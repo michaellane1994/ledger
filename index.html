@@ -582,6 +582,21 @@ tbody tr:hover .del-btn{opacity:1;}
       <div id="setup-banner-wrap"></div>
 
       <div class="card" style="margin-bottom:18px;">
+        <div class="card-head"><div class="card-title">People</div></div>
+        <div class="card-body">
+          <p style="font-size:12.5px;color:var(--muted);margin-bottom:14px;">Michael &amp; Lili are fixed. Toggle the shared option below.</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font-size:13px;font-weight:500;">Show "Joint" option</div>
+              <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">Adds a shared "Joint" option to all person dropdowns</div>
+            </div>
+            <input type="checkbox" id="toggle-joint" onchange="toggleJoint(this.checked)"
+              style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
         <div class="card-head">
           <div class="card-title">Expense Categories</div>
           <button class="btn btn-primary btn-sm" onclick="openAddCat()">
@@ -1227,6 +1242,7 @@ let incomes   = JSON.parse(localStorage.getItem('l3_incomes')  || '[]');
 let savAccts  = JSON.parse(localStorage.getItem('l3_savaccts') || '[]'); // savings accounts
 let contribs  = JSON.parse(localStorage.getItem('l3_contribs') || '[]'); // contribution log
 let sheetsUrl = localStorage.getItem('l3_sheets_url') || '';
+let showJoint = localStorage.getItem('l3_show_joint') !== 'false';
 let selMonth  = '';
 
 function persist() {
@@ -2665,10 +2681,29 @@ document.addEventListener('input', e => {
 });
 
 // ── GOOGLE SHEETS ────────────────────────────────────────
+function toggleJoint(val) {
+  showJoint = val;
+  localStorage.setItem('l3_show_joint', val);
+  applyJointSetting();
+}
+
+function applyJointSetting() {
+  const jointOpt = '<option value="Joint">Joint</option>';
+  ['ai-person', 'as-person', 'ac-person', 'add-person'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const existing = el.querySelector('option[value="Joint"]');
+    if (showJoint && !existing) el.insertAdjacentHTML('beforeend', jointOpt);
+    if (!showJoint && existing) existing.remove();
+  });
+}
+
 function renderSettings() {
   const inp = document.getElementById('sheets-url');
   if (inp && sheetsUrl) inp.value = sheetsUrl;
   updateSyncDot(sheetsUrl ? 'ok' : 'off');
+  const jt = document.getElementById('toggle-joint');
+  if (jt) jt.checked = showJoint;
   renderCatManagement();
   renderTypeManagement();
 }
@@ -3289,6 +3324,7 @@ trash = trash.filter(t => new Date(t.deletedAt) > trashCutoff);
 (function() { const b = document.getElementById('trash-count'); if (b && trash.length) { b.textContent = trash.length; b.style.display = 'inline'; } })();
 updateSyncDot(sheetsUrl ? 'ok' : 'off');
 setSyncLabel(sheetsUrl ? 'Connected' : 'Not connected');
+applyJointSetting();
 renderDashboard();
 renderUploads();
 </script>
