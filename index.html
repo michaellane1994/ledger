@@ -1505,18 +1505,19 @@ function renderTxns() {
   const s   = (document.getElementById('f-search').value || '').toLowerCase();
   const cf  = document.getElementById('f-cat').value;
   const cdf = document.getElementById('f-card').value;
-  const mf  = document.getElementById('f-month').value;
 
   // Populate cat dropdown once
   const cs = document.getElementById('f-cat');
   if (cs.options.length <= 1) {
     CATS.forEach(c => { const o = new Option(c.label, c.key); cs.appendChild(o); });
   }
-  // Populate month dropdown once
+  // Populate month dropdown dynamically so new months appear immediately
   const ms = document.getElementById('f-month');
-  if (ms.options.length <= 1) {
-    getMonths().forEach(m => { const o = new Option(fmtMonth(m), m); ms.appendChild(o); });
-  }
+  const currentMf = ms.value;
+  ms.innerHTML = '<option value="">All months</option>';
+  getMonths().forEach(m => { const o = new Option(fmtMonth(m), m); ms.appendChild(o); });
+  ms.value = currentMf;
+  const mf = ms.value;
   // Populate card dropdown dynamically from actual data
   const cardSel = document.getElementById('f-card');
   const allCards = [...new Set(txns.map(t => t.card || t.person).filter(Boolean))].sort();
