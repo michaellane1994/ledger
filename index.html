@@ -282,6 +282,10 @@ tbody tr:hover .del-btn{opacity:1;}
   .txn-table table{min-width:620px;}
   .dark-label{display:none;}
   .hide-mobile{display:none !important;}
+  .modal-overlay{align-items:flex-start;padding:16px 0;overflow-y:auto;}
+  .modal{max-height:none;}
+  #pdf-raw-text{height:140px !important;}
+  #pdf-step-2 > div[style*="max-height:280px"]{max-height:200px;}
 }
 </style>
 </head>
@@ -315,7 +319,7 @@ tbody tr:hover .del-btn{opacity:1;}
     <div class="nav-label" style="margin-top:10px;">Import</div>
     <div class="nav-item" onclick="goNav('upload')">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-      Upload CSV
+      Upload Data
     </div>
     <div class="nav-item" onclick="goNav('trash')" id="nav-trash">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -504,10 +508,10 @@ tbody tr:hover .del-btn{opacity:1;}
         <div class="dz-icon">
           <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m-4-4l4-4 4 4"/></svg>
         </div>
-        <div class="dz-title">Drop your CSV here</div>
+        <div class="dz-title">Drop your file here</div>
         <div class="dz-sub">Export from RBC, Amex, Scotiabank, CIBC or TD online banking<br>then drop the file here or click to browse</div>
-        <div class="csv-note">CSV format only · Columns mapped automatically</div>
-        <input type="file" id="fi" accept=".csv" style="display:none;" onchange="onFileSelect(event)">
+        <div class="csv-note">CSV or PDF · Columns mapped automatically</div>
+        <input type="file" id="fi" accept=".csv,.pdf" style="display:none;" onchange="onFileSelect(event)">
       </div>
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;margin-bottom:10px;">Import History</div>
       <div class="upload-list" id="upload-list">
@@ -1128,7 +1132,8 @@ function doGet(e) {
           <tbody id="pdf-parsed-rows"></tbody>
         </table>
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+      <div id="pdf-totals" style="display:flex;gap:20px;justify-content:flex-end;margin-top:10px;padding:10px 14px;background:var(--bg);border-radius:var(--radius-sm);font-size:12.5px;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
         <button class="btn btn-ghost" onclick="document.getElementById('pdf-step-1').style.display='block';document.getElementById('pdf-step-2').style.display='none';">← Back</button>
         <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
         <button class="btn btn-primary" onclick="importPdfTransactions()">Import All →</button>
@@ -1423,7 +1428,7 @@ function goNav(name) {
   const map = { dashboard: 0, transactions: 1, income: 2, savings: 3, upload: 4, trash: 5, rental: 6, settings: 7 };
   document.querySelectorAll('.nav-item')[map[name]].classList.add('active');
   document.getElementById('topbar-title').textContent =
-    { dashboard: 'Dashboard', transactions: 'Transactions', income: 'Income', savings: 'Savings', upload: 'Upload CSV', trash: 'Bin', rental: 'Rental', settings: 'Settings' }[name];
+    { dashboard: 'Dashboard', transactions: 'Transactions', income: 'Income', savings: 'Savings', upload: 'Upload Data', trash: 'Bin', rental: 'Rental', settings: 'Settings' }[name];
   if (name === 'dashboard')    renderDashboard();
   if (name === 'transactions') {
     const fm = document.getElementById('f-month');
@@ -2099,8 +2104,9 @@ function renameUpload(idx, newName) {
 const dz = document.getElementById('dz');
 dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('over'); });
 dz.addEventListener('dragleave', ()  => dz.classList.remove('over'));
-dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) openMapper(f); });
-function onFileSelect(e) { const f = e.target.files[0]; e.target.value = ''; if (f) openMapper(f); }
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) routeFile(f); });
+function onFileSelect(e) { const f = e.target.files[0]; e.target.value = ''; if (f) routeFile(f); }
+function routeFile(f) { f.name.toLowerCase().endsWith('.pdf') ? openPdfParser(f) : openMapper(f); }
 
 // ── COLUMN MAPPER ────────────────────────────────────────
 let pFile = null, pHeaders = [], pRows = [], pHasHeaders = true;
@@ -3300,6 +3306,14 @@ function parsePdfTransactions() {
     <td style="padding:8px 12px;font-size:13px;">${esc(t.merchant)}</td>
     <td style="padding:8px 12px;text-align:right;font-weight:600;font-size:13px;${t.amount<0?'color:#2d6a4f;':''}">${t.amount<0?'-':''}${fmt(Math.abs(t.amount))}</td>
   </tr>`).join('');
+
+  const charges = txns.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const credits  = txns.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
+  const totalsEl = document.getElementById('pdf-totals');
+  totalsEl.innerHTML = `
+    <span style="color:var(--muted);">Charges <strong style="color:var(--ink);margin-left:4px;">${fmt(charges)}</strong></span>
+    ${credits < 0 ? `<span style="color:var(--muted);">Credits <strong style="color:#2d6a4f;margin-left:4px;">-${fmt(Math.abs(credits))}</strong></span>` : ''}
+    <span style="color:var(--muted);">Net <strong style="color:var(--ink);margin-left:4px;">${fmt(charges + credits)}</strong></span>`;
 }
 
 async function importPdfTransactions() {
@@ -3329,36 +3343,36 @@ function parseRBC(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   const year = new Date().getFullYear();
 
-  // RBC Visa credit card format (from PDF):
-  // "JAN 22 JAN 26 REXALL PHARMACY #7149 VANCOUVER BC $6.30"
-  // or with negative: "FEB 01 FEB 03 REAL CDN SUPERSTORE 15 COQUITLAM BC -$10.00"
-  // Transaction date is the FIRST date (not posting date)
-  const rbcVisaRe = /^([A-Za-z]{3})\s+(\d{1,2})\s+[A-Za-z]{3}\s+\d{1,2}\s+(.+?)\s+(-?\$?[\d,]+\.\d{2})\s*$/;
+  // Reference number pattern to skip (long digit strings)
+  const refNumRe = /^\d{15,}$/;
 
-  // RBC Visa — amount on separate token at end, preceded by $ sign
-  const rbcVisaRe2 = /^([A-Za-z]{3})\s+(\d{1,2})\s+[A-Za-z]{3}\s+\d{1,2}\s+(.+?)\s+\$(-?[\d,]+\.\d{2})\s*$/;
+  // RBC Visa PDF: amount on SAME line as dates+merchant
+  // e.g. "JAN 22 JAN 26 REXALL PHARMACY #7149 VANCOUVER BC $6.30"
+  const rbcSingleRe = /^([A-Za-z]{3})\s+(\d{1,2})\s+[A-Za-z]{3}\s+\d{1,2}\s+(.+?)\s+(-?\$[\d,]+\.\d{2})\s*$/;
 
-  // RBC chequing: "JAN 15 Description 123.45 1,234.56" (last number is balance)
+  // RBC Visa PDF: amount on SEPARATE line (actual pdf.js extraction):
+  // Line 1: "JAN 22 JAN 26 REXALL PHARMACY #7149 VANCOUVER BC"
+  // Line 2: "74529006022920419102105"  (ref number — skip)
+  // Line 3: "$6.30" or "-$10.00"
+  const rbcDateRe  = /^([A-Za-z]{3})\s+(\d{1,2})\s+[A-Za-z]{3}\s+\d{1,2}\s+(.+)$/;
+  const rbcAmtRe   = /^(-?\$[\d,]+\.\d{2})$/;
+
+  // RBC chequing: "JAN 15 Description 123.45 1,234.56" (trailing balance)
   const rbcChqRe = /^([A-Za-z]{3})\s+(\d{1,2})\s+(.+?)\s+([-]?[\d,]+\.\d{2})\s+[\d,]+\.\d{2}\s*$/;
 
   // Simple fallback: "JAN 15 Description 123.45"
   const simpleRe = /^([A-Za-z]{3})\s+(\d{1,2})\s+(.+?)\s+([-]?[\d,]+\.\d{2})\s*$/;
 
-  // Reference number pattern to skip (all digits, 20+ chars)
-  const refNumRe = /^\d{15,}$/;
-
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // Skip reference number lines
     if (refNumRe.test(line)) continue;
 
-    let m = line.match(rbcVisaRe2);
-    if (!m) m = line.match(rbcVisaRe);
+    // Single-line format (amount on same line)
+    let m = line.match(rbcSingleRe);
     if (m) {
       const date = normDate(m[1] + ' ' + m[2] + ' ' + year);
       if (!date) continue;
-      const amtStr = m[4].replace(/[$,]/g, '');
-      const amt = parseFloat(amtStr);
+      const amt = parseFloat(m[4].replace(/[$,]/g, ''));
       if (isNaN(amt) || amt === 0) continue;
       const merchant = m[3].replace(/\s+/g, ' ').trim();
       if (isSkippable(merchant, amt)) continue;
@@ -3366,6 +3380,27 @@ function parseRBC(text) {
       continue;
     }
 
+    // Multi-line format: dates+merchant on this line, amount on a later line
+    m = line.match(rbcDateRe);
+    if (m) {
+      const date = normDate(m[1] + ' ' + m[2] + ' ' + year);
+      if (!date) continue;
+      const merchant = m[3].replace(/\s+/g, ' ').trim();
+      // Look ahead past ref number to find the amount line
+      let amt = null;
+      for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+        if (refNumRe.test(lines[j])) continue;
+        const am = lines[j].match(rbcAmtRe);
+        if (am) { amt = parseFloat(am[1].replace(/[$,]/g, '')); i = j; }
+        break;
+      }
+      if (amt === null || isNaN(amt) || amt === 0) continue;
+      if (isSkippable(merchant, amt)) continue;
+      txns.push({ date, merchant, amount: amt });
+      continue;
+    }
+
+    // RBC chequing
     m = line.match(rbcChqRe);
     if (m) {
       const date = normDate(m[1] + ' ' + m[2] + ' ' + year);
@@ -3378,6 +3413,7 @@ function parseRBC(text) {
       continue;
     }
 
+    // Simple fallback
     m = line.match(simpleRe);
     if (m) {
       const date = normDate(m[1] + ' ' + m[2] + ' ' + year);
@@ -3425,15 +3461,58 @@ function parseAmex(text) {
 }
 
 function parseScotia(text) {
-  // Scotia is similar to RBC format
-  return parseGeneric(text);
+  const txns = [];
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const year = new Date().getFullYear();
+
+  // Scotia format:
+  // Domestic (inline amount):  "001 Feb 24 Feb 25 UBER CANADA/UBERTRIP TORONTO ON 27.98"
+  // Foreign (multi-line):      "001 Feb 24 Feb 25 ZANZIBAR INSURANCE MIAMI FL"
+  //                            "AMT 88.00 USD"
+  //                            "120.62"
+  // Payment (trailing minus):  "016 Feb 28 Mar 3 ROYAL BANK OF CANADA VANCOUVER 750.00-"
+  // Icons may precede the ref# so \D* absorbs them
+  const headerRe = /^\D*(\d{3})\s+([A-Za-z]{3})\s+(\d{1,2})\s+[A-Za-z]{3}\s+\d{1,2}\s+(.+?)(?:\s+([\d,]+\.\d{2})(-?))?\s*$/;
+  const foreignRe = /^AMT\s+[\d,.]+\s+[A-Z]{3}/;
+  const amtRe     = /^([\d,]+\.\d{2})(-?)\s*$/;
+
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(headerRe);
+    if (!m) continue;
+    const date = normDate(`${m[2]} ${m[3]} ${year}`);
+    if (!date) continue;
+    const merchant = m[4].trim();
+
+    let amt;
+    if (m[5]) {
+      amt = parseFloat(m[5].replace(/,/g, '')) * (m[6] === '-' ? -1 : 1);
+    } else {
+      // Look ahead past AMT/USD lines and short location continuations
+      for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+        if (foreignRe.test(lines[j])) continue;
+        const am = lines[j].match(amtRe);
+        if (am) { amt = parseFloat(am[1].replace(/,/g, '')) * (am[2] === '-' ? -1 : 1); i = j; break; }
+        if (/^[A-Z]{2}$/.test(lines[j]) || lines[j].length < 6) continue; // province/short continuation
+        break;
+      }
+    }
+
+    if (amt === undefined || isNaN(amt) || amt === 0) continue;
+    if (isSkippable(merchant, amt)) continue;
+    if (/royal bank of canada/i.test(merchant)) continue; // inter-bank payment
+    txns.push({ date, merchant, amount: amt });
+  }
+  return txns;
 }
 
 function parseCIBC(text) {
   const txns = [];
   const lines = text.split('\n');
-  // CIBC: "Jan 15  Merchant Name  123.45  CR" or no CR for debits
-  const re = /^([A-Za-z]{3})\s+(\d{1,2})\s+(.+?)\s+([\d,]+\.\d{2})\s*(CR)?$/;
+  // Handles two formats:
+  // Classic CIBC:      "Jan 15 Merchant Name 123.45" or "123.45 CR"
+  // CIBC Costco/new:   "Jan 26 Jan 27 COSTCO WHOLESALE PORT COQUITLABC Retail and Grocery -33.59"
+  const re = /^([A-Za-z]{3})\s+(\d{1,2})(?:\s+[A-Za-z]{3}\s+\d{1,2})?\s+(.+?)\s+([-]?[\d,]+\.\d{2})\s*(CR)?$/;
+  const SPEND_CATS = ['Retail and Grocery','Transportation','Dining','Entertainment','Travel','Health','Other Purchases','Other'];
   const year = new Date().getFullYear();
   lines.forEach(line => {
     line = line.trim();
@@ -3441,9 +3520,14 @@ function parseCIBC(text) {
     if (!m) return;
     const date = normDate(`${m[1]} ${m[2]} ${year}`);
     if (!date) return;
-    const isCredit = !!m[5];
-    const amt = parseFloat(m[4].replace(/,/g,'')) * (isCredit ? -1 : 1);
-    const merchant = m[3].trim();
+    let amt = parseFloat(m[4].replace(/,/g,''));
+    if (m[5]) amt = -Math.abs(amt); // CR suffix = credit
+    // amt already negative when PDF uses minus sign
+    let merchant = m[3].trim();
+    // Strip trailing CIBC spend category label
+    for (const cat of SPEND_CATS) {
+      if (merchant.endsWith(cat)) { merchant = merchant.slice(0, -cat.length).trim(); break; }
+    }
     if (isSkippable(merchant, amt)) return;
     txns.push({ date, merchant, amount: amt });
   });
