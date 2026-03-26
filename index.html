@@ -65,9 +65,31 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .setup-banner-text strong{font-weight:600;}
 .setup-banner-text a{color:#c15c1e;text-decoration:underline;cursor:pointer;}
 
+/* ── DARK MODE ── */
+[data-theme="dark"]{
+  --ink:#ede8e1;--bg:#19170f;--surface:#242018;--border:#38342c;--muted:#9c9488;--faint:#6b6358;--accent:#d4703a;
+  --shadow:0 1px 3px rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.2);--shadow-lg:0 8px 32px rgba(0,0,0,.45);
+  --c-groceries-bg:#1a2e23;--c-eatingout-bg:#2e1e10;--c-liquor-bg:#2a1215;--c-home-bg:#2a2010;
+  --c-bills-bg:#0f2030;--c-gym-bg:#182b22;--c-shopping-bg:#251535;--c-misc-bg:#1e1e20;
+  --c-transport-bg:#0f2030;--c-travel-bg:#0f2030;--c-activities-bg:#2e1810;--c-health-bg:#0f2530;--c-puppies-bg:#2a1f08;
+}
+[data-theme="dark"] .sidebar{background:#131109;}
+[data-theme="dark"] tbody tr:hover{background:#2c2820;}
+[data-theme="dark"] .refund-badge{background:#1a2e23;color:#5dbd85;}
+[data-theme="dark"] .income-badge{background:#0f2030;color:#6ea8da;}
+[data-theme="dark"] .savings-badge{background:#2a1f08;color:#dba050;}
+[data-theme="dark"] .setup-banner{background:#2a1f08;border-color:#7c4e1a;}
+[data-theme="dark"] .setup-banner-text{color:#d4a870;}
+
 /* ── MAIN ── */
 .main{margin-left:228px;flex:1;display:flex;flex-direction:column;min-width:0;max-width:calc(100vw - 228px);padding-top:58px;}
 .topbar{background:var(--surface);border-bottom:1px solid var(--border);height:58px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:228px;right:0;z-index:50;}
+.dark-toggle{width:36px;height:20px;background:var(--border);border:none;border-radius:100px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;padding:0;}
+.dark-toggle.on{background:var(--accent);}
+.dark-toggle-knob{position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;pointer-events:none;}
+.dark-toggle.on .dark-toggle-knob{transform:translateX(16px);}
+.topbar-pills-row{display:none;position:fixed;top:58px;left:228px;right:0;background:var(--surface);border-bottom:1px solid var(--border);padding:9px 16px;gap:6px;overflow-x:auto;z-index:49;-webkit-overflow-scrolling:touch;}
+.topbar-pills-row::-webkit-scrollbar{display:none;}
 .topbar-left{display:flex;align-items:center;gap:14px;min-width:0;}
 .topbar-title{font-family:'Playfair Display',serif;font-size:17px;white-space:nowrap;}
 .month-pills{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;}
@@ -236,12 +258,11 @@ tbody tr:hover .del-btn{opacity:1;}
   .sidebar{transform:translateX(-100%);transition:transform .25s ease;z-index:100;}
   .sidebar.open{transform:translateX(0);}
   .sidebar-overlay.open{display:block;}
-  .main{margin-left:0;max-width:100vw;}
+  .main{margin-left:0;max-width:100vw;padding-top:100px;}
   .hamburger{display:flex;align-items:center;justify-content:center;}
   .topbar{padding:0 16px;left:0;}
   .topbar .month-pills{display:none;}
-  .mobile-month-pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;}
-  .mobile-month-pills .mpill{font-size:12px;padding:5px 13px;}
+  .topbar-pills-row{left:0;}
   .content{padding:16px;}
   .month-hero{flex-direction:column;align-items:flex-start;gap:16px;padding:20px;}
   .hero-total{font-size:38px;}
@@ -330,6 +351,13 @@ tbody tr:hover .del-btn{opacity:1;}
       <div class="month-pills" id="month-pills"></div>
     </div>
     <div class="topbar-right">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:11.5px;color:var(--muted);">Light</span>
+        <button class="dark-toggle" onclick="toggleDark()" id="dark-toggle" title="Dark mode">
+          <div class="dark-toggle-knob"></div>
+        </button>
+        <span style="font-size:11.5px;color:var(--muted);">Dark</span>
+      </div>
       <button class="btn btn-ghost btn-sm" onclick="exportCSV()">↓ Export</button>
       <button class="btn btn-primary btn-sm" onclick="goNav('upload')">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m-8-8l8-8 8 8"/></svg>
@@ -337,13 +365,13 @@ tbody tr:hover .del-btn{opacity:1;}
       </button>
     </div>
   </header>
+  <!-- Mobile month pills bar — fixed below topbar on small screens -->
+  <div class="topbar-pills-row" id="mobile-month-pills"></div>
 
   <div class="content">
 
     <!-- DASHBOARD -->
     <div class="view active" id="view-dashboard">
-      <!-- Mobile month pills — only visible on small screens -->
-      <div class="mobile-month-pills" id="mobile-month-pills" style="display:none;"></div>
       <div class="month-hero">
         <div>
           <div class="hero-label">Total Spent</div>
@@ -3577,6 +3605,19 @@ document.querySelectorAll('.nav-item').forEach(el => {
     if (window.innerWidth <= 768) closeSidebar();
   });
 });
+
+// ── DARK MODE ────────────────────────────────────────────
+function applyDark(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  const btn = document.getElementById('dark-toggle');
+  if (btn) btn.classList.toggle('on', dark);
+}
+function toggleDark() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  localStorage.setItem('l3_darkMode', !isDark);
+  applyDark(!isDark);
+}
+applyDark(localStorage.getItem('l3_darkMode') === 'true');
 
 // ── INIT ─────────────────────────────────────────────────
 // Prune old trash on load
