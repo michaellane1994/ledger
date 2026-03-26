@@ -80,6 +80,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 [data-theme="dark"] .savings-badge{background:#2a1f08;color:#dba050;}
 [data-theme="dark"] .setup-banner{background:#2a1f08;border-color:#7c4e1a;}
 [data-theme="dark"] .setup-banner-text{color:#d4a870;}
+.clr-credit{color:#2d6a4f;}
+[data-theme="dark"] .clr-credit{color:#5dbd85;}
 
 /* ── MAIN ── */
 .main{margin-left:228px;flex:1;display:flex;flex-direction:column;min-width:0;max-width:calc(100vw - 228px);padding-top:58px;}
@@ -1712,7 +1714,7 @@ function renderTxns() {
     const c = CAT[t.category] || CAT.misc;
     const isRefund = t.refund || t.amount < 0;
     const amtDisplay = isRefund
-      ? `<span style="color:#2d6a4f;font-weight:600;">−${fmt(Math.abs(t.amount))}</span>`
+      ? `<span class="clr-credit" style="font-weight:600;">−${fmt(Math.abs(t.amount))}</span>`
       : `<span style="font-weight:600;">${fmt(t.amount)}</span>`;
     const isIncome  = !!t.incomeType;
     const isSavings = !!t.savingsAccountId;
@@ -3304,7 +3306,7 @@ function parsePdfTransactions() {
   tbody.innerHTML = txns.map(t => `<tr style="border-bottom:1px solid var(--border);">
     <td style="padding:8px 12px;font-size:12px;color:var(--faint);white-space:nowrap;">${t.date}</td>
     <td style="padding:8px 12px;font-size:13px;">${esc(t.merchant)}</td>
-    <td style="padding:8px 12px;text-align:right;font-weight:600;font-size:13px;${t.amount<0?'color:#2d6a4f;':''}">${t.amount<0?'-':''}${fmt(Math.abs(t.amount))}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:600;font-size:13px;" ${t.amount<0?'class="clr-credit"':''}>${t.amount<0?'-':''}${fmt(Math.abs(t.amount))}</td>
   </tr>`).join('');
 
   const charges = txns.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
@@ -3312,7 +3314,7 @@ function parsePdfTransactions() {
   const totalsEl = document.getElementById('pdf-totals');
   totalsEl.innerHTML = `
     <span style="color:var(--muted);">Charges <strong style="color:var(--ink);margin-left:4px;">${fmt(charges)}</strong></span>
-    ${credits < 0 ? `<span style="color:var(--muted);">Credits <strong style="color:#2d6a4f;margin-left:4px;">-${fmt(Math.abs(credits))}</strong></span>` : ''}
+    ${credits < 0 ? `<span style="color:var(--muted);">Credits <strong class="clr-credit" style="margin-left:4px;">-${fmt(Math.abs(credits))}</strong></span>` : ''}
     <span style="color:var(--muted);">Net <strong style="color:var(--ink);margin-left:4px;">${fmt(charges + credits)}</strong></span>`;
 }
 
