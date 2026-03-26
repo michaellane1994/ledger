@@ -3031,7 +3031,7 @@ async function testConnection() {
   if (!sheetsUrl) { showConnStatus('No URL saved yet.', 'err'); return; }
   showConnStatus('Testing...', 'busy');
   try {
-    const res = await fetch(sheetsUrl);
+    const res = await fetchWithTimeout(sheetsUrl, {});
     const data = await res.json();
     if (data.ok) {
       showConnStatus('Connected successfully.', 'ok');
@@ -3045,12 +3045,18 @@ async function testConnection() {
   }
 }
 
+function fetchWithTimeout(url, opts, ms = 45000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
 async function syncToSheets() {
   if (!sheetsUrl) { alert('Please connect a Google Sheet in Settings first.'); goNav('settings'); return; }
   updateSyncDot('busy');
   setSyncLabel('Pushing...');
   try {
-    const res = await fetch(sheetsUrl, {
+    const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
       body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses }),
     });
@@ -3075,7 +3081,7 @@ async function syncFromSheets() {
   updateSyncDot('busy');
   setSyncLabel('Pulling...');
   try {
-    const res = await fetch(sheetsUrl, {
+    const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
       body: JSON.stringify({ action: 'pull' }),
     });
@@ -3190,16 +3196,18 @@ function copyScript() {
 // Auto-push to sheets after every import if connected
 async function autoPush() {
   if (sheetsUrl) {
+    updateSyncDot('busy');
     try {
-      await fetch(sheetsUrl, {
+      await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
         body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses }),
       });
       updateSyncDot('ok');
       setSyncLabel('Synced');
     } catch(e) {
+      // Silent fail for background auto-push -- data is saved locally, user can manually push
       updateSyncDot('err');
-      setSyncLabel('Sync failed');
+      setSyncLabel('Not synced');
     }
   }
 }
