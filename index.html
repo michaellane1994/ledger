@@ -3317,10 +3317,8 @@ function parsePdfTransactions() {
 }
 
 async function importPdfTransactions() {
-  const fresh = pdfParsedTxns.filter(t => {
-    const key = dedupKey(t);
-    return !txns.some(x => dedupKey(x) === key);
-  });
+  const pdfDedupKey = t => `${t.date}|${t.amount}|${t.card||t.person}|${(t.merchant||'').toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,20)}`;
+  const fresh = pdfParsedTxns.filter(t => !txns.some(x => pdfDedupKey(x) === pdfDedupKey(t)));
   txns = [...txns, ...fresh];
   const skipped = pdfParsedTxns.length - fresh.length;
   uploads.unshift({
