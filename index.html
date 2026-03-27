@@ -1239,6 +1239,21 @@ function doGet(e) {
           <input type="text" id="pdf-cardname" placeholder="e.g. RBC Visa, Amex" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
         </div>
       </div>
+      <div style="margin-top:10px;">
+        <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Import mode</label>
+        <div class="person-row" style="gap:16px;flex-wrap:wrap;">
+          <label style="align-items:flex-start;gap:6px;">
+            <input type="radio" name="pdf-import-mode" value="addnew" checked style="margin-top:2px;">
+            <span><strong style="font-size:12.5px;">Add new only</strong><br>
+            <span style="font-size:11px;color:var(--faint);">Skip transactions already in the app</span></span>
+          </label>
+          <label style="align-items:flex-start;gap:6px;">
+            <input type="radio" name="pdf-import-mode" value="replace" style="margin-top:2px;">
+            <span><strong style="font-size:12.5px;">Replace this period</strong><br>
+            <span style="font-size:11px;color:var(--faint);">Remove existing transactions for months in this file, then import fresh</span></span>
+          </label>
+        </div>
+      </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
         <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
         <button class="btn btn-primary" onclick="parsePdfTransactions()">Parse Transactions →</button>
@@ -2028,9 +2043,15 @@ function renderDashboard() {
   document.getElementById('hero-largest').textContent = fmt(lg.amount > 0 ? lg.amount : 0);
   document.getElementById('hero-lm').textContent      = lg.merchant || '—';
 
-  // Build byCat totals — transfers already negative, pure income excluded
+  // Build byCat totals — transfers credited to incomeCategory only; if none, unattributed
   const byCat = {};
-  expenses.forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + effectiveAmt(t); });
+  expenses.forEach(t => {
+    if (t.incomeType === 'transfer') {
+      if (t.incomeCategory) byCat[t.incomeCategory] = (byCat[t.incomeCategory] || 0) + effectiveAmt(t);
+    } else {
+      byCat[t.category] = (byCat[t.category] || 0) + effectiveAmt(t);
+    }
+  });
   const netTotal = total;
 
   // Render 13-tile grid
@@ -4016,13 +4037,45 @@ function parsePdfTransactions() {
 
 async function importPdfTransactions() {
   const pdfDedupKey = t => `${t.date}|${t.amount}|${t.card||t.person}|${(t.merchant||'').toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,20)}`;
-  const fresh = pdfParsedTxns.filter(t => !txns.some(x => pdfDedupKey(x) === pdfDedupKey(t)));
-  txns = [...txns, ...fresh];
-  const skipped = pdfParsedTxns.length - fresh.length;
+  const importMode = document.querySelector('input[name="pdf-import-mode"]:checked').value;
+  const person   = pdfParsedTxns[0]?.person || '';
+  const cardName = pdfParsedTxns[0]?.card   || '';
+
+  let fresh, skipped, removedCount = 0;
+
+  if (importMode === 'replace') {
+    const incomingMonths = new Set(pdfParsedTxns.map(t => t.date.substring(0,7)));
+    const cardMatch = (t) => {
+      const tCard = (t.card || t.person || '').toLowerCase().trim();
+      const cCard = cardName.toLowerCase().trim();
+      const cPers = person.toLowerCase().trim();
+      if (cCard) return tCard === cCard;
+      return tCard === cPers;
+    };
+    const removedTxnIds = new Set();
+    txns = txns.filter(t => {
+      if (incomingMonths.has(t.date.substring(0,7)) && cardMatch(t)) {
+        removedTxnIds.add(t.id);
+        return false;
+      }
+      return true;
+    });
+    removedCount = removedTxnIds.size;
+    incomes = incomes.filter(i => !i.fromTxnId || !removedTxnIds.has(i.fromTxnId));
+    fresh   = pdfParsedTxns;
+    skipped = 0;
+    txns    = [...txns, ...fresh];
+  } else {
+    const ex = new Set(txns.map(pdfDedupKey));
+    fresh   = pdfParsedTxns.filter(t => !ex.has(pdfDedupKey(t)));
+    skipped = pdfParsedTxns.length - fresh.length;
+    txns    = [...txns, ...fresh];
+  }
+
   uploads.unshift({
     name: pdfFile ? pdfFile.name : 'PDF Statement',
-    count: fresh.length, skipped, person: fresh[0]?.person || '',
-    card: fresh[0]?.card || '', date: new Date().toLocaleDateString('en-CA'), mode: 'addnew'
+    count: fresh.length, skipped, person, card: cardName,
+    date: new Date().toLocaleDateString('en-CA'), mode: importMode
   });
   persist();
   closePdfModal();
