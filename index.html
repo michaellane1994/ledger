@@ -4077,13 +4077,13 @@ document.querySelectorAll('.nav-item').forEach(el => {
 
 // ── THEMES ───────────────────────────────────────────────
 const THEMES = {
-  'light':         { dark:false, label:'Default',  bg:'#f4f1ec', surface:'#ffffff',  border:'#e8e2d8', ink:'#18181b',  muted:'#71717a', faint:'#a1a1aa', accent:'#c15c1e', sidebarBg:'#18181b', rowHover:'rgba(0,0,0,.03)', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
-  'cream':         { dark:false, label:'Cream',    bg:'#f0ebe0', surface:'#faf7f0',  border:'#e0d8c8', ink:'#2a1e0e',  muted:'#8c7c6a', faint:'#b0a090', accent:'#b05a28', sidebarBg:'#2a1e0e', rowHover:'rgba(0,0,0,.03)', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
-  'dark-warm':     { dark:true,  label:'Warm',     bg:'#19170f', surface:'#242018',  border:'#38342c', ink:'#ede8e1',  muted:'#9c9488', faint:'#6b6358', accent:'#d4703a', sidebarBg:'#131109', rowHover:'#2c2820', shadow:'0 1px 3px rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.2)', shadowLg:'0 8px 32px rgba(0,0,0,.45)' },
-  'dark-midnight': { dark:true,  label:'Midnight', bg:'#0f0f12', surface:'#1a1a20',  border:'#2e2e3a', ink:'#e8e8f2',  muted:'#8888a4', faint:'#55556a', accent:'#7090e0', sidebarBg:'#0a0a0e', rowHover:'#252530', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
-  'dark-ocean':    { dark:true,  label:'Ocean',    bg:'#091420', surface:'#0e1e30',  border:'#1a3048', ink:'#d0e4f8',  muted:'#6080a8', faint:'#385870', accent:'#4090d8', sidebarBg:'#060d18', rowHover:'#152538', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
-  'dark-forest':   { dark:true,  label:'Forest',   bg:'#091410', surface:'#0e1e18',  border:'#183028', ink:'#d0e8dc',  muted:'#508870', faint:'#305848', accent:'#3ab870', sidebarBg:'#060d0a', rowHover:'#132018', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
-  'dark-slate':    { dark:true,  label:'Slate',    bg:'#111418', surface:'#1c2028',  border:'#2a3040', ink:'#dce4f0',  muted:'#7080a8', faint:'#485870', accent:'#8090c8', sidebarBg:'#0c1018', rowHover:'#222835', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'light':         { dark:false, label:'Default',  bg:'#f4f1ec', surface:'#ffffff',  border:'#e8e2d8', ink:'#18181b',  muted:'#71717a', faint:'#a1a1aa', accent:'#c15c1e', sidebarBg:'#1c1c1f', rowHover:'rgba(0,0,0,.03)', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
+  'cream':         { dark:false, label:'Cream',    bg:'#f0ebe0', surface:'#faf7f0',  border:'#e0d8c8', ink:'#2a1e0e',  muted:'#8c7c6a', faint:'#b0a090', accent:'#b05a28', sidebarBg:'#2a1a08', rowHover:'rgba(0,0,0,.03)', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
+  'dark-warm':     { dark:true,  label:'Warm',     bg:'#19170f', surface:'#242018',  border:'#38342c', ink:'#ede8e1',  muted:'#9c9488', faint:'#6b6358', accent:'#d4703a', sidebarBg:'#2a1e0a', rowHover:'#2c2820', shadow:'0 1px 3px rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.2)', shadowLg:'0 8px 32px rgba(0,0,0,.45)' },
+  'dark-midnight': { dark:true,  label:'Midnight', bg:'#0f0f12', surface:'#1a1a20',  border:'#2e2e3a', ink:'#e8e8f2',  muted:'#8888a4', faint:'#55556a', accent:'#7090e0', sidebarBg:'#16162a', rowHover:'#252530', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'dark-ocean':    { dark:true,  label:'Ocean',    bg:'#091420', surface:'#0e1e30',  border:'#1a3048', ink:'#d0e4f8',  muted:'#6080a8', faint:'#385870', accent:'#4090d8', sidebarBg:'#0a2040', rowHover:'#152538', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'dark-forest':   { dark:true,  label:'Forest',   bg:'#091410', surface:'#0e1e18',  border:'#183028', ink:'#d0e8dc',  muted:'#508870', faint:'#305848', accent:'#3ab870', sidebarBg:'#0a2215', rowHover:'#132018', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'dark-slate':    { dark:true,  label:'Slate',    bg:'#111418', surface:'#1c2028',  border:'#2a3040', ink:'#dce4f0',  muted:'#7080a8', faint:'#485870', accent:'#8090c8', sidebarBg:'#141c30', rowHover:'#222835', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
 };
 
 function applyTheme(key) {
@@ -4102,6 +4102,8 @@ function applyTheme(key) {
   r.style.setProperty('--shadow-lg',  t.shadowLg);
   r.setAttribute('data-theme', t.dark ? 'dark' : 'light');
   document.getElementById('dark-toggle')?.classList.toggle('on', t.dark);
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.style.background = t.sidebarBg;
   localStorage.setItem('l3_theme', key);
 }
 function setTheme(key) {
