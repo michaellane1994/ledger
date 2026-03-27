@@ -1961,10 +1961,14 @@ function renderCashflowChart() {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode:'index', intersect:false },
       plugins: {
-        legend: { display:true, position:'top', labels:{ font:{size:11}, padding:12, color:tickColor, usePointStyle:true, pointStyleWidth:8,
+        legend: { display:true, position:'top', labels:{ font:{size:11}, padding:12, color:tickColor, usePointStyle:true, pointStyleWidth:11,
           generateLabels(chart) {
             const items = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-            items.forEach(item => { if (chart.data.datasets[item.datasetIndex]?.type === 'line') item.lineWidth = 0; });
+            items.forEach(item => {
+              const ds = chart.data.datasets[item.datasetIndex];
+              if (ds?.type === 'line') { item.pointStyle = 'circle'; item.lineWidth = 0; }
+              else { item.pointStyle = 'rect'; }
+            });
             return items;
           }
         }},
