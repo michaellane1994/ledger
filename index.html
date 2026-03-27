@@ -201,11 +201,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .income-inline{border:none;border-bottom:1px solid transparent;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:inherit;padding:1px 2px;outline:none;}
 .income-inline:hover,.income-inline:focus{border-bottom-color:var(--border);}
 .income-inline.amt{width:80px;text-align:right;font-weight:600;color:#2d6a4f;}
-.income-inline.date{width:96px;font-size:12px;color:var(--faint);}
+.income-inline.date{width:96px;font-size:12px;color:var(--ink);}
 .income-inline.date:focus{color:var(--ink);}
 .income-inline.date::-webkit-calendar-picker-indicator{opacity:0.35;cursor:pointer;}
 .th-sort{cursor:pointer;user-select:none;}
 .th-sort:hover{color:var(--ink);}
+.th-sort.sort-active{color:var(--accent);}
 .txn-table{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;max-width:100%;}
 table{width:100%;border-collapse:collapse;table-layout:fixed;}
 thead th{text-align:left;padding:11px 15px;font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;background:var(--bg);border-bottom:1px solid var(--border);}
@@ -566,8 +567,8 @@ tbody tr:hover .del-btn{opacity:1;}
         <table>
           <thead>
             <tr>
-              <th class="th-sort" onclick="setTxnSort('date')">Date <span id="txn-date-icon" style="font-size:10px;">↓</span></th><th>Merchant</th><th>Category</th><th>Person</th><th>Card</th><th>Note</th>
-              <th style="text-align:right;" class="th-sort" onclick="setTxnSort('amount')">Amount <span id="txn-amt-icon" style="font-size:10px;">↕</span></th>
+              <th id="txn-date-th" class="th-sort sort-active" onclick="setTxnSort('date')">Date <span id="txn-date-icon" style="font-size:10px;">↓</span></th><th>Merchant</th><th>Category</th><th>Person</th><th>Card</th><th>Note</th>
+              <th id="txn-amt-th" style="text-align:right;" class="th-sort" onclick="setTxnSort('amount')">Amount <span id="txn-amt-icon" style="font-size:10px;">↕</span></th>
             </tr>
           </thead>
           <tbody id="txn-body"></tbody>
@@ -2041,11 +2042,15 @@ function renderTxns() {
     }).join('');
     pillsEl.innerHTML = typePills + '<span style="display:inline-block;width:1px;height:16px;background:var(--border);margin:0 4px;vertical-align:middle;"></span>' + catPills;
   }
-  // Sort icons
+  // Sort icons + active column highlight
   const dateIcon = document.getElementById('txn-date-icon');
   const amtIcon  = document.getElementById('txn-amt-icon');
+  const dateTh   = document.getElementById('txn-date-th');
+  const amtTh    = document.getElementById('txn-amt-th');
   if (dateIcon) dateIcon.textContent = txnSort === 'date' ? '↓' : '↕';
   if (amtIcon)  amtIcon.textContent  = txnSort === 'amount-desc' ? '↓' : txnSort === 'amount-asc' ? '↑' : '↕';
+  if (dateTh) dateTh.classList.toggle('sort-active', txnSort === 'date');
+  if (amtTh)  amtTh.classList.toggle('sort-active', txnSort !== 'date');
 
   let list = txns.filter(t => {
     if (s && !t.merchant.toLowerCase().includes(s)) return false;
@@ -2836,7 +2841,7 @@ function renderIncome() {
       <td>${catCell}</td>
       <td><span class="person-tag">${i.person||'—'}</span></td>
       <td><span class="txn-note" contenteditable="true" onblur="saveIncomeNote('${i.id}',this.textContent)">${esc(i.note||'')}</span></td>
-      <td style="text-align:right;"><input type="number" class="income-inline amt" value="${i.amount}" min="0" step="0.01" onchange="saveIncomeAmount('${i.id}',this.value)" title="${isLinked ? 'Linked to transaction — also updates transaction amount' : ''}"></td>
+      <td style="text-align:right;"><input type="number" class="income-inline amt" value="${(+i.amount).toFixed(2)}" min="0" step="0.01" onchange="saveIncomeAmount('${i.id}',this.value)" title="${isLinked ? 'Linked to transaction — also updates transaction amount' : ''}"></td>
       <td style="text-align:right;white-space:nowrap;">
         <button class="del-btn" onclick="openEditIncome('${i.id}')" title="Edit" style="margin-right:4px;">✎</button>
         <button class="del-btn" onclick="deleteIncome('${i.id}')" title="Remove">✕</button>
