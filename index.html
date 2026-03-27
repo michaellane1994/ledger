@@ -3385,9 +3385,9 @@ async function testConnection() {
   }
 }
 
-function fetchWithTimeout(url, opts, ms = 45000) {
+function fetchWithTimeout(url, opts, ms = 60000) {
   const ctrl = new AbortController();
-  const id = setTimeout(() => ctrl.abort(), ms);
+  const id = setTimeout(() => ctrl.abort(new Error('Request timed out — Google Sheets took too long to respond. Try again.')), ms);
   return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
 }
 
