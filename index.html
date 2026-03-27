@@ -144,7 +144,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 
 /* Category grid – 7 cols, 2 rows */
 .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:11px;margin-bottom:18px;}
-.cat-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);border-top:3px solid transparent;transition:box-shadow .15s;cursor:default;}
+.cat-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);border-top:3px solid transparent;transition:box-shadow .15s;cursor:pointer;}
 .cat-tile:hover{box-shadow:var(--shadow-lg);}
 .ct-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ct-amount{font-family:'Playfair Display',serif;font-size:17px;margin-bottom:5px;}
@@ -1651,6 +1651,11 @@ function toggleChartCat(key) {
   else chartHiddenCats.add(key);
   renderChartSection();
 }
+function toggleAllChartCats() {
+  if (chartHiddenCats.size === 0) CATS.forEach(c => chartHiddenCats.add(c.key));
+  else chartHiddenCats.clear();
+  renderChartSection();
+}
 
 function renderChartSection() {
   const allExpenses  = txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId));
@@ -1682,7 +1687,9 @@ function renderChartSection() {
 
   const catsEl = document.getElementById('chart-cats');
   if (catsEl) {
-    catsEl.innerHTML = CATS.map(c => {
+    const allOn = chartHiddenCats.size === 0;
+    const toggleBtn = `<span class="cc-pill ${allOn ? 'on' : 'off'}" style="${allOn ? 'background:var(--muted);border-color:var(--muted);color:#fff;' : ''}" onclick="toggleAllChartCats()">${allOn ? 'Deselect All' : 'Select All'}</span>`;
+    catsEl.innerHTML = toggleBtn + CATS.map(c => {
       const on = !chartHiddenCats.has(c.key);
       return `<span class="cc-pill ${on ? 'on' : 'off'}"
         style="${on ? `background:${c.color};border-color:${c.color};color:#fff;` : ''}"
@@ -1909,6 +1916,8 @@ function renderDashboard() {
     const tile = document.createElement('div');
     tile.className = 'cat-tile';
     tile.style.borderTopColor = c.color;
+    tile.title = `View ${c.label} transactions`;
+    tile.onclick = () => goToCatFilter(c.key);
     tile.innerHTML = `
       <div class="ct-label" title="${c.label}">${c.label}</div>
       <div class="ct-amount" style="color:${c.color};">${fmt(amt)}</div>
@@ -1980,6 +1989,12 @@ function setTxnCatPill(key) {
   sel.value = sel.value === key ? '' : key;
   renderTxns();
 }
+function goToCatFilter(catKey) {
+  txnTypeFilter = '';
+  const fc = document.getElementById('f-cat');
+  if (fc) fc.value = catKey;
+  goNav('transactions');
+}
 function setTxnTypePill(type) {
   txnTypeFilter = txnTypeFilter === type ? '' : type;
   if (txnTypeFilter) document.getElementById('f-cat').value = '';
@@ -2026,17 +2041,11 @@ function renderTxns() {
   cardSel.innerHTML = '<option value="">All cards</option>' + allCards.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
   cardSel.value = currentCardVal;
 
-  // Type pills + Category pills
+  // Type pills
   const pillsEl = document.getElementById('txn-cat-pills');
   if (pillsEl) {
     const tp = (type, label) => `<span class="tcp tcp-transfer${txnTypeFilter === type ? ' active' : ''}" onclick="setTxnTypePill('${type}')">${label}</span>`;
-    const typePills = tp('expenses','Expenses') + tp('transfer','Transfers') + tp('income','Income');
-    const catPills = CATS.map(c => {
-      const active = !txnTypeFilter && cf === c.key;
-      const style = active ? `background:${c.bg};color:${c.color};border-color:${c.color};` : '';
-      return `<span class="tcp" style="${style}" onclick="setTxnCatPill('${c.key}')">${c.label}</span>`;
-    }).join('');
-    pillsEl.innerHTML = typePills + '<span style="display:inline-block;width:1px;height:16px;background:var(--border);margin:0 4px;vertical-align:middle;"></span>' + catPills;
+    pillsEl.innerHTML = tp('expenses','Expenses') + tp('transfer','Transfers') + tp('income','Income');
   }
   // Sort icons + active column highlight
   const dateIcon = document.getElementById('txn-date-icon');
