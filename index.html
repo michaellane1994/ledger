@@ -3609,7 +3609,7 @@ async function syncFromSheets() {
         date: t.date ? String(t.date).substring(0,10) : t.date
       }));
       learned  = data.learned  || {};
-      incomes  = data.incomes  || [];
+      incomes  = (data.incomes  || []).map(i => ({...i, date: i.date ? String(i.date).substring(0,10) : undefined}));
       savAccts = data.savAccts || [];
       contribs = data.contribs || [];
       recalcAllBalances(); // recalculate from contributions after pull
@@ -3617,6 +3617,7 @@ async function syncFromSheets() {
       trash    = data.trash    || [];
       rentalExpenses = data.rentalExpenses || [];
       if (data.cats) { CATS = data.cats.map(normCat); rebuildCAT(); saveCats(); }
+      repairIncomeDates();
       persist();
       updateSyncDot('ok');
       setSyncLabel('Synced');
@@ -4336,6 +4337,7 @@ function renderAppearance() {
 })();
 
 // ── INIT ─────────────────────────────────────────────────
+repairIncomeDates(); // fix any stored incomes missing dates before first render
 // Prune old trash on load
 const trashCutoff = new Date(); trashCutoff.setDate(trashCutoff.getDate() - 30);
 trash = trash.filter(t => new Date(t.deletedAt) > trashCutoff);
