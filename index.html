@@ -10,13 +10,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 :root {
-  --ink:     #18181b;
-  --bg:      #f4f1ec;
-  --surface: #ffffff;
-  --border:  #e8e2d8;
-  --muted:   #71717a;
-  --faint:   #a1a1aa;
-  --accent:  #c15c1e;
+  --ink:        #18181b;
+  --bg:         #f4f1ec;
+  --surface:    #ffffff;
+  --border:     #e8e2d8;
+  --muted:      #71717a;
+  --faint:      #a1a1aa;
+  --accent:     #c15c1e;
+  --sidebar-bg: #18181b;
+  --row-hover:  rgba(0,0,0,.03);
   --radius:  14px;
   --radius-sm: 8px;
   --shadow:    0 1px 3px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.04);
@@ -42,7 +44,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .shell{display:flex;min-height:100vh;overflow-x:hidden;max-width:100vw;}
 
 /* ── SIDEBAR ── */
-.sidebar{width:228px;min-height:100vh;background:var(--ink);position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column;}
+.sidebar{width:228px;min-height:100vh;background:var(--sidebar-bg);position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column;}
 .logo{padding:26px 22px 18px;border-bottom:1px solid rgba(255,255,255,.07);}
 .logo h1{font-family:'Playfair Display',serif;font-size:20px;color:#fff;}
 .logo span{font-size:11px;color:rgba(255,255,255,.3);letter-spacing:.6px;text-transform:uppercase;margin-top:2px;display:block;}
@@ -68,13 +70,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 /* ── DARK MODE ── */
 [data-theme="dark"]{
   --ink:#ede8e1;--bg:#19170f;--surface:#242018;--border:#38342c;--muted:#9c9488;--faint:#6b6358;--accent:#d4703a;
+  --sidebar-bg:#131109;--row-hover:#2c2820;
   --shadow:0 1px 3px rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.2);--shadow-lg:0 8px 32px rgba(0,0,0,.45);
   --c-groceries-bg:#0d2b1a;--c-eatingout-bg:#2a1508;--c-liquor-bg:#250a18;--c-home-bg:#141428;
   --c-bills-bg:#0a1540;--c-gym-bg:#041e20;--c-shopping-bg:#1c0830;--c-misc-bg:#1a1c22;
   --c-transport-bg:#051828;--c-travel-bg:#041830;--c-activities-bg:#2a0818;--c-health-bg:#052820;--c-puppies-bg:#281002;
 }
-[data-theme="dark"] .sidebar{background:#131109;}
-[data-theme="dark"] tbody tr:hover{background:#2c2820;}
+[data-theme="dark"] tbody tr:hover{background:var(--row-hover);}
 [data-theme="dark"] .refund-badge{background:#0d2b1a;color:#5dbd85;}
 [data-theme="dark"] .income-badge{background:#0a1540;color:#6ea8da;}
 [data-theme="dark"] .savings-badge{background:#2a1a02;color:#dba050;}
@@ -83,6 +85,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 [data-theme="dark"] #apps-script-code{background:#0d1117;color:#c9d1d9;}
 [data-theme="dark"] input[type="text"],
 [data-theme="dark"] input[type="url"]{background:var(--bg);color:var(--ink);border-color:var(--border);}
+.theme-picker{display:flex;flex-wrap:wrap;gap:10px;}.theme-option{cursor:pointer;text-align:center;}
+.theme-preview{width:60px;height:40px;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color .15s;display:flex;flex-direction:column;}
+.theme-preview-top{flex:1;padding:7px 8px;display:flex;flex-direction:column;gap:3px;}
+.theme-preview-base{height:14px;flex-shrink:0;}
+.theme-option.tactive .theme-preview{border-color:var(--accent);}
+.theme-option:not(.tactive):hover .theme-preview{border-color:var(--muted);}
+.theme-name{font-size:10px;color:var(--muted);margin-top:5px;line-height:1;}
+.theme-option.tactive .theme-name{color:var(--ink);font-weight:600;}
 .custom-badge{font-size:10px;color:var(--accent);background:#fdf0e8;padding:2px 7px;border-radius:100px;font-weight:600;}
 [data-theme="dark"] .custom-badge{background:#2a1a02;}
 .btn-danger{color:#dc2626;border-color:#fecaca;}
@@ -726,6 +736,14 @@ tbody tr:hover .del-btn{opacity:1;}
     <!-- SETTINGS -->
     <div class="view" id="view-settings">
       <div id="setup-banner-wrap"></div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-head" onclick="toggleSettingsSec('appearance')" style="cursor:pointer;">
+          <div class="card-title">Appearance</div>
+          <span class="sec-toggle" id="chev-appearance">▾</span>
+        </div>
+        <div class="card-body sec-body" id="sec-appearance"></div>
+      </div>
 
       <div class="card" style="margin-bottom:18px;">
         <div class="card-head" onclick="toggleSettingsSec('people')" style="cursor:pointer;">
@@ -1427,6 +1445,8 @@ const DEFAULT_CATS = [
   { key:'bills',      label:'Bills',       color:'#3050a8', kw:['bc hydro','bchydro','fortis','shaw ','telus','rogers','bell canada','enbridge','hydro ','internet','wireless plan','phone plan','insurance','strata fee','cra','government','municipal','property tax','water ','utility'] },
   { key:'gym',        label:'Gym',         color:'#0d8a90', kw:['goodlife','anytime fitness','equinox','ymca','limelight','crossfit','soulcycle','orangetheory','fitness','gym','pilates','yoga ','barre','f45','peloton'] },
   { key:'shopping',   label:'Shopping',    color:'#9040c8', kw:['amazon','aritzia','lululemon','h&m','zara','banana republic','gap','old navy','winners','marshalls','hudson','bay ','nordstrom','saks','ssense','foot locker','nike','adidas','apple store','best buy','sport chek','mec','arcteryx','uniqlo','anthropologie','free people','everlane','holt renfrew','flannels','revolve'] },
+  { key:'hubby',      label:'Hubby',       color:'#4878b0', kw:[] },
+  { key:'wifey',      label:'Wifey',       color:'#c85080', kw:[] },
   { key:'misc',       label:'Misc',        color:'#606878', kw:[] },
   { key:'transport',  label:'Transport',   color:'#2e7ab0', kw:['translink','compass card','uber','lyft','evo ','modo ','car2go','parking','impark','sp+','petro','shell','esso','chevron','husky','ultramar','via rail','greyhound','taxi','yellow cab','accessible transit'] },
   { key:'travel',     label:'Travel',      color:'#1878c8', kw:['air canada','westjet','flair','porter air','delta','united','american air','expedia','hotels.com','airbnb','marriott','hilton','hyatt','fairmont','hertz','avis','budget rent','enterprise','booking.com','kayak','trivago','vrbo','hostelworld','eurail','amtrak','british airways','klm','lufthansa'] },
@@ -3299,7 +3319,7 @@ function applyJointSetting() {
   });
 }
 
-const SEC_DEFAULTS = { people:false, cats:false, 'income-types':false, 'savings-types':false, sheets:true, sync:true, setup:false };
+const SEC_DEFAULTS = { appearance:true, people:false, cats:false, 'income-types':false, 'savings-types':false, sheets:true, sync:true, setup:false };
 
 function getSecStates() {
   try { return JSON.parse(localStorage.getItem('l3_sec_states') || '{}'); } catch(e) { return {}; }
@@ -3333,6 +3353,7 @@ function renderSettings() {
   const jt = document.getElementById('toggle-joint');
   if (jt) jt.checked = showJoint;
   initSecStates();
+  renderAppearance();
   renderCatManagement();
   renderTypeManagement();
 }
@@ -4054,20 +4075,84 @@ document.querySelectorAll('.nav-item').forEach(el => {
   });
 });
 
-// ── DARK MODE ────────────────────────────────────────────
-function applyDark(dark) {
-  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-  const btn = document.getElementById('dark-toggle');
-  if (btn) btn.classList.toggle('on', dark);
+// ── THEMES ───────────────────────────────────────────────
+const THEMES = {
+  'light':         { dark:false, label:'Default',  bg:'#f4f1ec', surface:'#ffffff',  border:'#e8e2d8', ink:'#18181b',  muted:'#71717a', faint:'#a1a1aa', accent:'#c15c1e', sidebarBg:'#18181b', rowHover:'rgba(0,0,0,.03)', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
+  'cream':         { dark:false, label:'Cream',    bg:'#f0ebe0', surface:'#faf7f0',  border:'#e0d8c8', ink:'#2a1e0e',  muted:'#8c7c6a', faint:'#b0a090', accent:'#b05a28', sidebarBg:'#2a1e0e', rowHover:'rgba(0,0,0,.03)', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
+  'dark-warm':     { dark:true,  label:'Warm',     bg:'#19170f', surface:'#242018',  border:'#38342c', ink:'#ede8e1',  muted:'#9c9488', faint:'#6b6358', accent:'#d4703a', sidebarBg:'#131109', rowHover:'#2c2820', shadow:'0 1px 3px rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.2)', shadowLg:'0 8px 32px rgba(0,0,0,.45)' },
+  'dark-midnight': { dark:true,  label:'Midnight', bg:'#0f0f12', surface:'#1a1a20',  border:'#2e2e3a', ink:'#e8e8f2',  muted:'#8888a4', faint:'#55556a', accent:'#7090e0', sidebarBg:'#0a0a0e', rowHover:'#252530', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'dark-ocean':    { dark:true,  label:'Ocean',    bg:'#091420', surface:'#0e1e30',  border:'#1a3048', ink:'#d0e4f8',  muted:'#6080a8', faint:'#385870', accent:'#4090d8', sidebarBg:'#060d18', rowHover:'#152538', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'dark-forest':   { dark:true,  label:'Forest',   bg:'#091410', surface:'#0e1e18',  border:'#183028', ink:'#d0e8dc',  muted:'#508870', faint:'#305848', accent:'#3ab870', sidebarBg:'#060d0a', rowHover:'#132018', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'dark-slate':    { dark:true,  label:'Slate',    bg:'#111418', surface:'#1c2028',  border:'#2a3040', ink:'#dce4f0',  muted:'#7080a8', faint:'#485870', accent:'#8090c8', sidebarBg:'#0c1018', rowHover:'#222835', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+};
+
+function applyTheme(key) {
+  const t = THEMES[key] || THEMES.light;
+  const r = document.documentElement;
+  r.style.setProperty('--bg',         t.bg);
+  r.style.setProperty('--surface',    t.surface);
+  r.style.setProperty('--border',     t.border);
+  r.style.setProperty('--ink',        t.ink);
+  r.style.setProperty('--muted',      t.muted);
+  r.style.setProperty('--faint',      t.faint);
+  r.style.setProperty('--accent',     t.accent);
+  r.style.setProperty('--sidebar-bg', t.sidebarBg);
+  r.style.setProperty('--row-hover',  t.rowHover);
+  r.style.setProperty('--shadow',     t.shadow);
+  r.style.setProperty('--shadow-lg',  t.shadowLg);
+  r.setAttribute('data-theme', t.dark ? 'dark' : 'light');
+  document.getElementById('dark-toggle')?.classList.toggle('on', t.dark);
+  localStorage.setItem('l3_theme', key);
 }
-function toggleDark() {
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  localStorage.setItem('l3_darkMode', !isDark);
-  applyDark(!isDark);
+function setTheme(key) {
+  const t = THEMES[key]; if (!t) return;
+  if (t.dark) localStorage.setItem('l3_lastDark', key);
+  else        localStorage.setItem('l3_lastLight', key);
+  applyTheme(key);
+  renderAppearance();
   renderChartSection();
   renderCashflowChart();
 }
-applyDark(localStorage.getItem('l3_darkMode') === 'true');
+function toggleDark() {
+  const current = localStorage.getItem('l3_theme') || 'light';
+  const t = THEMES[current];
+  if (t && t.dark) applyTheme(localStorage.getItem('l3_lastLight') || 'light');
+  else             setTheme(localStorage.getItem('l3_lastDark')  || 'dark-warm');
+}
+function renderAppearance() {
+  const el = document.getElementById('sec-appearance');
+  if (!el) return;
+  const current = localStorage.getItem('l3_theme') || 'light';
+  const group = (darkOnly) => Object.entries(THEMES).filter(([,t]) => t.dark === darkOnly).map(([key, t]) => {
+    const active = current === key ? ' tactive' : '';
+    return `<div class="theme-option${active}" onclick="setTheme('${key}')">
+      <div class="theme-preview">
+        <div class="theme-preview-top" style="background:${t.surface};">
+          <div style="height:3px;background:${t.ink};opacity:.5;border-radius:2px;width:70%;"></div>
+          <div style="height:2px;background:${t.ink};opacity:.3;border-radius:2px;width:50%;"></div>
+          <div style="height:3px;width:14px;background:${t.accent};border-radius:2px;margin-top:2px;"></div>
+        </div>
+        <div class="theme-preview-base" style="background:${t.bg};"></div>
+      </div>
+      <div class="theme-name">${t.label}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);font-weight:600;margin-bottom:10px;">Light</div>
+      <div class="theme-picker">${group(false)}</div>
+    </div>
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);font-weight:600;margin-bottom:10px;">Dark</div>
+      <div class="theme-picker">${group(true)}</div>
+    </div>`;
+}
+// Init — migrate from old l3_darkMode if needed
+(function() {
+  const saved = localStorage.getItem('l3_theme');
+  if (saved && THEMES[saved]) { applyTheme(saved); return; }
+  applyTheme(localStorage.getItem('l3_darkMode') === 'true' ? 'dark-warm' : 'light');
+})();
 
 // ── INIT ─────────────────────────────────────────────────
 // Prune old trash on load
