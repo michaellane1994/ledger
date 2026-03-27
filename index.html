@@ -1928,7 +1928,7 @@ function renderCashflowChart() {
           },
           borderColor: isDark ? 'rgba(45,106,79,.65)' : 'rgba(45,106,79,.5)',
           backgroundColor: 'transparent',
-          borderWidth: 2, pointRadius: 0, tension: 0.1,
+          borderWidth: 2, pointRadius: 0, pointStyle: 'circle', tension: 0.1,
           yAxisID: 'y'
         },
         {
@@ -1940,7 +1940,7 @@ function renderCashflowChart() {
           },
           borderColor: isDark ? 'rgba(48,80,168,.75)' : 'rgba(48,80,168,.55)',
           backgroundColor: 'transparent',
-          borderWidth: 2,
+          borderWidth: 2, pointStyle: 'circle',
           pointRadius: projected.map(p => p ? 3 : 4),
           pointBackgroundColor: projected.map(p =>
             p ? (isDark?'rgba(48,80,168,.35)':'rgba(48,80,168,.2)')
@@ -1955,7 +1955,7 @@ function renderCashflowChart() {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode:'index', intersect:false },
       plugins: {
-        legend: { display:true, position:'top', labels:{ font:{size:11}, boxWidth:12, padding:12, color:tickColor } },
+        legend: { display:true, position:'top', labels:{ font:{size:11}, boxWidth:8, padding:12, color:tickColor, usePointStyle:true, pointStyleWidth:10 } },
         tooltip: {
           callbacks: {
             label: ctx => {
