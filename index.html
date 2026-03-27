@@ -1060,9 +1060,13 @@ function doGet(e) {
       </div>
       <div class="add-field">
         <label>Account Type</label>
-        <select id="as-type">
+        <select id="as-type" onchange="toggleCustomAcctType()">
           <!-- populated dynamically -->
         </select>
+      </div>
+      <div class="add-field" id="as-custom-type-field" style="display:none;">
+        <label>Custom Type Name</label>
+        <input type="text" id="as-type-custom" placeholder="e.g. FHSA, GIC, Pension">
       </div>
       <div class="add-field">
         <label>Person</label>
@@ -3058,11 +3062,21 @@ function renderSavings() {
   }).join('');
 }
 
+function savingsTypeOptions() {
+  return ACCT_TYPES_ARR.map(t => `<option value="${t.key}">${t.label}</option>`).join('') +
+    '<option value="__custom__">+ Custom type...</option>';
+}
+function toggleCustomAcctType() {
+  const isCustom = document.getElementById('as-type').value === '__custom__';
+  document.getElementById('as-custom-type-field').style.display = isCustom ? '' : 'none';
+}
 function openAddSavings() {
   document.getElementById('as-name').value    = '';
   document.getElementById('as-balance').value = '';
   document.getElementById('as-goal').value    = '';
-  document.getElementById('as-type').innerHTML = ACCT_TYPES_ARR.map(t => `<option value="${t.key}">${t.label}</option>`).join('');
+  document.getElementById('as-type-custom').value = '';
+  document.getElementById('as-custom-type-field').style.display = 'none';
+  document.getElementById('as-type').innerHTML = savingsTypeOptions();
   document.getElementById('add-savings-modal').dataset.editId = '';
   document.getElementById('savings-modal-title').textContent = 'Add Account';
   document.getElementById('add-savings-modal').classList.add('open');
@@ -3072,7 +3086,9 @@ function openAddSavings() {
 function editSavings(id) {
   const a = savAccts.find(x => x.id === id);
   if (!a) return;
-  document.getElementById('as-type').innerHTML = ACCT_TYPES_ARR.map(t => `<option value="${t.key}">${t.label}</option>`).join('');
+  document.getElementById('as-type').innerHTML = savingsTypeOptions();
+  document.getElementById('as-type-custom').value = '';
+  document.getElementById('as-custom-type-field').style.display = 'none';
   document.getElementById('as-name').value    = a.name;
   document.getElementById('as-type').value    = a.type;
   document.getElementById('as-person').value  = a.person;
@@ -3087,17 +3103,30 @@ function closeAddSavings() { document.getElementById('add-savings-modal').classL
 
 function confirmAddSavings() {
   const name    = document.getElementById('as-name').value.trim();
-  const type    = document.getElementById('as-type').value;
+  let   type    = document.getElementById('as-type').value;
   const person  = document.getElementById('as-person').value;
   const balance = parseFloat(document.getElementById('as-balance').value) || 0;
   const goal    = parseFloat(document.getElementById('as-goal').value)    || null;
   if (!name) { alert('Please enter an account name.'); return; }
+  if (type === '__custom__') {
+    const customLabel = document.getElementById('as-type-custom').value.trim();
+    if (!customLabel) { alert('Please enter a custom account type name.'); return; }
+    type = customLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'custom';
+    if (!ACCT_TYPES_ARR.find(t => t.key === type)) {
+      ACCT_TYPES_ARR.push({ key: type, label: customLabel, color: '#71717a' });
+      saveAcctTypes();
+    }
+  }
   const editId = document.getElementById('add-savings-modal').dataset.editId;
   if (editId) {
     const a = savAccts.find(x => x.id === editId);
-    if (a) Object.assign(a, { name, type, person, balance, goal });
+    if (a) {
+      const fromContribs = contribs.filter(c => c.accountId === editId)
+        .reduce((s, c) => s + (c.type === 'contribution' ? c.amount : -c.amount), 0);
+      Object.assign(a, { name, type, person, balance, baseBalance: balance - fromContribs, goal });
+    }
   } else {
-    savAccts.push({ id:uid(), name, type, person, balance, goal });
+    savAccts.push({ id:uid(), name, type, person, balance, baseBalance: balance, goal });
   }
   persist(); closeAddSavings(); renderSavings(); renderDashboard(); autoPush();
 }
