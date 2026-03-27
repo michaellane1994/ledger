@@ -193,6 +193,17 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .txn-cat-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
 .tcp{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);user-select:none;white-space:nowrap;}
 .tcp:hover{color:var(--ink);border-color:var(--muted);}
+.tcp-transfer{border-color:#1d4e89;color:#1d4e89;}
+.tcp-transfer.active{background:#1d4e89;color:#fff;}
+.txn-date-input{border:none;background:transparent;font-size:12px;color:var(--faint);font-family:'Inter',sans-serif;cursor:pointer;width:96px;padding:0;outline:none;}
+.txn-date-input:focus{color:var(--ink);}
+.txn-date-input::-webkit-calendar-picker-indicator{opacity:0.35;cursor:pointer;}
+.income-inline{border:none;border-bottom:1px solid transparent;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:inherit;padding:1px 2px;outline:none;}
+.income-inline:hover,.income-inline:focus{border-bottom-color:var(--border);}
+.income-inline.amt{width:80px;text-align:right;font-weight:600;color:#2d6a4f;}
+.income-inline.date{width:96px;font-size:12px;color:var(--faint);}
+.income-inline.date:focus{color:var(--ink);}
+.income-inline.date::-webkit-calendar-picker-indicator{opacity:0.35;cursor:pointer;}
 .th-sort{cursor:pointer;user-select:none;}
 .th-sort:hover{color:var(--ink);}
 .txn-table{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;max-width:100%;}
@@ -982,11 +993,11 @@ function doGet(e) {
 </div>
 </div>
 
-<!-- ADD INCOME MODAL -->
+<!-- ADD / EDIT INCOME MODAL -->
 <div class="modal-overlay" id="add-income-modal">
   <div class="modal">
-    <div class="modal-title">Add Income</div>
-    <div class="modal-sub">Log a salary, transfer from a friend, or other income</div>
+    <div class="modal-title" id="ai-modal-title">Add Income</div>
+    <div class="modal-sub" id="ai-modal-sub">Log a salary, transfer from a friend, or other income</div>
     <div class="add-modal-grid">
       <div class="add-field">
         <label>Date</label>
@@ -1027,7 +1038,7 @@ function doGet(e) {
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button class="btn btn-ghost" onclick="closeAddIncome()">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmAddIncome()">Add →</button>
+      <button class="btn btn-primary" id="ai-confirm-btn" onclick="confirmAddIncome()">Add →</button>
     </div>
   </div>
 </div>
@@ -1615,6 +1626,8 @@ let timeChart;
 let cashflowChart;
 let chartHiddenCats = new Set();
 let txnSort = 'date';
+let txnTransferFilter = false;
+let editingIncomeId = null;
 
 function resetChartFilters() {
   chartHiddenCats.clear();
@@ -1957,9 +1970,25 @@ function setTxnSort(col) {
   renderTxns();
 }
 function setTxnCatPill(key) {
+  txnTransferFilter = false;
   const sel = document.getElementById('f-cat');
   sel.value = sel.value === key ? '' : key;
   renderTxns();
+}
+function setTxnTransferPill() {
+  txnTransferFilter = !txnTransferFilter;
+  if (txnTransferFilter) document.getElementById('f-cat').value = '';
+  renderTxns();
+}
+function saveTxnDate(id, date) {
+  if (!date) return;
+  const t = txns.find(x => x.id === id);
+  if (!t) return;
+  t.date = date;
+  // Keep linked income entry in sync
+  const linked = incomes.find(i => i.fromTxnId === id);
+  if (linked) linked.date = date;
+  persist(); renderDashboard(); renderIncome(); autoPush();
 }
 function renderTxns() {
   const s   = (document.getElementById('f-search').value || '').toLowerCase();
@@ -1992,14 +2021,16 @@ function renderTxns() {
   cardSel.innerHTML = '<option value="">All cards</option>' + allCards.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
   cardSel.value = currentCardVal;
 
-  // Category pills
+  // Category pills + Transfer pill
   const pillsEl = document.getElementById('txn-cat-pills');
   if (pillsEl) {
-    pillsEl.innerHTML = CATS.map(c => {
-      const active = cf === c.key;
+    const transferPill = `<span class="tcp tcp-transfer${txnTransferFilter ? ' active' : ''}" onclick="setTxnTransferPill()">Transfers</span>`;
+    const catPills = CATS.map(c => {
+      const active = !txnTransferFilter && cf === c.key;
       const style = active ? `background:${c.bg};color:${c.color};border-color:${c.color};` : '';
       return `<span class="tcp" style="${style}" onclick="setTxnCatPill('${c.key}')">${c.label}</span>`;
     }).join('');
+    pillsEl.innerHTML = transferPill + catPills;
   }
   // Sort icons
   const dateIcon = document.getElementById('txn-date-icon');
@@ -2008,9 +2039,13 @@ function renderTxns() {
   if (amtIcon)  amtIcon.textContent  = txnSort === 'amount-desc' ? '↓' : txnSort === 'amount-asc' ? '↑' : '↕';
 
   let list = txns.filter(t => {
-    if (s   && !t.merchant.toLowerCase().includes(s)) return false;
-    if (cf  && (t.incomeType || t.savingsAccountId)) return false;
-    if (cf  && t.category !== cf) return false;
+    if (s && !t.merchant.toLowerCase().includes(s)) return false;
+    if (txnTransferFilter) {
+      if (!t.incomeType) return false;
+    } else {
+      if (cf && (t.incomeType || t.savingsAccountId)) return false;
+      if (cf && t.category !== cf) return false;
+    }
     if (cpf && t.person !== cpf) return false;
     if (cdf && t.card !== cdf) return false;
     if (mf  && !t.date.startsWith(mf)) return false;
@@ -2037,8 +2072,12 @@ function renderTxns() {
     const isIncome  = !!t.incomeType;
     const isSavings = !!t.savingsAccountId;
     const savAcct   = isSavings ? savAccts.find(a => a.id === t.savingsAccountId) : null;
+    const linkedCat = (t.incomeType === 'transfer' && t.incomeCategory) ? (CAT[t.incomeCategory] || CAT.misc) : null;
     const catCell = isIncome
-      ? `<button class="income-badge" onclick="openIncomeDD(event,'${t.id}')" title="Click to change">↑ ${INCOME_TYPES[t.incomeType]||t.incomeType} ▾</button>`
+      ? `<span style="display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;">
+           <button class="income-badge" onclick="openIncomeDD(event,'${t.id}')" title="Click to change">↑ ${INCOME_TYPES[t.incomeType]||t.incomeType} ▾</button>
+           ${linkedCat ? `<span class="cat-badge" style="background:${linkedCat.bg};color:${linkedCat.color};font-size:11px;padding:2px 7px;"><span class="cat-badge-dot" style="background:${linkedCat.color};"></span>${linkedCat.label}</span>` : ''}
+         </span>`
       : isSavings
       ? `<button class="savings-badge" onclick="openSavingsDD(event,'${t.id}')" title="Click to change">↓ ${savAcct ? esc(savAcct.name) : 'Savings'} ▾</button>`
       : isRefund
@@ -2048,7 +2087,7 @@ function renderTxns() {
          </span>`
       : `<button class="cat-badge" style="background:${c.bg};color:${c.color};" onclick="openDD(event,'${t.id}')"><span class="cat-badge-dot" style="background:${c.color};"></span>${c.label} ▾</button>`;
     return `<tr class="${isRefund ? 'refund-row' : ''}">
-      <td style="color:var(--faint);font-size:12px;width:92px;">${t.date}</td>
+      <td style="width:100px;"><input type="date" class="txn-date-input" value="${t.date}" onchange="saveTxnDate('${t.id}',this.value)"></td>
       <td style="font-weight:500;">${esc(t.merchant)}</td>
       <td style="position:relative;">${catCell}</td>
       <td><select onchange="savePerson('${t.id}',this.value)" style="border:none;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;outline:none;padding:2px 4px;border-radius:4px;">
@@ -2743,26 +2782,54 @@ function renderIncome() {
     const catCell = linkedCat
       ? `<span class="cat-badge" style="background:${linkedCat.bg};color:${linkedCat.color};">${linkedCat.label}</span>`
       : '<span style="color:var(--faint);font-size:12px;">—</span>';
+    const isLinked = !!i.fromTxnId;
     return `<tr>
-      <td style="color:var(--faint);font-size:12px;width:92px;">${i.date}</td>
+      <td style="width:100px;"><input type="date" class="income-inline date" value="${i.date}" onchange="saveIncomeDate('${i.id}',this.value)" title="${isLinked ? 'Linked to transaction — also updates transaction date' : ''}"></td>
       <td><span class="cat-badge" style="background:${lightenColor(incomeTypeColor(i.type))};color:${incomeTypeColor(i.type)};">${INCOME_TYPES[i.type]||i.type}</span></td>
-      <td style="font-weight:500;">${esc(i.desc||'')}</td>
+      <td style="font-weight:500;"><span class="txn-note" contenteditable="true" onblur="saveIncomeDesc('${i.id}',this.textContent)">${esc(i.desc||'')}</span></td>
       <td>${catCell}</td>
       <td><span class="person-tag">${i.person||'—'}</span></td>
       <td><span class="txn-note" contenteditable="true" onblur="saveIncomeNote('${i.id}',this.textContent)">${esc(i.note||'')}</span></td>
-      <td style="text-align:right;font-weight:600;color:#2d6a4f;">${fmt(i.amount)}</td>
-      <td style="text-align:right;"><button class="del-btn" onclick="deleteIncome('${i.id}')" title="Remove">✕</button></td>
+      <td style="text-align:right;"><input type="number" class="income-inline amt" value="${i.amount}" min="0" step="0.01" onchange="saveIncomeAmount('${i.id}',this.value)" title="${isLinked ? 'Linked to transaction — also updates transaction amount' : ''}"></td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="del-btn" onclick="openEditIncome('${i.id}')" title="Edit" style="margin-right:4px;">✎</button>
+        <button class="del-btn" onclick="deleteIncome('${i.id}')" title="Remove">✕</button>
+      </td>
     </tr>`;
   }).join('');
 }
 
 function openAddIncome() {
+  editingIncomeId = null;
+  document.getElementById('ai-modal-title').textContent = 'Add Income';
+  document.getElementById('ai-modal-sub').textContent = 'Log a salary, transfer from a friend, or other income';
+  document.getElementById('ai-confirm-btn').textContent = 'Add →';
   document.getElementById('ai-date').value   = new Date().toISOString().slice(0,10);
   document.getElementById('ai-amount').value = '';
   document.getElementById('ai-desc').value   = '';
   document.getElementById('ai-note').value   = '';
   document.getElementById('ai-type').innerHTML = INCOME_TYPES_ARR.map(t => `<option value="${t.key}">${t.label}</option>`).join('');
   document.getElementById('ai-category').innerHTML = CATS.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
+  toggleIncomeCategory();
+  document.getElementById('add-income-modal').classList.add('open');
+  setTimeout(() => document.getElementById('ai-desc').focus(), 100);
+}
+function openEditIncome(id) {
+  const i = incomes.find(x => x.id === id);
+  if (!i) return;
+  editingIncomeId = id;
+  document.getElementById('ai-modal-title').textContent = 'Edit Income';
+  document.getElementById('ai-modal-sub').textContent = i.fromTxnId ? 'Linked to a transaction — amount and date also update the source transaction' : 'Edit income entry details';
+  document.getElementById('ai-confirm-btn').textContent = 'Save →';
+  document.getElementById('ai-type').innerHTML = INCOME_TYPES_ARR.map(t => `<option value="${t.key}">${t.label}</option>`).join('');
+  document.getElementById('ai-category').innerHTML = CATS.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
+  document.getElementById('ai-date').value   = i.date;
+  document.getElementById('ai-amount').value = i.amount;
+  document.getElementById('ai-type').value   = i.type;
+  document.getElementById('ai-person').value = i.person || 'Michael';
+  document.getElementById('ai-desc').value   = i.desc || '';
+  document.getElementById('ai-note').value   = i.note || '';
+  if (i.category) document.getElementById('ai-category').value = i.category;
   toggleIncomeCategory();
   document.getElementById('add-income-modal').classList.add('open');
   setTimeout(() => document.getElementById('ai-desc').focus(), 100);
@@ -2783,11 +2850,25 @@ function confirmAddIncome() {
   const desc     = document.getElementById('ai-desc').value.trim();
   const note     = document.getElementById('ai-note').value.trim();
   const category = type === 'transfer' ? document.getElementById('ai-category').value : null;
-  if (!date)              { alert('Please enter a date.'); return; }
+  if (!date)                    { alert('Please enter a date.'); return; }
   if (isNaN(amount)||amount<=0) { alert('Please enter a valid amount.'); return; }
-  if (!desc)              { alert('Please enter a description.'); return; }
-  incomes.push({ id:uid(), date, amount, type, person, desc, note, category });
-  persist(); closeAddIncome(); renderIncome(); renderDashboard(); autoPush();
+  if (!desc)                    { alert('Please enter a description.'); return; }
+  if (editingIncomeId) {
+    const i = incomes.find(x => x.id === editingIncomeId);
+    if (i) {
+      i.date = date; i.amount = amount; i.type = type;
+      i.person = person; i.desc = desc; i.note = note;
+      i.category = category;
+      // Sync linked transaction if any
+      if (i.fromTxnId) {
+        const t = txns.find(x => x.id === i.fromTxnId);
+        if (t) { t.date = date; t.amount = amount; t.incomeType = type; if (category) t.incomeCategory = category; }
+      }
+    }
+  } else {
+    incomes.push({ id:uid(), date, amount, type, person, desc, note, category });
+  }
+  persist(); closeAddIncome(); renderIncome(); renderDashboard(); renderTxns(); autoPush();
 }
 
 function deleteIncome(id) {
@@ -2798,6 +2879,30 @@ function deleteIncome(id) {
 function saveIncomeNote(id, note) {
   const i = incomes.find(x => x.id === id);
   if (i) { i.note = note.trim(); persist(); }
+}
+function saveIncomeDesc(id, desc) {
+  const i = incomes.find(x => x.id === id);
+  if (!i) return;
+  i.desc = desc.trim();
+  if (i.fromTxnId) { const t = txns.find(x => x.id === i.fromTxnId); if (t) t.merchant = i.desc; }
+  persist(); renderDashboard(); autoPush();
+}
+function saveIncomeDate(id, date) {
+  if (!date) return;
+  const i = incomes.find(x => x.id === id);
+  if (!i) return;
+  i.date = date;
+  if (i.fromTxnId) { const t = txns.find(x => x.id === i.fromTxnId); if (t) t.date = date; }
+  persist(); renderDashboard(); renderTxns(); autoPush();
+}
+function saveIncomeAmount(id, val) {
+  const amount = parseFloat(val);
+  if (isNaN(amount) || amount <= 0) return;
+  const i = incomes.find(x => x.id === id);
+  if (!i) return;
+  i.amount = amount;
+  if (i.fromTxnId) { const t = txns.find(x => x.id === i.fromTxnId); if (t) t.amount = amount; }
+  persist(); renderDashboard(); renderTxns(); autoPush();
 }
 
 // ── SAVINGS ──────────────────────────────────────────────
