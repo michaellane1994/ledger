@@ -1926,7 +1926,7 @@ function renderCashflowChart() {
             borderColor: ctx => `rgba(45,106,79,${a(isDark?.65:.5, isDark?.3:.2, ctx.p1DataIndex)})`,
             borderDash:  ctx => projected[ctx.p1DataIndex] ? [6,4] : []
           },
-          borderColor: 'transparent',
+          borderColor: isDark ? 'rgba(45,106,79,.65)' : 'rgba(45,106,79,.5)',
           backgroundColor: 'transparent',
           borderWidth: 2, pointRadius: 0, tension: 0.1,
           yAxisID: 'y'
@@ -1938,7 +1938,7 @@ function renderCashflowChart() {
             borderColor: ctx => `rgba(48,80,168,${a(isDark?.75:.55, isDark?.35:.25, ctx.p1DataIndex)})`,
             borderDash:  ctx => projected[ctx.p1DataIndex] ? [6,4] : []
           },
-          borderColor: 'transparent',
+          borderColor: isDark ? 'rgba(48,80,168,.75)' : 'rgba(48,80,168,.55)',
           backgroundColor: 'transparent',
           borderWidth: 2,
           pointRadius: projected.map(p => p ? 3 : 4),
