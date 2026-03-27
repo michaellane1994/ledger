@@ -17,8 +17,10 @@
   --muted:      #71717a;
   --faint:      #a1a1aa;
   --accent:     #c15c1e;
-  --sidebar-bg: #18181b;
-  --row-hover:  rgba(0,0,0,.03);
+  --sidebar-bg:       #18181b;
+  --row-hover:        rgba(0,0,0,.03);
+  --nav-active-bg:    rgba(193,92,30,.22);
+  --nav-active-color: #e8804a;
   --radius:  14px;
   --radius-sm: 8px;
   --shadow:    0 1px 3px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.04);
@@ -52,7 +54,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .nav-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.25);padding:8px 12px 5px;font-weight:600;}
 .nav-item{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;color:rgba(255,255,255,.5);transition:all .15s;font-size:13px;margin-bottom:2px;user-select:none;}
 .nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.8);}
-.nav-item.active{background:rgba(193,92,30,.22);color:#e8956a;font-weight:500;}
+.nav-item.active{background:var(--nav-active-bg);color:var(--nav-active-color);font-weight:500;}
 .nav-item svg{width:15px;height:15px;flex-shrink:0;}
 .sidebar-foot{padding:14px 22px;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:rgba(255,255,255,.2);}
 .sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;background:#71717a;}
@@ -4077,13 +4079,13 @@ document.querySelectorAll('.nav-item').forEach(el => {
 
 // ── THEMES ───────────────────────────────────────────────
 const THEMES = {
-  'light':         { dark:false, label:'Default',  bg:'#f4f1ec', surface:'#ffffff',  border:'#e8e2d8', ink:'#18181b',  muted:'#71717a', faint:'#a1a1aa', accent:'#c15c1e', sidebarBg:'#1c1c1f', rowHover:'rgba(0,0,0,.03)', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
-  'cream':         { dark:false, label:'Cream',    bg:'#f0ebe0', surface:'#faf7f0',  border:'#e0d8c8', ink:'#2a1e0e',  muted:'#8c7c6a', faint:'#b0a090', accent:'#b05a28', sidebarBg:'#2a1a08', rowHover:'rgba(0,0,0,.03)', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
-  'dark-warm':     { dark:true,  label:'Warm',     bg:'#19170f', surface:'#242018',  border:'#38342c', ink:'#ede8e1',  muted:'#9c9488', faint:'#6b6358', accent:'#d4703a', sidebarBg:'#2a1e0a', rowHover:'#2c2820', shadow:'0 1px 3px rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.2)', shadowLg:'0 8px 32px rgba(0,0,0,.45)' },
-  'dark-midnight': { dark:true,  label:'Midnight', bg:'#0f0f12', surface:'#1a1a20',  border:'#2e2e3a', ink:'#e8e8f2',  muted:'#8888a4', faint:'#55556a', accent:'#7090e0', sidebarBg:'#16162a', rowHover:'#252530', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
-  'dark-ocean':    { dark:true,  label:'Ocean',    bg:'#091420', surface:'#0e1e30',  border:'#1a3048', ink:'#d0e4f8',  muted:'#6080a8', faint:'#385870', accent:'#4090d8', sidebarBg:'#0a2040', rowHover:'#152538', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
-  'dark-forest':   { dark:true,  label:'Forest',   bg:'#091410', surface:'#0e1e18',  border:'#183028', ink:'#d0e8dc',  muted:'#508870', faint:'#305848', accent:'#3ab870', sidebarBg:'#0a2215', rowHover:'#132018', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
-  'dark-slate':    { dark:true,  label:'Slate',    bg:'#111418', surface:'#1c2028',  border:'#2a3040', ink:'#dce4f0',  muted:'#7080a8', faint:'#485870', accent:'#8090c8', sidebarBg:'#141c30', rowHover:'#222835', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'light':         { dark:false, label:'Default',  bg:'#f4f1ec', surface:'#ffffff',  border:'#e8e2d8', ink:'#18181b',  muted:'#71717a', faint:'#a1a1aa', accent:'#c15c1e', sidebarBg:'#1c1c1f', rowHover:'rgba(0,0,0,.03)', navActiveBg:'rgba(193,92,30,.22)',  navActiveColor:'#e8804a', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
+  'cream':         { dark:false, label:'Cream',    bg:'#f0ebe0', surface:'#faf7f0',  border:'#e0d8c8', ink:'#2a1e0e',  muted:'#8c7c6a', faint:'#b0a090', accent:'#b05a28', sidebarBg:'#2a1a08', rowHover:'rgba(0,0,0,.03)', navActiveBg:'rgba(176,90,40,.22)',  navActiveColor:'#d87848', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
+  'dark-warm':     { dark:true,  label:'Warm',     bg:'#19170f', surface:'#242018',  border:'#38342c', ink:'#ede8e1',  muted:'#9c9488', faint:'#6b6358', accent:'#d4703a', sidebarBg:'#2a1e0a', rowHover:'#2c2820',        navActiveBg:'rgba(212,112,58,.25)', navActiveColor:'#f09060', shadow:'0 1px 3px rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.2)', shadowLg:'0 8px 32px rgba(0,0,0,.45)' },
+  'dark-midnight': { dark:true,  label:'Midnight', bg:'#0f0f12', surface:'#1a1a20',  border:'#2e2e3a', ink:'#e8e8f2',  muted:'#8888a4', faint:'#55556a', accent:'#7090e0', sidebarBg:'#16162a', rowHover:'#252530',        navActiveBg:'rgba(112,144,224,.25)',navActiveColor:'#a0b8f4', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'dark-ocean':    { dark:true,  label:'Ocean',    bg:'#091420', surface:'#0e1e30',  border:'#1a3048', ink:'#d0e4f8',  muted:'#6080a8', faint:'#385870', accent:'#4090d8', sidebarBg:'#0a2040', rowHover:'#152538',        navActiveBg:'rgba(64,144,216,.25)', navActiveColor:'#80b8ee', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'dark-forest':   { dark:true,  label:'Forest',   bg:'#091410', surface:'#0e1e18',  border:'#183028', ink:'#d0e8dc',  muted:'#508870', faint:'#305848', accent:'#3ab870', sidebarBg:'#0a2215', rowHover:'#132018',        navActiveBg:'rgba(58,184,112,.25)', navActiveColor:'#70d898', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'dark-slate':    { dark:true,  label:'Slate',    bg:'#111418', surface:'#1c2028',  border:'#2a3040', ink:'#dce4f0',  muted:'#7080a8', faint:'#485870', accent:'#8090c8', sidebarBg:'#141c30', rowHover:'#222835',        navActiveBg:'rgba(128,144,200,.25)',navActiveColor:'#a8b8e0', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
 };
 
 function applyTheme(key) {
@@ -4096,8 +4098,10 @@ function applyTheme(key) {
   r.style.setProperty('--muted',      t.muted);
   r.style.setProperty('--faint',      t.faint);
   r.style.setProperty('--accent',     t.accent);
-  r.style.setProperty('--sidebar-bg', t.sidebarBg);
-  r.style.setProperty('--row-hover',  t.rowHover);
+  r.style.setProperty('--sidebar-bg',       t.sidebarBg);
+  r.style.setProperty('--row-hover',        t.rowHover);
+  r.style.setProperty('--nav-active-bg',    t.navActiveBg);
+  r.style.setProperty('--nav-active-color', t.navActiveColor);
   r.style.setProperty('--shadow',     t.shadow);
   r.style.setProperty('--shadow-lg',  t.shadowLg);
   r.setAttribute('data-theme', t.dark ? 'dark' : 'light');
