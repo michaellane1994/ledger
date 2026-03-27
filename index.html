@@ -23,19 +23,19 @@
   --shadow-lg: 0 8px 32px rgba(0,0,0,.12);
 
   /* category colours */
-  --c-groceries:    #2d6a4f; --c-groceries-bg:    #eaf4ef;
-  --c-eatingout:    #c15c1e; --c-eatingout-bg:    #fdf0e8;
-  --c-liquor:       #9b2335; --c-liquor-bg:       #faeaec;
-  --c-home:         #7c5c2a; --c-home-bg:         #faf3e6;
-  --c-bills:        #1d5c89; --c-bills-bg:        #e8f1fa;
-  --c-gym:          #2e7d60; --c-gym-bg:          #e8f5f0;
-  --c-shopping:     #6b21a8; --c-shopping-bg:     #f3eefa;
-  --c-misc:         #71717a; --c-misc-bg:         #f4f4f5;
-  --c-transport:    #1a5276; --c-transport-bg:    #e8eff7;
-  --c-travel:       #1b4f72; --c-travel-bg:       #e3eef9;
-  --c-activities:   #a04020; --c-activities-bg:   #fdf0ea;
-  --c-health:       #155a6c; --c-health-bg:       #e5f2f5;
-  --c-puppies:      #b45309; --c-puppies-bg:      #fef3e2;
+  --c-groceries:    #3d8b5e; --c-groceries-bg:    #ecf5ef;
+  --c-eatingout:    #d4603a; --c-eatingout-bg:    #fdf0ea;
+  --c-liquor:       #9e3060; --c-liquor-bg:       #f7eaf2;
+  --c-home:         #6060a8; --c-home-bg:         #eeeef8;
+  --c-bills:        #3050a8; --c-bills-bg:        #edf1fc;
+  --c-gym:          #0d8a90; --c-gym-bg:          #e5f4f5;
+  --c-shopping:     #9040c8; --c-shopping-bg:     #f3ecfd;
+  --c-misc:         #606878; --c-misc-bg:         #f0f1f3;
+  --c-transport:    #2e7ab0; --c-transport-bg:    #e8f3fb;
+  --c-travel:       #1878c8; --c-travel-bg:       #e5f0fb;
+  --c-activities:   #c03878; --c-activities-bg:   #fce8f2;
+  --c-health:       #2a9080; --c-health-bg:       #e8f4f2;
+  --c-puppies:      #d07020; --c-puppies-bg:      #fdf3e5;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-size:14px;min-height:100vh;overflow-x:hidden;}
@@ -54,7 +54,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .nav-item svg{width:15px;height:15px;flex-shrink:0;}
 .sidebar-foot{padding:14px 22px;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:rgba(255,255,255,.2);}
 .sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;background:#71717a;}
-.sync-dot.ok{background:#2d6a4f;}
+.sync-dot.ok{background:#16a34a;}
 .sync-dot.busy{background:#c15c1e;animation:pulse .8s ease-in-out infinite;}
 .sync-dot.err{background:#dc2626;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
@@ -69,30 +69,30 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 [data-theme="dark"]{
   --ink:#ede8e1;--bg:#19170f;--surface:#242018;--border:#38342c;--muted:#9c9488;--faint:#6b6358;--accent:#d4703a;
   --shadow:0 1px 3px rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.2);--shadow-lg:0 8px 32px rgba(0,0,0,.45);
-  --c-groceries-bg:#1a2e23;--c-eatingout-bg:#2e1e10;--c-liquor-bg:#2a1215;--c-home-bg:#2a2010;
-  --c-bills-bg:#0f2030;--c-gym-bg:#182b22;--c-shopping-bg:#251535;--c-misc-bg:#1e1e20;
-  --c-transport-bg:#0f2030;--c-travel-bg:#0f2030;--c-activities-bg:#2e1810;--c-health-bg:#0f2530;--c-puppies-bg:#2a1f08;
+  --c-groceries-bg:#0d2b1a;--c-eatingout-bg:#2a1508;--c-liquor-bg:#250a18;--c-home-bg:#141428;
+  --c-bills-bg:#0a1540;--c-gym-bg:#041e20;--c-shopping-bg:#1c0830;--c-misc-bg:#1a1c22;
+  --c-transport-bg:#051828;--c-travel-bg:#041830;--c-activities-bg:#2a0818;--c-health-bg:#052820;--c-puppies-bg:#281002;
 }
 [data-theme="dark"] .sidebar{background:#131109;}
 [data-theme="dark"] tbody tr:hover{background:#2c2820;}
-[data-theme="dark"] .refund-badge{background:#1a2e23;color:#5dbd85;}
-[data-theme="dark"] .income-badge{background:#0f2030;color:#6ea8da;}
-[data-theme="dark"] .savings-badge{background:#2a1f08;color:#dba050;}
+[data-theme="dark"] .refund-badge{background:#0d2b1a;color:#5dbd85;}
+[data-theme="dark"] .income-badge{background:#0a1540;color:#6ea8da;}
+[data-theme="dark"] .savings-badge{background:#2a1a02;color:#dba050;}
 [data-theme="dark"] .setup-banner{background:#2a1f08;border-color:#7c4e1a;}
 [data-theme="dark"] .setup-banner-text{color:#d4a870;}
 [data-theme="dark"] #apps-script-code{background:#0d1117;color:#c9d1d9;}
 [data-theme="dark"] input[type="text"],
 [data-theme="dark"] input[type="url"]{background:var(--bg);color:var(--ink);border-color:var(--border);}
 .custom-badge{font-size:10px;color:var(--accent);background:#fdf0e8;padding:2px 7px;border-radius:100px;font-weight:600;}
-[data-theme="dark"] .custom-badge{background:#2a1f08;}
+[data-theme="dark"] .custom-badge{background:#2a1a02;}
 .btn-danger{color:#dc2626;border-color:#fecaca;}
 [data-theme="dark"] .btn-danger{color:#f87171;border-color:#7f1d1d;}
 .btn-warning{color:#7c3d12;border-color:#f5c07a;}
 [data-theme="dark"] .btn-warning{color:#fbbf24;border-color:#78350f;}
-.clr-credit{color:#2d6a4f;}
+.clr-credit{color:#16a34a;}
 [data-theme="dark"] .clr-credit{color:#5dbd85;}
 .refund-row{background:#f7fdf8;}
-[data-theme="dark"] .refund-row{background:#1a2e23;}
+[data-theme="dark"] .refund-row{background:#0d2b1a;}
 
 /* ── MAIN ── */
 .main{margin-left:228px;flex:1;display:flex;flex-direction:column;min-width:0;max-width:calc(100vw - 228px);padding-top:58px;}
@@ -140,10 +140,25 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .ct-bar{height:100%;border-radius:2px;transition:width .5s ease;}
 .ct-pct{font-size:10px;color:var(--faint);margin-top:4px;}
 
+/* Settings collapsible */
+.sec-toggle{background:none;border:none;cursor:pointer;color:var(--muted);padding:2px 4px;font-size:18px;line-height:1;transition:transform .2s;flex-shrink:0;}
+.sec-toggle.open{transform:rotate(180deg);}
+.sec-body{overflow:hidden;}
+.sec-body.sec-collapsed{display:none;}
+
 /* Charts row */
 .charts-row{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:18px;min-width:0;}
+.chart-controls{padding:12px 18px 8px;display:flex;flex-direction:column;gap:9px;border-bottom:1px solid var(--border);}
+.chart-range{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.chart-range label{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
+.chart-range select{padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;cursor:pointer;}
+.chart-range select:focus{border-color:var(--accent);}
+.chart-cats{display:flex;flex-wrap:wrap;gap:5px;}
+.cc-pill{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;border:1.5px solid transparent;user-select:none;white-space:nowrap;}
+.cc-pill.off{background:var(--surface)!important;color:var(--muted)!important;border-color:var(--border)!important;opacity:.55;text-decoration:line-through;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);}
-.card-head{padding:16px 20px 0;display:flex;align-items:center;justify-content:space-between;}
+.card-head{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}
+.card-head+.card-body{padding-top:0;}
 .card-title{font-family:'Playfair Display',serif;font-size:15px;}
 .card-body{padding:12px 20px 18px;}
 .subcat-rows{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
@@ -163,6 +178,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .filter-bar input,.filter-bar select{padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;}
 .filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent);}
 .filter-bar input{min-width:180px;}
+.txn-cat-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+.tcp{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);user-select:none;white-space:nowrap;}
+.tcp:hover{color:var(--ink);border-color:var(--muted);}
+.th-sort{cursor:pointer;user-select:none;}
+.th-sort:hover{color:var(--ink);}
 .txn-table{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;max-width:100%;}
 table{width:100%;border-collapse:collapse;table-layout:fixed;}
 thead th{text-align:left;padding:11px 15px;font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;background:var(--bg);border-bottom:1px solid var(--border);}
@@ -172,10 +192,10 @@ tbody tr:hover{background:#faf8f5;}
 tbody td{padding:10px 15px;font-size:13.5px;vertical-align:middle;}
 .cat-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:opacity .15s;}
 .cat-badge:hover{opacity:.75;}
-.refund-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;background:#eaf4ef;color:#2d6a4f;border:none;font-family:'Inter',sans-serif;}
-.income-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;background:#eaf0f9;color:#1d4e89;border:none;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity .15s;}
+.refund-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;background:#eaf5ee;color:#2a7a50;border:none;font-family:'Inter',sans-serif;}
+.income-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;background:#dde4f9;color:#1d4ed8;border:none;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity .15s;}
 .income-badge:hover{opacity:.75;}
-.savings-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;background:#fef3e2;color:#b45309;border:none;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity .15s;}
+.savings-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;background:#fdf3e2;color:#b87820;border:none;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity .15s;}
 .savings-badge:hover{opacity:.75;}
 .cat-badge-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 .person-tag{display:inline-flex;align-items:center;font-size:11px;color:var(--muted);padding:2px 7px;background:var(--bg);border-radius:100px;}
@@ -455,13 +475,33 @@ tbody tr:hover .del-btn{opacity:1;}
 
       <div class="charts-row">
         <div class="card">
-          <div class="card-head"><div class="card-title">Spend by Month &amp; Category</div></div>
+          <div class="card-head">
+            <div class="card-title">Spend by Month &amp; Category</div>
+            <button class="btn btn-ghost btn-sm" onclick="resetChartFilters()">Reset</button>
+          </div>
+          <div class="chart-controls">
+            <div class="chart-range">
+              <label>From</label>
+              <select id="chart-from" onchange="renderChartSection()"></select>
+              <label>To</label>
+              <select id="chart-to" onchange="renderChartSection()"></select>
+            </div>
+            <div class="chart-cats" id="chart-cats"></div>
+          </div>
           <div class="card-body" style="padding-bottom:16px;"><canvas id="timeChart"></canvas></div>
         </div>
         <div class="card">
           <div class="card-head"><div class="card-title">Top Categories</div></div>
           <div class="card-body"><div class="subcat-rows" id="subcat-rows"></div></div>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-head">
+          <div class="card-title">Cash Flow Forecast</div>
+          <span id="cashflow-sub" style="font-size:11px;color:var(--muted);"></span>
+        </div>
+        <div class="card-body" style="padding-bottom:16px;"><canvas id="cashflowChart"></canvas></div>
       </div>
 
       <div class="card">
@@ -498,12 +538,13 @@ tbody tr:hover .del-btn{opacity:1;}
           <option value="">All months</option>
         </select>
       </div>
+      <div class="txn-cat-pills" id="txn-cat-pills"></div>
       <div class="txn-table">
         <table>
           <thead>
             <tr>
-              <th>Date</th><th>Merchant</th><th>Category</th><th>Person</th><th>Card</th><th>Note</th>
-              <th style="text-align:right;">Amount</th>
+              <th class="th-sort" onclick="setTxnSort('date')">Date <span id="txn-date-icon" style="font-size:10px;">↓</span></th><th>Merchant</th><th>Category</th><th>Person</th><th>Card</th><th>Note</th>
+              <th style="text-align:right;" class="th-sort" onclick="setTxnSort('amount')">Amount <span id="txn-amt-icon" style="font-size:10px;">↕</span></th>
             </tr>
           </thead>
           <tbody id="txn-body"></tbody>
@@ -687,8 +728,11 @@ tbody tr:hover .del-btn{opacity:1;}
       <div id="setup-banner-wrap"></div>
 
       <div class="card" style="margin-bottom:18px;">
-        <div class="card-head"><div class="card-title">People</div></div>
-        <div class="card-body">
+        <div class="card-head" onclick="toggleSettingsSec('people')" style="cursor:pointer;">
+          <div class="card-title">People</div>
+          <span class="sec-toggle" id="chev-people">▾</span>
+        </div>
+        <div class="card-body sec-body" id="sec-people">
           <p style="font-size:12.5px;color:var(--muted);margin-bottom:14px;">Michael &amp; Lili are fixed. Toggle the shared option below.</p>
           <div style="display:flex;align-items:center;justify-content:space-between;">
             <div>
@@ -702,49 +746,61 @@ tbody tr:hover .del-btn{opacity:1;}
       </div>
 
       <div class="card" style="margin-bottom:18px;">
-        <div class="card-head">
+        <div class="card-head" onclick="toggleSettingsSec('cats')" style="cursor:pointer;">
           <div class="card-title">Expense Categories</div>
-          <button class="btn btn-primary btn-sm" onclick="openAddCat()">
+          <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openAddCat()">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path d="M12 4v16m-8-8h16"/></svg>
             Add Category
           </button>
+          <span class="sec-toggle" id="chev-cats">▾</span>
+          </div>
         </div>
-        <div class="card-body">
+        <div class="card-body sec-body" id="sec-cats">
           <div id="cat-management-list" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
       </div>
 
       <div class="card" style="margin-bottom:18px;">
-        <div class="card-head">
+        <div class="card-head" onclick="toggleSettingsSec('income-types')" style="cursor:pointer;">
           <div class="card-title">Income Types</div>
-          <button class="btn btn-primary btn-sm" onclick="openAddType('income')">
+          <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openAddType('income')">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path d="M12 4v16m-8-8h16"/></svg>
             Add Type
           </button>
+          <span class="sec-toggle" id="chev-income-types">▾</span>
+          </div>
         </div>
-        <div class="card-body">
+        <div class="card-body sec-body" id="sec-income-types">
           <div id="income-type-list" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
       </div>
 
       <div class="card" style="margin-bottom:18px;">
-        <div class="card-head">
+        <div class="card-head" onclick="toggleSettingsSec('savings-types')" style="cursor:pointer;">
           <div class="card-title">Savings Account Types</div>
-          <button class="btn btn-primary btn-sm" onclick="openAddType('savings')">
+          <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openAddType('savings')">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path d="M12 4v16m-8-8h16"/></svg>
             Add Type
           </button>
+          <span class="sec-toggle" id="chev-savings-types">▾</span>
+          </div>
         </div>
-        <div class="card-body">
+        <div class="card-body sec-body" id="sec-savings-types">
           <div id="savings-type-list" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
       </div>
 
       <div class="card" style="margin-bottom:18px;">
-        <div class="card-head"><div class="card-title">Google Sheets Sync</div></div>
-        <div class="card-body">
+        <div class="card-head" onclick="toggleSettingsSec('sheets')" style="cursor:pointer;">
+          <div class="card-title">Google Sheets Sync</div>
+          <span class="sec-toggle" id="chev-sheets">▾</span>
+        </div>
+        <div class="card-body sec-body" id="sec-sheets">
           <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
-            Connect to a Google Sheet so your data syncs across all your devices. 
+            Connect to a Google Sheet so your data syncs across all your devices.
             Follow the setup guide below to get your Web App URL, then paste it here.
           </p>
           <div style="display:flex;gap:10px;align-items:flex-end;">
@@ -761,8 +817,11 @@ tbody tr:hover .del-btn{opacity:1;}
       </div>
 
       <div class="card" style="margin-bottom:18px;">
-        <div class="card-head"><div class="card-title">Sync Controls</div></div>
-        <div class="card-body">
+        <div class="card-head" onclick="toggleSettingsSec('sync')" style="cursor:pointer;">
+          <div class="card-title">Google Sheet Sync Controls</div>
+          <span class="sec-toggle" id="chev-sync">▾</span>
+        </div>
+        <div class="card-body sec-body" id="sec-sync">
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button class="btn btn-primary" onclick="syncToSheets()">↑ Push to Google Sheets</button>
             <button class="btn btn-ghost" onclick="syncFromSheets()">↓ Pull from Google Sheets</button>
@@ -784,8 +843,11 @@ tbody tr:hover .del-btn{opacity:1;}
       </div>
 
       <div class="card">
-        <div class="card-head"><div class="card-title">Setup Guide</div></div>
-        <div class="card-body">
+        <div class="card-head" onclick="toggleSettingsSec('setup')" style="cursor:pointer;">
+          <div class="card-title">Google Sheets Setup Guide</div>
+          <span class="sec-toggle" id="chev-setup">▾</span>
+        </div>
+        <div class="card-body sec-body" id="sec-setup">
           <div style="font-size:13px;color:var(--muted);line-height:1.8;">
             <p style="margin-bottom:12px;">Follow these steps once to connect your Google Sheet:</p>
             <ol style="padding-left:18px;display:flex;flex-direction:column;gap:10px;">
@@ -1159,7 +1221,10 @@ function doGet(e) {
 <div class="modal-overlay" id="add-modal">
   <div class="modal">
     <div class="modal-title">Add Transaction</div>
-    <div class="modal-sub">Manually add an expense, reimbursement, or transfer</div>
+    <div style="display:flex;gap:0;margin:10px 0 16px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;width:fit-content;">
+      <button id="add-type-expense" onclick="setAddType('expense')" style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--accent);color:#fff;font-family:'Inter',sans-serif;">Expense</button>
+      <button id="add-type-refund"  onclick="setAddType('refund')"  style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--surface);color:var(--muted);font-family:'Inter',sans-serif;">Refund</button>
+    </div>
     <div class="add-modal-grid">
       <div class="add-field">
         <label>Date</label>
@@ -1355,25 +1420,39 @@ function lightenColor(hex) {
 }
 
 const DEFAULT_CATS = [
-  { key:'groceries',  label:'Groceries',   color:'#2d6a4f', kw:['safeway','save-on','save on','superstore','loblaws','metro ','sobeys','whole foods','t&t','freshco','costco','independent grocer','farm boy','no frills','walmart','overwaitea','thrifty foods','mayfair','IGA','produce','market'] },
-  { key:'eatingout',  label:'Eating Out',  color:'#c15c1e', kw:['mcdonald','burger king','a&w ','kfc','wendy','subway','pizza','sushi','ramen','restaurant','cafe ','doordash','ubereats','skip','grubhub','earls','cactus','moxies','milestones','boston pizza','the keg','white spot','grill','eatery','bistro','canteen','dine','nandos','chipotle','five guys','toast','lox','miku','cin cin'] },
-  { key:'liquor',     label:'Liquor',      color:'#9b2335', kw:['bc liquor','bcliquor','bc ldb','private liquor','wine','brewery','distillery','beer store','lcbo','saq','liquor depot','cold beer','wine store','craft beer','spirits','bar ','pub ','nightclub','lounge','cocktail'] },
-  { key:'home',       label:'Home',        color:'#7c5c2a', kw:['rent ','mortgage','strata','home depot','rona','ikea','wayfair','bed bath','leons','the brick','sleep country','restoration hardware','cb2','crate','property tax','home insurance','hardware','plumbing','electrician','furniture','mattress','linen','decor','canadian tire','lordco'] },
-  { key:'bills',      label:'Bills',       color:'#1d5c89', kw:['bc hydro','bchydro','fortis','shaw ','telus','rogers','bell canada','enbridge','hydro ','internet','wireless plan','phone plan','insurance','strata fee','cra','government','municipal','property tax','water ','utility'] },
-  { key:'gym',        label:'Gym',         color:'#2e7d60', kw:['goodlife','anytime fitness','equinox','ymca','limelight','crossfit','soulcycle','orangetheory','fitness','gym','pilates','yoga ','barre','f45','peloton'] },
-  { key:'shopping',   label:'Shopping',    color:'#6b21a8', kw:['amazon','aritzia','lululemon','h&m','zara','banana republic','gap','old navy','winners','marshalls','hudson','bay ','nordstrom','saks','ssense','foot locker','nike','adidas','apple store','best buy','sport chek','mec','arcteryx','uniqlo','anthropologie','free people','everlane','holt renfrew','flannels','revolve'] },
-  { key:'misc',       label:'Misc',        color:'#71717a', kw:[] },
-  { key:'transport',  label:'Transport',   color:'#1a5276', kw:['translink','compass card','uber','lyft','evo ','modo ','car2go','parking','impark','sp+','petro','shell','esso','chevron','husky','ultramar','via rail','greyhound','taxi','yellow cab','accessible transit'] },
-  { key:'travel',     label:'Travel',      color:'#1b4f72', kw:['air canada','westjet','flair','porter air','delta','united','american air','expedia','hotels.com','airbnb','marriott','hilton','hyatt','fairmont','hertz','avis','budget rent','enterprise','booking.com','kayak','trivago','vrbo','hostelworld','eurail','amtrak','british airways','klm','lufthansa'] },
-  { key:'activities', label:'Activities',  color:'#a04020', kw:['cineplex','landmark cinema','amc','ticketmaster','eventbrite','concert','theatre','museum','art gallery','escape room','bowling','mini golf','laser tag','arcade','axe throwing','comedy','spa ','massage ','paintball','trampoline','skiing','snowboard','kayak tour','zipline','bungee'] },
-  { key:'health',     label:'Health',      color:'#155a6c', kw:['shoppers drug','rexall','pharmacy','dental','optom','vision care','doctor','clinic','physiotherapy','physio','acupuncture','chiropractic','mental health','therapist','counselling','london drugs','medicentre','walk-in','lab ','medical','naturopath','dietitian'] },
-  { key:'puppies',    label:'Puppies',     color:'#b45309', kw:['vet ','veterinary','animal hospital','pet food','petsmart','pet supplies','petco','dog food','cat food','pet store','puppy','dog grooming','dog walker','dog park','doggy daycare','pet insurance','bark'] },
+  { key:'groceries',  label:'Groceries',   color:'#3d8b5e', kw:['safeway','save-on','save on','superstore','loblaws','metro ','sobeys','whole foods','t&t','freshco','costco','independent grocer','farm boy','no frills','walmart','overwaitea','thrifty foods','mayfair','IGA','produce','market'] },
+  { key:'eatingout',  label:'Eating Out',  color:'#d4603a', kw:['mcdonald','burger king','a&w ','kfc','wendy','subway','pizza','sushi','ramen','restaurant','cafe ','doordash','ubereats','skip','grubhub','earls','cactus','moxies','milestones','boston pizza','the keg','white spot','grill','eatery','bistro','canteen','dine','nandos','chipotle','five guys','toast','lox','miku','cin cin'] },
+  { key:'liquor',     label:'Liquor',      color:'#9e3060', kw:['bc liquor','bcliquor','bc ldb','private liquor','wine','brewery','distillery','beer store','lcbo','saq','liquor depot','cold beer','wine store','craft beer','spirits','bar ','pub ','nightclub','lounge','cocktail'] },
+  { key:'home',       label:'Home',        color:'#6060a8', kw:['rent ','mortgage','strata','home depot','rona','ikea','wayfair','bed bath','leons','the brick','sleep country','restoration hardware','cb2','crate','property tax','home insurance','hardware','plumbing','electrician','furniture','mattress','linen','decor','canadian tire','lordco'] },
+  { key:'bills',      label:'Bills',       color:'#3050a8', kw:['bc hydro','bchydro','fortis','shaw ','telus','rogers','bell canada','enbridge','hydro ','internet','wireless plan','phone plan','insurance','strata fee','cra','government','municipal','property tax','water ','utility'] },
+  { key:'gym',        label:'Gym',         color:'#0d8a90', kw:['goodlife','anytime fitness','equinox','ymca','limelight','crossfit','soulcycle','orangetheory','fitness','gym','pilates','yoga ','barre','f45','peloton'] },
+  { key:'shopping',   label:'Shopping',    color:'#9040c8', kw:['amazon','aritzia','lululemon','h&m','zara','banana republic','gap','old navy','winners','marshalls','hudson','bay ','nordstrom','saks','ssense','foot locker','nike','adidas','apple store','best buy','sport chek','mec','arcteryx','uniqlo','anthropologie','free people','everlane','holt renfrew','flannels','revolve'] },
+  { key:'misc',       label:'Misc',        color:'#606878', kw:[] },
+  { key:'transport',  label:'Transport',   color:'#2e7ab0', kw:['translink','compass card','uber','lyft','evo ','modo ','car2go','parking','impark','sp+','petro','shell','esso','chevron','husky','ultramar','via rail','greyhound','taxi','yellow cab','accessible transit'] },
+  { key:'travel',     label:'Travel',      color:'#1878c8', kw:['air canada','westjet','flair','porter air','delta','united','american air','expedia','hotels.com','airbnb','marriott','hilton','hyatt','fairmont','hertz','avis','budget rent','enterprise','booking.com','kayak','trivago','vrbo','hostelworld','eurail','amtrak','british airways','klm','lufthansa'] },
+  { key:'activities', label:'Activities',  color:'#c03878', kw:['cineplex','landmark cinema','amc','ticketmaster','eventbrite','concert','theatre','museum','art gallery','escape room','bowling','mini golf','laser tag','arcade','axe throwing','comedy','spa ','massage ','paintball','trampoline','skiing','snowboard','kayak tour','zipline','bungee'] },
+  { key:'health',     label:'Health',      color:'#2a9080', kw:['shoppers drug','rexall','pharmacy','dental','optom','vision care','doctor','clinic','physiotherapy','physio','acupuncture','chiropractic','mental health','therapist','counselling','london drugs','medicentre','walk-in','lab ','medical','naturopath','dietitian'] },
+  { key:'puppies',    label:'Puppies',     color:'#d07020', kw:['vet ','veterinary','animal hospital','pet food','petsmart','pet supplies','petco','dog food','cat food','pet store','puppy','dog grooming','dog walker','dog park','doggy daycare','pet insurance','bark'] },
 ];
 
 function normCat(c) { return { kw:[], ...c, bg: lightenColor(c.color) }; }
+const CAT_COLOR_MIGRATION = {
+  '#16a34a':'#3d8b5e','#ea580c':'#d4603a','#be123c':'#9e3060','#92400e':'#6060a8',
+  '#1d4ed8':'#3050a8','#0891b2':'#0d8a90','#9333ea':'#9040c8','#6b7280':'#606878',
+  '#0f766e':'#2e7ab0','#0284c7':'#1878c8','#db2777':'#c03878','#059669':'#2a9080',
+  '#d97706':'#d07020','#c08a30':'#6060a8','#c03545':'#0d8a90','#7050b8':'#1878c8','#c89020':'#c03878'
+};
 function loadCats() {
   const s = localStorage.getItem('l3_cats');
-  if (s) { try { return JSON.parse(s).map(normCat); } catch(e) {} }
+  if (s) {
+    try {
+      const cats = JSON.parse(s).map(c => ({
+        ...c,
+        color: CAT_COLOR_MIGRATION[c.color] || c.color
+      }));
+      return cats.map(normCat);
+    } catch(e) {}
+  }
   return DEFAULT_CATS.map(normCat);
 }
 function saveCats() { localStorage.setItem('l3_cats', JSON.stringify(CATS)); }
@@ -1511,6 +1590,240 @@ window.addEventListener('resize', () => {
 
 // ── DASHBOARD ────────────────────────────────────────────
 let timeChart;
+let cashflowChart;
+let chartHiddenCats = new Set();
+let txnSort = 'date';
+
+function resetChartFilters() {
+  chartHiddenCats.clear();
+  const allExpenses = txns.filter(t => t.amount > 0 && !t.incomeType && !t.savingsAccountId);
+  const allMonths = [...new Set(allExpenses.map(t => t.date.substring(0,7)))].sort();
+  const fromSel = document.getElementById('chart-from');
+  const toSel   = document.getElementById('chart-to');
+  if (fromSel && allMonths.length) { fromSel.value = allMonths[0]; }
+  if (toSel   && allMonths.length) { toSel.value   = allMonths[allMonths.length - 1]; }
+  renderChartSection();
+}
+
+function toggleChartCat(key) {
+  if (chartHiddenCats.has(key)) chartHiddenCats.delete(key);
+  else chartHiddenCats.add(key);
+  renderChartSection();
+}
+
+function renderChartSection() {
+  const allExpenses  = txns.filter(t => t.amount > 0 && !t.incomeType && !t.savingsAccountId);
+  const allAvailMonths = [...new Set(allExpenses.map(t => t.date.substring(0,7)))].sort();
+
+  const fromSel = document.getElementById('chart-from');
+  const toSel   = document.getElementById('chart-to');
+  if (!fromSel || !toSel) return;
+
+  const prevFrom = fromSel.value || allAvailMonths[0];
+  const prevTo   = toSel.value   || allAvailMonths[allAvailMonths.length - 1];
+
+  fromSel.innerHTML = '';
+  toSel.innerHTML   = '';
+  allAvailMonths.forEach(m => {
+    const [y, mo] = m.split('-');
+    const lbl = new Date(+y, mo - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+    fromSel.add(new Option(lbl, m));
+    toSel.add(new Option(lbl, m));
+  });
+  fromSel.value = allAvailMonths.includes(prevFrom) ? prevFrom : (allAvailMonths[0] || '');
+  toSel.value   = allAvailMonths.includes(prevTo)   ? prevTo   : (allAvailMonths[allAvailMonths.length - 1] || '');
+
+  const from = fromSel.value;
+  const to   = toSel.value;
+  let filteredMonths = allAvailMonths;
+  if (from) filteredMonths = filteredMonths.filter(m => m >= from);
+  if (to)   filteredMonths = filteredMonths.filter(m => m <= to);
+
+  const catsEl = document.getElementById('chart-cats');
+  if (catsEl) {
+    catsEl.innerHTML = CATS.map(c => {
+      const on = !chartHiddenCats.has(c.key);
+      return `<span class="cc-pill ${on ? 'on' : 'off'}"
+        style="${on ? `background:${c.color};border-color:${c.color};color:#fff;` : ''}"
+        onclick="toggleChartCat('${c.key}')">${c.label}</span>`;
+    }).join('');
+  }
+
+  const catDatasets = CATS.filter(c => !chartHiddenCats.has(c.key)).map(c => {
+    const data = filteredMonths.map(m =>
+      allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key)
+                 .reduce((s, t) => s + t.amount, 0)
+    );
+    if (data.every(v => v === 0)) return null;
+    return { label: c.label, data, backgroundColor: c.color, borderWidth: 0, borderRadius: 2 };
+  }).filter(Boolean);
+
+  const monthLabels = filteredMonths.map(m => {
+    const [y, mo] = m.split('-');
+    return new Date(+y, mo - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+  });
+
+  const chartHeight = Math.max(200, filteredMonths.length * 44 + 60);
+  const canvas = document.getElementById('timeChart');
+  canvas.style.height    = chartHeight + 'px';
+  canvas.style.maxHeight = 'none';
+
+  const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? '#38342c' : '#f0ece6';
+  const tickColor = isDark ? '#9c9488' : '#71717a';
+
+  if (timeChart) timeChart.destroy();
+  if (catDatasets.length && filteredMonths.length) {
+    timeChart = new Chart(canvas, {
+      type: 'bar',
+      data: { labels: monthLabels, datasets: catDatasets },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.x.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})}`
+            }
+          }
+        },
+        scales: {
+          x: { stacked: true, grid: { color: gridColor }, ticks: { font: { size: 10 }, callback: v => '$' + Math.round(v).toLocaleString(), color: tickColor } },
+          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 }, color: tickColor } }
+        }
+      }
+    });
+  } else if (timeChart) { timeChart.destroy(); timeChart = null; }
+}
+
+function renderCashflowChart() {
+  const now = new Date();
+  const currentYear     = now.getFullYear();
+  const currentMonthStr = `${currentYear}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  const yearMonths = Array.from({length:12}, (_,i) =>
+    `${currentYear}-${String(i+1).padStart(2,'0')}`
+  );
+
+  const incByMonth = {};
+  incomes.forEach(i => {
+    const m = i.date.substring(0,7);
+    incByMonth[m] = (incByMonth[m]||0) + i.amount;
+  });
+
+  const expByMonth = {};
+  txns.filter(t => t.amount > 0 && !t.incomeType && !t.savingsAccountId).forEach(t => {
+    const m = t.date.substring(0,7);
+    expByMonth[m] = (expByMonth[m]||0) + t.amount;
+  });
+
+  // Average last 3 complete months for projection
+  const pastComplete = yearMonths.filter(m => m < currentMonthStr && (incByMonth[m]||expByMonth[m])).slice(-3);
+  const avgInc = pastComplete.length ? pastComplete.reduce((s,m) => s+(incByMonth[m]||0),0)/pastComplete.length : 0;
+  const avgExp = pastComplete.length ? pastComplete.reduce((s,m) => s+(expByMonth[m]||0),0)/pastComplete.length : 0;
+
+  const netData=[], projected=[], incData=[], expData=[];
+  yearMonths.forEach(m => {
+    const future = m > currentMonthStr;
+    const inc = future ? avgInc : (incByMonth[m]||0);
+    const exp = future ? avgExp : (expByMonth[m]||0);
+    incData.push(inc);
+    expData.push(exp);
+    netData.push(inc - exp);
+    projected.push(future);
+  });
+
+  // Running cumulative net
+  let running = 0;
+  const runningData = netData.map(v => { running += v; return running; });
+
+  const labels = yearMonths.map(m => {
+    const [y,mo] = m.split('-');
+    return new Date(+y,mo-1).toLocaleString('default',{month:'short'});
+  });
+
+  const isDark    = document.documentElement.getAttribute('data-theme')==='dark';
+  const gridColor = isDark ? '#38342c' : '#f0ece6';
+  const tickColor = isDark ? '#9c9488' : '#71717a';
+
+  const subEl = document.getElementById('cashflow-sub');
+  if (subEl) subEl.textContent = pastComplete.length
+    ? `Faded = projected from ${pastComplete.length}-month avg`
+    : `${currentYear} — add income entries for projections`;
+
+  const canvas = document.getElementById('cashflowChart');
+  canvas.style.height    = '280px';
+  canvas.style.maxHeight = 'none';
+
+  if (cashflowChart) cashflowChart.destroy();
+  if (netData.some(v=>v!==0) || runningData.some(v=>v!==0)) {
+    cashflowChart = new Chart(canvas, {
+      data: {
+        labels,
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Monthly Net',
+            data: netData,
+            backgroundColor: netData.map((v,i) => {
+              const a = projected[i] ? (isDark ? .3 : .2) : (isDark ? .82 : .55);
+              return v >= 0 ? `rgba(42,144,128,${a})` : `rgba(192,56,30,${a})`;
+            }),
+            borderWidth: 0,
+            borderRadius: 3,
+            yAxisID: 'y'
+          },
+          {
+            type: 'line',
+            label: 'Running Balance',
+            data: runningData,
+            borderColor: isDark ? 'rgba(48,80,168,.75)' : 'rgba(48,80,168,.45)',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [],
+            pointRadius: projected.map(p => p ? 3 : 4),
+            pointBackgroundColor: projected.map(p =>
+              p ? (isDark ? 'rgba(48,80,168,.35)' : 'rgba(48,80,168,.2)')
+                : (isDark ? 'rgba(48,80,168,.85)' : 'rgba(48,80,168,.55)')
+            ),
+            pointBorderWidth: 0,
+            tension: 0.3,
+            yAxisID: 'y2'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode:'index', intersect:false },
+        plugins: {
+          legend: { display:true, position:'top', labels:{ font:{size:11}, boxWidth:12, padding:12, color:tickColor } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const i = ctx.dataIndex;
+                if (ctx.dataset.label === 'Monthly Net') {
+                  const v = netData[i];
+                  const tag = projected[i] ? ' (proj.)' : '';
+                  return ` Net: ${v>=0?'+':'-'}$${Math.abs(v).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}${tag}  (Income $${incData[i].toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})} / Exp $${expData[i].toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})})`;
+                }
+                const v = runningData[i];
+                return ` Running: ${v>=0?'+':'-'}$${Math.abs(v).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x:  { grid:{display:false}, ticks:{font:{size:11},color:tickColor} },
+          y:  { grid:{color:gridColor}, ticks:{font:{size:10},callback:v=>(v>=0?'+':'')+Math.round(v).toLocaleString(),color:tickColor}, title:{display:true,text:'Monthly Net',font:{size:10},color:tickColor} },
+          y2: { position:'right', grid:{display:false}, ticks:{font:{size:10},callback:v=>'$'+Math.round(v).toLocaleString(),color:'rgba(48,80,168,.7)'}, title:{display:true,text:'Running Balance',font:{size:10},color:'rgba(48,80,168,.7)'} }
+        }
+      }
+    });
+  } else if (cashflowChart) { cashflowChart.destroy(); cashflowChart=null; }
+}
 
 function filtered() {
   return selMonth
@@ -1569,75 +1882,9 @@ function renderDashboard() {
     </div>`;
   }).join('') || '<div style="color:var(--faint);font-size:13px;padding:16px 0;">No data this period</div>';
 
-  // Daily bar chart
-  // Horizontal stacked bar: months on y-axis, categories colour-coded
-  const allExpenses = txns.filter(t => t.amount > 0 && !t.incomeType && !t.savingsAccountId);
-  const allMonths   = [...new Set(allExpenses.map(t => t.date.substring(0,7)))].sort();
-
-  const catDatasets = CATS.filter(c => c.key !== 'misc').map(c => {
-    const data = allMonths.map(m =>
-      allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key)
-                 .reduce((s,t) => s + t.amount, 0)
-    );
-    if (data.every(v => v === 0)) return null;
-    return { label: c.label, data, backgroundColor: c.color, borderWidth: 0, borderRadius: 2 };
-  }).filter(Boolean);
-
-  const miscData = allMonths.map(m =>
-    allExpenses.filter(t => t.date.startsWith(m) && t.category === 'misc')
-               .reduce((s,t) => s + t.amount, 0)
-  );
-  if (miscData.some(v => v > 0)) {
-    catDatasets.push({ label: 'Misc', data: miscData, backgroundColor: CAT.misc.color, borderWidth: 0, borderRadius: 2 });
-  }
-
-  const monthLabels = allMonths.map(m => {
-    const [y, mo] = m.split('-');
-    return new Date(y, mo-1).toLocaleString('default', { month: 'long', year: 'numeric' });
-  });
-
-  // Height: 44px per month row + room for legend
-  const chartHeight = Math.max(200, allMonths.length * 44 + 60);
-  const canvas = document.getElementById('timeChart');
-  canvas.style.height = chartHeight + 'px';
-  canvas.style.maxHeight = 'none';
-
-  if (timeChart) timeChart.destroy();
-  if (catDatasets.length && allMonths.length) {
-    timeChart = new Chart(canvas, {
-      type: 'bar',
-      data: { labels: monthLabels, datasets: catDatasets },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'right',
-            labels: { font: { size: 11 }, boxWidth: 12, padding: 10 }
-          },
-          tooltip: {
-            callbacks: {
-              label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.x.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})}`
-            }
-          }
-        },
-        scales: {
-          x: {
-            stacked: true,
-            grid: { color: '#f0ece6' },
-            ticks: { font: { size: 10 }, callback: v => '$' + Math.round(v).toLocaleString() }
-          },
-          y: {
-            stacked: true,
-            grid: { display: false },
-            ticks: { font: { size: 11 }, color: '#71717a' }
-          }
-        }
-      }
-    });
-  } else if (timeChart) { timeChart.destroy(); timeChart = null; }
+  // Chart with filters
+  renderChartSection();
+  renderCashflowChart();
 
   // Summary row — income & savings
   const monthIncomes = incomes.filter(i => !selMonth || i.date.startsWith(selMonth));
@@ -1674,6 +1921,16 @@ function renderDashboard() {
 }
 
 // ── TRANSACTIONS ─────────────────────────────────────────
+function setTxnSort(col) {
+  if (col === 'date') { txnSort = 'date'; }
+  else { txnSort = txnSort === 'amount-desc' ? 'amount-asc' : 'amount-desc'; }
+  renderTxns();
+}
+function setTxnCatPill(key) {
+  const sel = document.getElementById('f-cat');
+  sel.value = sel.value === key ? '' : key;
+  renderTxns();
+}
 function renderTxns() {
   const s   = (document.getElementById('f-search').value || '').toLowerCase();
   const cf  = document.getElementById('f-cat').value;
@@ -1705,14 +1962,34 @@ function renderTxns() {
   cardSel.innerHTML = '<option value="">All cards</option>' + allCards.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
   cardSel.value = currentCardVal;
 
+  // Category pills
+  const pillsEl = document.getElementById('txn-cat-pills');
+  if (pillsEl) {
+    pillsEl.innerHTML = CATS.map(c => {
+      const active = cf === c.key;
+      const style = active ? `background:${c.bg};color:${c.color};border-color:${c.color};` : '';
+      return `<span class="tcp" style="${style}" onclick="setTxnCatPill('${c.key}')">${c.label}</span>`;
+    }).join('');
+  }
+  // Sort icons
+  const dateIcon = document.getElementById('txn-date-icon');
+  const amtIcon  = document.getElementById('txn-amt-icon');
+  if (dateIcon) dateIcon.textContent = txnSort === 'date' ? '↓' : '↕';
+  if (amtIcon)  amtIcon.textContent  = txnSort === 'amount-desc' ? '↓' : txnSort === 'amount-asc' ? '↑' : '↕';
+
   let list = txns.filter(t => {
     if (s   && !t.merchant.toLowerCase().includes(s)) return false;
+    if (cf  && (t.incomeType || t.savingsAccountId)) return false;
     if (cf  && t.category !== cf) return false;
     if (cpf && t.person !== cpf) return false;
     if (cdf && t.card !== cdf) return false;
     if (mf  && !t.date.startsWith(mf)) return false;
     return true;
-  }).sort((a, b) => b.date.localeCompare(a.date));
+  }).sort((a, b) => {
+    if (txnSort === 'amount-desc') return Math.abs(b.amount) - Math.abs(a.amount);
+    if (txnSort === 'amount-asc')  return Math.abs(a.amount) - Math.abs(b.amount);
+    return b.date.localeCompare(a.date);
+  });
 
   const tbody = document.getElementById('txn-body');
   const empty = document.getElementById('txn-empty');
@@ -2339,16 +2616,28 @@ function setStep(n, st) {
 function setProg(p, l) { document.getElementById('prog').style.width = p + '%'; if (l) document.getElementById('prog-lbl').textContent = l; }
 
 // ── ADD TRANSACTION ──────────────────────────────────────
+let addModalType = 'expense';
+
+function setAddType(type) {
+  addModalType = type;
+  const isRefund = type === 'refund';
+  document.getElementById('add-type-expense').style.background = isRefund ? 'var(--surface)' : 'var(--accent)';
+  document.getElementById('add-type-expense').style.color      = isRefund ? 'var(--muted)'   : '#fff';
+  document.getElementById('add-type-refund').style.background  = isRefund ? '#2a9080'        : 'var(--surface)';
+  document.getElementById('add-type-refund').style.color       = isRefund ? '#fff'           : 'var(--muted)';
+  document.getElementById('add-merchant').placeholder = isRefund ? 'e.g. Work expense reimbursement, Insurance claim' : 'e.g. Team lunch, Friend reimbursement';
+}
+
 function openAddModal() {
-  // Populate category dropdown
+  addModalType = 'expense';
+  setAddType('expense');
   const sel = document.getElementById('add-cat');
   sel.innerHTML = CATS.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
-  // Default date to today
-  document.getElementById('add-date').value = new Date().toISOString().slice(0, 10);
-  document.getElementById('add-amount').value = '';
+  document.getElementById('add-date').value     = new Date().toISOString().slice(0,10);
+  document.getElementById('add-amount').value   = '';
   document.getElementById('add-merchant').value = '';
-  document.getElementById('add-card').value = '';
-  document.getElementById('add-note').value = '';
+  document.getElementById('add-card').value     = '';
+  document.getElementById('add-note').value     = '';
   document.getElementById('add-modal').classList.add('open');
   setTimeout(() => document.getElementById('add-merchant').focus(), 100);
 }
@@ -2370,7 +2659,9 @@ function confirmAdd() {
   if (!merchant)          { alert('Please enter a merchant or description.'); return; }
   if (isNaN(amount) || amount <= 0) { alert('Please enter a valid amount.'); return; }
 
-  txns.push({ id: uid(), date, merchant, amount, category, person, card, note, manual: true });
+  const isRefund = addModalType === 'refund';
+  const finalAmount = isRefund ? -amount : amount;
+  txns.push({ id: uid(), date, merchant, amount: finalAmount, category, person, card, note, manual: true, refund: isRefund });
   persist();
   closeAddModal();
 
@@ -3008,12 +3299,40 @@ function applyJointSetting() {
   });
 }
 
+const SEC_DEFAULTS = { people:false, cats:false, 'income-types':false, 'savings-types':false, sheets:true, sync:true, setup:false };
+
+function getSecStates() {
+  try { return JSON.parse(localStorage.getItem('l3_sec_states') || '{}'); } catch(e) { return {}; }
+}
+
+function toggleSettingsSec(id) {
+  const states = getSecStates();
+  states[id] = !states[id];
+  localStorage.setItem('l3_sec_states', JSON.stringify(states));
+  applySecState(id, states[id]);
+}
+
+function applySecState(id, open) {
+  const body   = document.getElementById('sec-' + id);
+  const toggle = document.getElementById('chev-' + id);
+  if (body)   body.classList.toggle('sec-collapsed', !open);
+  if (toggle) toggle.classList.toggle('open', open);
+}
+
+function initSecStates() {
+  const saved = getSecStates();
+  Object.keys(SEC_DEFAULTS).forEach(id => {
+    applySecState(id, id in saved ? saved[id] : SEC_DEFAULTS[id]);
+  });
+}
+
 function renderSettings() {
   const inp = document.getElementById('sheets-url');
   if (inp && sheetsUrl) inp.value = sheetsUrl;
   updateSyncDot(sheetsUrl ? 'ok' : 'off');
   const jt = document.getElementById('toggle-joint');
   if (jt) jt.checked = showJoint;
+  initSecStates();
   renderCatManagement();
   renderTypeManagement();
 }
@@ -3357,10 +3676,34 @@ async function importPdfTransactions() {
 // ── BANK-SPECIFIC PARSERS ─────────────────────────────────
 // All parsers return: [{ date:'YYYY-MM-DD', merchant:'...', amount:number }]
 
+// Extract statement start/end month+year from PDF text.
+// Handles: "DEC 23, 2025 TO JAN 21, 2026" (RBC) and "Dec 24, 2025 - Jan 23, 2026" (Scotia)
+function extractStatementYears(text) {
+  const re = /([A-Za-z]{3})\s+\d{1,2}[,.]?\s*(\d{4})\s*(?:to|-)\s*([A-Za-z]{3})\s+\d{1,2}[,.]?\s*(\d{4})/i;
+  const m = text.match(re);
+  if (!m) return null;
+  const mos = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  return {
+    startMonth: mos[m[1].toLowerCase().substring(0,3)],
+    startYear:  parseInt(m[2]),
+    endMonth:   mos[m[3].toLowerCase().substring(0,3)],
+    endYear:    parseInt(m[4])
+  };
+}
+
+// Return the correct year for a month abbreviation given statement boundaries.
+// For Dec-Jan statements: Dec → startYear (2025), Jan → endYear (2026).
+function yearFor(monthAbbr, sy) {
+  if (!sy || sy.startYear === sy.endYear) return sy ? sy.startYear : new Date().getFullYear();
+  const mos = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  const mn = mos[monthAbbr.toLowerCase().substring(0,3)];
+  return mn >= sy.startMonth ? sy.startYear : sy.endYear;
+}
+
 function parseRBC(text) {
   const txns = [];
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  const year = new Date().getFullYear();
+  const sy = extractStatementYears(text);
 
   // Reference number pattern to skip (long digit strings)
   const refNumRe = /^\d{15,}$/;
@@ -3389,7 +3732,7 @@ function parseRBC(text) {
     // Single-line format (amount on same line)
     let m = line.match(rbcSingleRe);
     if (m) {
-      const date = normDate(m[1] + ' ' + m[2] + ' ' + year);
+      const date = normDate(m[1] + ' ' + m[2] + ' ' + yearFor(m[1], sy));
       if (!date) continue;
       const amt = parseFloat(m[4].replace(/[$,]/g, ''));
       if (isNaN(amt) || amt === 0) continue;
@@ -3402,7 +3745,7 @@ function parseRBC(text) {
     // Multi-line format: dates+merchant on this line, amount on a later line
     m = line.match(rbcDateRe);
     if (m) {
-      const date = normDate(m[1] + ' ' + m[2] + ' ' + year);
+      const date = normDate(m[1] + ' ' + m[2] + ' ' + yearFor(m[1], sy));
       if (!date) continue;
       const merchant = m[3].replace(/\s+/g, ' ').trim();
       // Look ahead past ref number to find the amount line
@@ -3422,7 +3765,7 @@ function parseRBC(text) {
     // RBC chequing
     m = line.match(rbcChqRe);
     if (m) {
-      const date = normDate(m[1] + ' ' + m[2] + ' ' + year);
+      const date = normDate(m[1] + ' ' + m[2] + ' ' + yearFor(m[1], sy));
       if (!date) continue;
       const amt = parseFloat(m[4].replace(/,/g, ''));
       if (isNaN(amt) || amt === 0) continue;
@@ -3435,7 +3778,7 @@ function parseRBC(text) {
     // Simple fallback
     m = line.match(simpleRe);
     if (m) {
-      const date = normDate(m[1] + ' ' + m[2] + ' ' + year);
+      const date = normDate(m[1] + ' ' + m[2] + ' ' + yearFor(m[1], sy));
       if (!date) continue;
       const amt = parseFloat(m[4].replace(/,/g, ''));
       if (isNaN(amt) || amt === 0) continue;
@@ -3482,7 +3825,7 @@ function parseAmex(text) {
 function parseScotia(text) {
   const txns = [];
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  const year = new Date().getFullYear();
+  const sy = extractStatementYears(text);
 
   // Scotia format:
   // Domestic (inline amount):  "001 Feb 24 Feb 25 UBER CANADA/UBERTRIP TORONTO ON 27.98"
@@ -3498,7 +3841,7 @@ function parseScotia(text) {
   for (let i = 0; i < lines.length; i++) {
     const m = lines[i].match(headerRe);
     if (!m) continue;
-    const date = normDate(`${m[2]} ${m[3]} ${year}`);
+    const date = normDate(`${m[2]} ${m[3]} ${yearFor(m[2], sy)}`);
     if (!date) continue;
     const merchant = m[4].trim();
 
@@ -3532,12 +3875,12 @@ function parseCIBC(text) {
   // CIBC Costco/new:   "Jan 26 Jan 27 COSTCO WHOLESALE PORT COQUITLABC Retail and Grocery -33.59"
   const re = /^([A-Za-z]{3})\s+(\d{1,2})(?:\s+[A-Za-z]{3}\s+\d{1,2})?\s+(.+?)\s+([-]?[\d,]+\.\d{2})\s*(CR)?$/;
   const SPEND_CATS = ['Retail and Grocery','Transportation','Dining','Entertainment','Travel','Health','Other Purchases','Other'];
-  const year = new Date().getFullYear();
+  const sy = extractStatementYears(text);
   lines.forEach(line => {
     line = line.trim();
     const m = line.match(re);
     if (!m) return;
-    const date = normDate(`${m[1]} ${m[2]} ${year}`);
+    const date = normDate(`${m[1]} ${m[2]} ${yearFor(m[1], sy)}`);
     if (!date) return;
     let amt = parseFloat(m[4].replace(/,/g,''));
     if (m[5]) amt = -Math.abs(amt); // CR suffix = credit
@@ -3558,12 +3901,12 @@ function parseTD(text) {
   const lines = text.split('\n');
   // TD: "Jan 15 MERCHANT NAME 123.45"
   const re = /^([A-Za-z]{3})\s+(\d{1,2})\s+(.+?)\s+([-]?[\d,]+\.\d{2})\s*$/;
-  const year = new Date().getFullYear();
+  const sy = extractStatementYears(text);
   lines.forEach(line => {
     line = line.trim();
     const m = line.match(re);
     if (!m) return;
-    const date = normDate(`${m[1]} ${m[2]} ${year}`);
+    const date = normDate(`${m[1]} ${m[2]} ${yearFor(m[1], sy)}`);
     if (!date) return;
     const amt = parseFloat(m[4].replace(/,/g,''));
     const merchant = m[3].trim();
@@ -3721,6 +4064,8 @@ function toggleDark() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   localStorage.setItem('l3_darkMode', !isDark);
   applyDark(!isDark);
+  renderChartSection();
+  renderCashflowChart();
 }
 applyDark(localStorage.getItem('l3_darkMode') === 'true');
 
