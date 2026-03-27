@@ -1649,7 +1649,7 @@ let timeChart;
 let cashflowChart;
 let chartHiddenCats  = new Set();
 let cfProjWindow     = parseInt(localStorage.getItem('l3_cf_proj') || '3');
-let cfStartBalance   = localStorage.getItem('l3_cf_start') !== null ? parseFloat(localStorage.getItem('l3_cf_start')) : null; // null = auto from savings
+let cfStartBalance   = parseFloat(localStorage.getItem('l3_cf_start') || '0');
 // Categories treated as fixed recurring costs for spending capacity calculation
 const CF_FIXED_CATS  = new Set(['home', 'bills']);
 let txnSort = 'date-desc';
@@ -1771,9 +1771,8 @@ function renderChartSection() {
 }
 
 function setCfStart(val) {
-  cfStartBalance = val === '' ? null : (parseFloat(val) || 0);
-  if (cfStartBalance === null) localStorage.removeItem('l3_cf_start');
-  else localStorage.setItem('l3_cf_start', cfStartBalance);
+  cfStartBalance = parseFloat(val) || 0;
+  localStorage.setItem('l3_cf_start', cfStartBalance);
   renderCashflowChart();
 }
 function setCfProj(n) {
@@ -1835,9 +1834,7 @@ function renderCashflowChart() {
   });
 
   // Running balance from starting point
-  const autoStart = savAccts.reduce((s,a) => s + (a.balance||0), 0);
-  const startBal  = cfStartBalance !== null ? cfStartBalance : autoStart;
-  let running = startBal;
+  let running = cfStartBalance;
   const runningData = yearMonths.map((_,i) => {
     running += incData[i] + fixedData[i] + discData[i];
     return running;
@@ -1845,10 +1842,7 @@ function renderCashflowChart() {
 
   // Update controls
   const startEl = document.getElementById('cf-start-bal');
-  if (startEl && startEl !== document.activeElement) {
-    startEl.value = cfStartBalance !== null ? cfStartBalance.toFixed(0) : autoStart.toFixed(0);
-    startEl.placeholder = cfStartBalance !== null ? '' : 'auto';
-  }
+  if (startEl && startEl !== document.activeElement) startEl.value = cfStartBalance.toFixed(0);
   const p3 = document.getElementById('cf-proj-3');
   const p6 = document.getElementById('cf-proj-6');
   if (p3) { p3.style.fontWeight = cfProjWindow===3?'700':'400'; p3.style.color = cfProjWindow===3?'var(--ink)':''; }
