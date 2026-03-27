@@ -1631,7 +1631,7 @@ window.addEventListener('resize', () => {
 let timeChart;
 let cashflowChart;
 let chartHiddenCats = new Set();
-let txnSort = 'date';
+let txnSort = 'date-desc';
 let txnTypeFilter = ''; // '', 'expenses', 'transfer', 'income'
 let editingIncomeId = null;
 
@@ -1970,7 +1970,7 @@ function renderDashboard() {
 
 // ── TRANSACTIONS ─────────────────────────────────────────
 function setTxnSort(col) {
-  if (col === 'date') { txnSort = 'date'; }
+  if (col === 'date') { txnSort = txnSort === 'date-desc' ? 'date-asc' : 'date-desc'; }
   else { txnSort = txnSort === 'amount-desc' ? 'amount-asc' : 'amount-desc'; }
   renderTxns();
 }
@@ -2043,10 +2043,10 @@ function renderTxns() {
   const amtIcon  = document.getElementById('txn-amt-icon');
   const dateTh   = document.getElementById('txn-date-th');
   const amtTh    = document.getElementById('txn-amt-th');
-  if (dateIcon) dateIcon.textContent = txnSort === 'date' ? '↓' : '↕';
+  if (dateIcon) dateIcon.textContent = txnSort === 'date-asc' ? '↑' : txnSort === 'date-desc' ? '↓' : '↕';
   if (amtIcon)  amtIcon.textContent  = txnSort === 'amount-desc' ? '↓' : txnSort === 'amount-asc' ? '↑' : '↕';
-  if (dateTh) dateTh.classList.toggle('sort-active', txnSort === 'date');
-  if (amtTh)  amtTh.classList.toggle('sort-active', txnSort !== 'date');
+  if (dateTh) dateTh.classList.toggle('sort-active', txnSort === 'date-desc' || txnSort === 'date-asc');
+  if (amtTh)  amtTh.classList.toggle('sort-active', txnSort === 'amount-desc' || txnSort === 'amount-asc');
 
   let list = txns.filter(t => {
     if (s && !t.merchant.toLowerCase().includes(s)) return false;
@@ -2068,7 +2068,8 @@ function renderTxns() {
   }).sort((a, b) => {
     if (txnSort === 'amount-desc') return Math.abs(b.amount) - Math.abs(a.amount);
     if (txnSort === 'amount-asc')  return Math.abs(a.amount) - Math.abs(b.amount);
-    return b.date.localeCompare(a.date);
+    if (txnSort === 'date-asc')    return (a.date||'').localeCompare(b.date||'');
+    return (b.date||'').localeCompare(a.date||'');
   });
 
   const tbody = document.getElementById('txn-body');
@@ -2825,7 +2826,7 @@ function renderIncome() {
   repairIncomeDates();
   const body  = document.getElementById('income-body');
   const empty = document.getElementById('income-empty');
-  const all   = [...incomes].sort((a,b) => b.date.localeCompare(a.date));
+  const all   = [...incomes].sort((a,b) => (b.date||'').localeCompare(a.date||''));
   const list  = selMonth ? all.filter(i => i.date.startsWith(selMonth)) : all;
   // Update income page total
   const totalEl = document.getElementById('income-page-total');
