@@ -1928,7 +1928,13 @@ function renderCashflowChart() {
           },
           borderColor: isDark ? 'rgba(45,106,79,.65)' : 'rgba(45,106,79,.5)',
           backgroundColor: 'transparent',
-          borderWidth: 2, pointRadius: 0, pointStyle: 'circle', tension: 0.1,
+          borderWidth: 2, pointStyle: 'circle', tension: 0.1,
+          pointRadius: projected.map(p => p ? 3 : 4),
+          pointBackgroundColor: projected.map(p =>
+            p ? (isDark?'rgba(45,106,79,.35)':'rgba(45,106,79,.2)')
+              : (isDark?'rgba(45,106,79,.8)':'rgba(45,106,79,.6)')
+          ),
+          pointBorderWidth: 0,
           yAxisID: 'y'
         },
         {
@@ -1955,7 +1961,13 @@ function renderCashflowChart() {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode:'index', intersect:false },
       plugins: {
-        legend: { display:true, position:'top', labels:{ font:{size:11}, boxWidth:8, padding:12, color:tickColor, usePointStyle:true, pointStyleWidth:10 } },
+        legend: { display:true, position:'top', labels:{ font:{size:11}, padding:12, color:tickColor, usePointStyle:true, pointStyleWidth:8,
+          generateLabels(chart) {
+            const items = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+            items.forEach(item => { if (chart.data.datasets[item.datasetIndex]?.type === 'line') item.lineWidth = 0; });
+            return items;
+          }
+        }},
         tooltip: {
           callbacks: {
             label: ctx => {
