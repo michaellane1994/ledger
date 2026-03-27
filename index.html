@@ -4297,7 +4297,7 @@ function parseGeneric(text) {
 function isSkippable(merchant, amt) {
   if (!merchant || merchant.length < 2) return true;
   if (Math.abs(amt) > 50000 || amt === 0) return true;
-  const skip = /payment|thank you|balance|previous|opening|closing|credit limit|minimum|statement|total|interest|fee rebate|annual/i;
+  const skip = /payment|thank you|balance|previous|opening|closing|credit limit|minimum|statement|total|interest|fee rebate|annual rate|annual interest|annual percentage/i;
   return skip.test(merchant);
 }
 
