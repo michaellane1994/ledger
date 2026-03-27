@@ -2844,7 +2844,7 @@ function renderIncome() {
       : '<span style="color:var(--faint);font-size:12px;">—</span>';
     const isLinked = !!i.fromTxnId;
     return `<tr>
-      <td style="width:100px;font-size:12px;color:var(--muted);white-space:nowrap;">${fmtDate(i.date)}</td>
+      <td style="width:100px;"><input type="date" class="txn-date-input" value="${i.date||''}" onchange="saveIncomeDate('${i.id}',this.value)"></td>
       <td><span class="cat-badge" style="background:${lightenColor(incomeTypeColor(i.type))};color:${incomeTypeColor(i.type)};">${INCOME_TYPES[i.type]||i.type}</span></td>
       <td style="font-weight:500;"><span class="txn-note" contenteditable="true" onblur="saveIncomeDesc('${i.id}',this.textContent)">${esc(i.desc||'')}</span></td>
       <td>${catCell}</td>
