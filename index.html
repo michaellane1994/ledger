@@ -1672,10 +1672,13 @@ function renderChartSection() {
   }
 
   const catDatasets = CATS.filter(c => !chartHiddenCats.has(c.key)).map(c => {
-    const data = filteredMonths.map(m =>
-      allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key)
-                 .reduce((s, t) => s + t.amount, 0)
-    );
+    const data = filteredMonths.map(m => {
+      const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key)
+                               .reduce((s, t) => s + t.amount, 0);
+      const transferred = incomes.filter(i => i.category === c.key && i.fromTxnId && i.date.startsWith(m))
+                                 .reduce((s, i) => s + i.amount, 0);
+      return gross - transferred;
+    });
     if (data.every(v => v === 0)) return null;
     return { label: c.label, data, backgroundColor: c.color, borderWidth: 0, borderRadius: 2 };
   }).filter(Boolean);
@@ -1873,6 +1876,11 @@ function renderDashboard() {
   // Build byCat totals — exclude income-flagged, refunds deduct from their category
   const byCat = {};
   expenses.forEach(t => byCat[t.category] = (byCat[t.category] || 0) + t.amount);
+  // Net off transfer/split incomes that have a linked expense category
+  incomes
+    .filter(i => i.category && i.fromTxnId)
+    .filter(i => !selMonth || i.date.startsWith(selMonth))
+    .forEach(i => { byCat[i.category] = (byCat[i.category] || 0) - i.amount; });
 
   // Render 13-tile grid
   const grid = document.getElementById('cat-grid');
