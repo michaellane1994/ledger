@@ -518,9 +518,21 @@ tbody tr:hover .del-btn{opacity:1;}
       </div>
 
       <div class="card" style="margin-bottom:18px;">
-        <div class="card-head">
+        <div class="card-head" style="flex-wrap:wrap;gap:8px;">
           <div class="card-title">Cash Flow Forecast</div>
-          <span id="cashflow-sub" style="font-size:11px;color:var(--muted);"></span>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span id="cashflow-sub" style="font-size:11px;color:var(--muted);"></span>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <label style="font-size:11px;color:var(--muted);white-space:nowrap;">Start balance</label>
+              <input type="number" id="cf-start-bal" step="1000" placeholder="auto"
+                style="width:88px;font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);"
+                onchange="setCfStart(this.value)">
+            </div>
+            <div style="display:flex;gap:3px;">
+              <button id="cf-proj-3" class="btn btn-ghost btn-sm" onclick="setCfProj(3)" style="font-size:11px;padding:2px 8px;">3m avg</button>
+              <button id="cf-proj-6" class="btn btn-ghost btn-sm" onclick="setCfProj(6)" style="font-size:11px;padding:2px 8px;">6m avg</button>
+            </div>
+          </div>
         </div>
         <div class="card-body" style="padding-bottom:16px;"><canvas id="cashflowChart"></canvas></div>
       </div>
@@ -1635,7 +1647,11 @@ window.addEventListener('resize', () => {
 // ── DASHBOARD ────────────────────────────────────────────
 let timeChart;
 let cashflowChart;
-let chartHiddenCats = new Set();
+let chartHiddenCats  = new Set();
+let cfProjWindow     = parseInt(localStorage.getItem('l3_cf_proj') || '3');
+let cfStartBalance   = localStorage.getItem('l3_cf_start') !== null ? parseFloat(localStorage.getItem('l3_cf_start')) : null; // null = auto from savings
+// Categories treated as fixed recurring costs for spending capacity calculation
+const CF_FIXED_CATS  = new Set(['home', 'bills']);
 let txnSort = 'date-desc';
 let txnTypeFilter = ''; // '', 'expenses', 'transfer', 'income'
 let editingIncomeId = null;
@@ -1754,6 +1770,18 @@ function renderChartSection() {
   } else if (timeChart) { timeChart.destroy(); timeChart = null; }
 }
 
+function setCfStart(val) {
+  cfStartBalance = val === '' ? null : (parseFloat(val) || 0);
+  if (cfStartBalance === null) localStorage.removeItem('l3_cf_start');
+  else localStorage.setItem('l3_cf_start', cfStartBalance);
+  renderCashflowChart();
+}
+function setCfProj(n) {
+  cfProjWindow = n;
+  localStorage.setItem('l3_cf_proj', n);
+  renderCashflowChart();
+}
+
 function renderCashflowChart() {
   const now = new Date();
   const currentYear     = now.getFullYear();
@@ -1763,37 +1791,68 @@ function renderCashflowChart() {
     `${currentYear}-${String(i+1).padStart(2,'0')}`
   );
 
+  // Income by month (exclude transfers)
   const incByMonth = {};
-  incomes.forEach(i => {
-    const m = i.date.substring(0,7);
-    incByMonth[m] = (incByMonth[m]||0) + i.amount;
+  incomes.filter(i => i.type !== 'transfer').forEach(i => {
+    const m = i.date?.substring(0,7);
+    if (m) incByMonth[m] = (incByMonth[m]||0) + i.amount;
   });
 
-  const expByMonth = {};
+  // Expenses split: fixed (home+bills) vs discretionary
+  const fixedByMonth = {};
+  const discByMonth  = {};
   txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId)).forEach(t => {
-    const m = t.date.substring(0,7);
-    expByMonth[m] = (expByMonth[m]||0) + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount);
+    const m = t.date?.substring(0,7);
+    if (!m) return;
+    if (t.incomeType === 'transfer') {
+      discByMonth[m] = (discByMonth[m]||0) - Math.abs(t.amount); // transfers reduce spend
+    } else if (CF_FIXED_CATS.has(t.category)) {
+      fixedByMonth[m] = (fixedByMonth[m]||0) + t.amount;
+    } else {
+      discByMonth[m] = (discByMonth[m]||0) + t.amount;
+    }
   });
 
-  // Average last 3 complete months for projection
-  const pastComplete = yearMonths.filter(m => m < currentMonthStr && (incByMonth[m]||expByMonth[m])).slice(-3);
-  const avgInc = pastComplete.length ? pastComplete.reduce((s,m) => s+(incByMonth[m]||0),0)/pastComplete.length : 0;
-  const avgExp = pastComplete.length ? pastComplete.reduce((s,m) => s+(expByMonth[m]||0),0)/pastComplete.length : 0;
+  // Past complete months for projection avg (exclude current partial month)
+  const pastComplete = yearMonths
+    .filter(m => m < currentMonthStr && (incByMonth[m] || fixedByMonth[m] || discByMonth[m]))
+    .slice(-cfProjWindow);
+  const avgInc   = pastComplete.length ? pastComplete.reduce((s,m)=>s+(incByMonth[m]||0),0)/pastComplete.length : 0;
+  const avgFixed = pastComplete.length ? pastComplete.reduce((s,m)=>s+(fixedByMonth[m]||0),0)/pastComplete.length : 0;
+  const avgDisc  = pastComplete.length ? pastComplete.reduce((s,m)=>s+(discByMonth[m]||0),0)/pastComplete.length : 0;
 
-  const netData=[], projected=[], incData=[], expData=[];
+  const incData=[], fixedData=[], discData=[], capData=[], projected=[];
   yearMonths.forEach(m => {
-    const future = m > currentMonthStr;
-    const inc = future ? avgInc : (incByMonth[m]||0);
-    const exp = future ? avgExp : (expByMonth[m]||0);
+    const isFuture = m > currentMonthStr;
+    const inc   = isFuture ? avgInc   : (incByMonth[m]||0);
+    const fixed = isFuture ? avgFixed : (fixedByMonth[m]||0);
+    const disc  = isFuture ? avgDisc  : (discByMonth[m]||0);
     incData.push(inc);
-    expData.push(exp);
-    netData.push(inc - exp);
-    projected.push(future);
+    fixedData.push(-fixed);        // negative = bar goes down
+    discData.push(-disc);          // negative = bar goes down (transfers already negative so double-neg = positive reduction)
+    capData.push(inc - fixed);     // spending capacity for discretionary
+    projected.push(isFuture);
   });
 
-  // Running cumulative net
-  let running = 0;
-  const runningData = netData.map(v => { running += v; return running; });
+  // Running balance from starting point
+  const autoStart = savAccts.reduce((s,a) => s + (a.balance||0), 0);
+  const startBal  = cfStartBalance !== null ? cfStartBalance : autoStart;
+  let running = startBal;
+  const runningData = yearMonths.map((_,i) => {
+    running += incData[i] + fixedData[i] + discData[i];
+    return running;
+  });
+
+  // Update controls
+  const startEl = document.getElementById('cf-start-bal');
+  if (startEl && startEl !== document.activeElement) {
+    startEl.value = cfStartBalance !== null ? cfStartBalance.toFixed(0) : autoStart.toFixed(0);
+    startEl.placeholder = cfStartBalance !== null ? '' : 'auto';
+  }
+  const p3 = document.getElementById('cf-proj-3');
+  const p6 = document.getElementById('cf-proj-6');
+  if (p3) { p3.style.fontWeight = cfProjWindow===3?'700':'400'; p3.style.color = cfProjWindow===3?'var(--ink)':''; }
+  if (p6) { p6.style.fontWeight = cfProjWindow===6?'700':'400'; p6.style.color = cfProjWindow===6?'var(--ink)':''; }
 
   const labels = yearMonths.map(m => {
     const [y,mo] = m.split('-');
@@ -1803,82 +1862,134 @@ function renderCashflowChart() {
   const isDark    = document.documentElement.getAttribute('data-theme')==='dark';
   const gridColor = isDark ? '#38342c' : '#f0ece6';
   const tickColor = isDark ? '#9c9488' : '#71717a';
+  const a         = (solid, faded, i) => projected[i] ? faded : solid;
 
   const subEl = document.getElementById('cashflow-sub');
   if (subEl) subEl.textContent = pastComplete.length
-    ? `Faded = projected from ${pastComplete.length}-month avg`
+    ? `Faded = projected · capacity = income − fixed costs`
     : `${currentYear} — add income entries for projections`;
 
   const canvas = document.getElementById('cashflowChart');
-  canvas.style.height    = '280px';
+  canvas.style.height    = '300px';
   canvas.style.maxHeight = 'none';
 
+  // Inline plugin: "today" vertical divider
+  const currentIdx = yearMonths.indexOf(currentMonthStr);
+  const todayPlugin = {
+    id: 'todayLine',
+    afterDraw(chart) {
+      if (currentIdx < 0) return;
+      const { ctx, chartArea:{ top, bottom }, scales:{ x } } = chart;
+      const xPos = x.getPixelForValue(currentIdx);
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(xPos, top);
+      ctx.lineTo(xPos, bottom);
+      ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4,3]);
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+
+  const fmtK = v => {
+    const abs = Math.abs(v);
+    return (v < 0 ? '-' : '') + '$' + (abs >= 1000 ? (abs/1000).toFixed(1)+'k' : Math.round(abs).toLocaleString());
+  };
+
   if (cashflowChart) cashflowChart.destroy();
-  if (netData.some(v=>v!==0) || runningData.some(v=>v!==0)) {
-    cashflowChart = new Chart(canvas, {
-      data: {
-        labels,
-        datasets: [
-          {
-            type: 'bar',
-            label: 'Monthly Net',
-            data: netData,
-            backgroundColor: netData.map((v,i) => {
-              const a = projected[i] ? (isDark ? .3 : .2) : (isDark ? .82 : .55);
-              return v >= 0 ? `rgba(42,144,128,${a})` : `rgba(192,56,30,${a})`;
-            }),
-            borderWidth: 0,
-            borderRadius: 3,
-            yAxisID: 'y'
+  cashflowChart = new Chart(canvas, {
+    plugins: [todayPlugin],
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar', label: 'Income',
+          data: incData,
+          backgroundColor: incData.map((_,i) => `rgba(45,106,79,${a(isDark?.7:.55, isDark?.28:.18, i)})`),
+          borderWidth: 0, borderRadius: 2,
+          stack: 'cf', yAxisID: 'y'
+        },
+        {
+          type: 'bar', label: 'Fixed (home + bills)',
+          data: fixedData,
+          backgroundColor: fixedData.map((_,i) => `rgba(180,83,9,${a(isDark?.75:.5, isDark?.28:.18, i)})`),
+          borderWidth: 0, borderRadius: 2,
+          stack: 'cf', yAxisID: 'y'
+        },
+        {
+          type: 'bar', label: 'Discretionary',
+          data: discData,
+          backgroundColor: discData.map((_,i) => `rgba(212,96,58,${a(isDark?.75:.5, isDark?.28:.18, i)})`),
+          borderWidth: 0, borderRadius: 2,
+          stack: 'cf', yAxisID: 'y'
+        },
+        {
+          type: 'line', label: 'Spending capacity',
+          data: capData,
+          segment: {
+            borderColor: ctx => `rgba(45,106,79,${a(isDark?.65:.5, isDark?.3:.2, ctx.p1DataIndex)})`,
+            borderDash:  ctx => projected[ctx.p1DataIndex] ? [6,4] : []
           },
-          {
-            type: 'line',
-            label: 'Running Balance',
-            data: runningData,
-            borderColor: isDark ? 'rgba(48,80,168,.75)' : 'rgba(48,80,168,.45)',
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            borderDash: [],
-            pointRadius: projected.map(p => p ? 3 : 4),
-            pointBackgroundColor: projected.map(p =>
-              p ? (isDark ? 'rgba(48,80,168,.35)' : 'rgba(48,80,168,.2)')
-                : (isDark ? 'rgba(48,80,168,.85)' : 'rgba(48,80,168,.55)')
-            ),
-            pointBorderWidth: 0,
-            tension: 0.3,
-            yAxisID: 'y2'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode:'index', intersect:false },
-        plugins: {
-          legend: { display:true, position:'top', labels:{ font:{size:11}, boxWidth:12, padding:12, color:tickColor } },
-          tooltip: {
-            callbacks: {
-              label: ctx => {
-                const i = ctx.dataIndex;
-                if (ctx.dataset.label === 'Monthly Net') {
-                  const v = netData[i];
-                  const tag = projected[i] ? ' (proj.)' : '';
-                  return ` Net: ${v>=0?'+':'-'}$${Math.abs(v).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}${tag}  (Income $${incData[i].toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})} / Exp $${expData[i].toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})})`;
-                }
-                const v = runningData[i];
-                return ` Running: ${v>=0?'+':'-'}$${Math.abs(v).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+          borderColor: 'transparent',
+          backgroundColor: 'transparent',
+          borderWidth: 2, pointRadius: 0, tension: 0.1,
+          yAxisID: 'y'
+        },
+        {
+          type: 'line', label: 'Running balance',
+          data: runningData,
+          segment: {
+            borderColor: ctx => `rgba(48,80,168,${a(isDark?.75:.55, isDark?.35:.25, ctx.p1DataIndex)})`,
+            borderDash:  ctx => projected[ctx.p1DataIndex] ? [6,4] : []
+          },
+          borderColor: 'transparent',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: projected.map(p => p ? 3 : 4),
+          pointBackgroundColor: projected.map(p =>
+            p ? (isDark?'rgba(48,80,168,.35)':'rgba(48,80,168,.2)')
+              : (isDark?'rgba(48,80,168,.85)':'rgba(48,80,168,.55)')
+          ),
+          pointBorderWidth: 0, tension: 0.3,
+          yAxisID: 'y2'
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { display:true, position:'top', labels:{ font:{size:11}, boxWidth:12, padding:12, color:tickColor } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const i = ctx.dataIndex;
+              const tag = projected[i] ? ' (proj.)' : '';
+              const v = ctx.raw;
+              const abs = n => '$' + Math.abs(n).toLocaleString('en-CA',{minimumFractionDigits:0,maximumFractionDigits:0});
+              if (ctx.dataset.label === 'Income')               return ` Income: ${abs(v)}${tag}`;
+              if (ctx.dataset.label === 'Fixed (home + bills)') return ` Fixed costs: ${abs(v)}${tag}`;
+              if (ctx.dataset.label === 'Discretionary') {
+                const cap = capData[i];
+                const disc = Math.abs(v);
+                const remaining = cap - disc;
+                return ` Discretionary: ${abs(v)}${tag}  (${remaining>=0?abs(remaining)+' capacity left':'over capacity by '+abs(remaining)})`;
               }
+              if (ctx.dataset.label === 'Spending capacity') return ` Capacity for discretionary: ${abs(v)}${tag}`;
+              return ` Running balance: ${v>=0?abs(v):'-'+abs(v)}${tag}`;
             }
           }
-        },
-        scales: {
-          x:  { grid:{display:false}, ticks:{font:{size:11},color:tickColor} },
-          y:  { grid:{color:gridColor}, ticks:{font:{size:10},callback:v=>(v>=0?'+':'')+Math.round(v).toLocaleString(),color:tickColor}, title:{display:true,text:'Monthly Net',font:{size:10},color:tickColor} },
-          y2: { position:'right', grid:{display:false}, ticks:{font:{size:10},callback:v=>'$'+Math.round(v).toLocaleString(),color:'rgba(48,80,168,.7)'}, title:{display:true,text:'Running Balance',font:{size:10},color:'rgba(48,80,168,.7)'} }
         }
+      },
+      scales: {
+        x:  { stacked:true, grid:{display:false}, ticks:{font:{size:11},color:tickColor} },
+        y:  { stacked:true, grid:{color:gridColor}, ticks:{font:{size:10},callback:v=>fmtK(v),color:tickColor}, title:{display:true,text:'Monthly ($)',font:{size:10},color:tickColor} },
+        y2: { position:'right', grid:{display:false}, ticks:{font:{size:10},callback:v=>fmtK(v),color:'rgba(48,80,168,.7)'}, title:{display:true,text:'Running Balance',font:{size:10},color:'rgba(48,80,168,.7)'} }
       }
-    });
-  } else if (cashflowChart) { cashflowChart.destroy(); cashflowChart=null; }
+    }
+  });
 }
 
 function filtered() {
