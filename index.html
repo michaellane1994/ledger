@@ -1279,12 +1279,8 @@ function doGet(e) {
         <input type="text" id="add-merchant" placeholder="e.g. Team lunch, Friend reimbursement">
       </div>
       <div class="add-field" id="add-cat-field">
-        <label>Category</label>
+        <label id="add-cat-label">Category</label>
         <select id="add-cat"></select>
-      </div>
-      <div class="add-field full" id="add-offset-field" style="display:none;">
-        <label>Offsets which expense category? <span style="color:var(--faint);font-weight:400;">(e.g. friend paid back for Activities)</span></label>
-        <select id="add-offset-cat"></select>
       </div>
       <div class="add-field">
         <label>Person</label>
@@ -1644,7 +1640,7 @@ let editingIncomeId = null;
 
 function resetChartFilters() {
   chartHiddenCats.clear();
-  const allExpenses = txns.filter(t => t.amount > 0 && !t.incomeType && !t.savingsAccountId);
+  const allExpenses = txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId));
   const allMonths = [...new Set(allExpenses.map(t => t.date.substring(0,7)))].sort();
   const fromSel = document.getElementById('chart-from');
   const toSel   = document.getElementById('chart-to');
@@ -1660,7 +1656,7 @@ function toggleChartCat(key) {
 }
 
 function renderChartSection() {
-  const allExpenses  = txns.filter(t => t.amount > 0 && !t.incomeType && !t.savingsAccountId);
+  const allExpenses  = txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId));
   const allAvailMonths = [...new Set(allExpenses.map(t => t.date.substring(0,7)))].sort();
 
   const fromSel = document.getElementById('chart-from');
@@ -1765,9 +1761,9 @@ function renderCashflowChart() {
   });
 
   const expByMonth = {};
-  txns.filter(t => t.amount > 0 && !t.incomeType && !t.savingsAccountId).forEach(t => {
+  txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId)).forEach(t => {
     const m = t.date.substring(0,7);
-    expByMonth[m] = (expByMonth[m]||0) + t.amount;
+    expByMonth[m] = (expByMonth[m]||0) + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount);
   });
 
   // Average last 3 complete months for projection
@@ -1886,31 +1882,26 @@ function renderDashboard() {
   renderPills();
   const ts    = filtered();
   // Exclude income-flagged transactions from expense calculations
-  const expenses = ts.filter(t => !t.incomeType && !t.savingsAccountId);
-  const total = expenses.reduce((s, t) => s + t.amount, 0);
-  const refundTotal = expenses.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
-  // Net off transfer/split incomes for hero display (consistent with category tiles)
-  const linkedIncomesTotal = incomes
-    .filter(i => i.category && i.fromTxnId && (!selMonth || i.date.startsWith(selMonth)))
-    .reduce((s, i) => s + i.amount, 0);
+  // Transfers contribute as negative (reduce total like refunds); pure income excluded entirely
+  const expenses = ts.filter(t => t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId));
+  const effectiveAmt = t => t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount;
+  const total = expenses.reduce((s, t) => s + effectiveAmt(t), 0);
+  const creditsTotal = expenses.filter(t => effectiveAmt(t) < 0).reduce((s, t) => s + effectiveAmt(t), 0);
 
-  document.getElementById('hero-total').textContent = fmt(total - linkedIncomesTotal);
-  document.getElementById('hero-sub').textContent   = selMonth ? 'in ' + fmtMonth(selMonth) + (refundTotal < 0 ? '  (' + fmt(Math.abs(refundTotal)) + ' refunded)' : '') : 'all time';
-  document.getElementById('hero-txns').textContent  = expenses.filter(t => t.amount > 0).length;
-  const ud = new Set(expenses.filter(t=>t.amount>0).map(t => t.date)).size || 1;
-  document.getElementById('hero-avg').textContent = fmt(expenses.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0) / ud);
-  const lg = expenses.filter(t=>t.amount>0).reduce((a, b) => b.amount > a.amount ? b : a, { amount: 0, merchant: '—' });
-  document.getElementById('hero-largest').textContent = fmt(lg.amount);
+  document.getElementById('hero-total').textContent = fmt(total);
+  document.getElementById('hero-sub').textContent   = selMonth ? 'in ' + fmtMonth(selMonth) + (creditsTotal < 0 ? '  (' + fmt(Math.abs(creditsTotal)) + ' credited)' : '') : 'all time';
+  const posExpenses = expenses.filter(t => effectiveAmt(t) > 0);
+  document.getElementById('hero-txns').textContent  = posExpenses.length;
+  const ud = new Set(posExpenses.map(t => t.date)).size || 1;
+  document.getElementById('hero-avg').textContent = fmt(posExpenses.reduce((s,t)=>s+effectiveAmt(t),0) / ud);
+  const lg = posExpenses.reduce((a, b) => effectiveAmt(b) > effectiveAmt(a) ? b : a, { amount: 0, merchant: '—' });
+  document.getElementById('hero-largest').textContent = fmt(lg.amount > 0 ? lg.amount : 0);
   document.getElementById('hero-lm').textContent      = lg.merchant || '—';
 
-  // Build byCat totals — exclude income-flagged, refunds deduct from their category
+  // Build byCat totals — transfers already negative, pure income excluded
   const byCat = {};
-  expenses.forEach(t => byCat[t.category] = (byCat[t.category] || 0) + t.amount);
-  // Net off transfer/split incomes that have a linked expense category
-  incomes
-    .filter(i => i.category && i.fromTxnId && (!selMonth || i.date.startsWith(selMonth)))
-    .forEach(i => { byCat[i.category] = (byCat[i.category] || 0) - i.amount; });
-  const netTotal = total - linkedIncomesTotal;
+  expenses.forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + effectiveAmt(t); });
+  const netTotal = total;
 
   // Render 13-tile grid
   const grid = document.getElementById('cat-grid');
@@ -1946,8 +1937,8 @@ function renderDashboard() {
   renderChartSection();
   renderCashflowChart();
 
-  // Summary row — income & savings
-  const monthIncomes = incomes.filter(i => !selMonth || i.date.startsWith(selMonth));
+  // Summary row — exclude transfer-type incomes (already counted as negative in expenses)
+  const monthIncomes = incomes.filter(i => i.type !== 'transfer' && (!selMonth || i.date.startsWith(selMonth)));
   const totalIncome  = monthIncomes.reduce((s, i) => s + i.amount, 0);
   const totalExpenses = total;
   const net = totalIncome - totalExpenses;
@@ -1961,8 +1952,8 @@ function renderDashboard() {
   document.getElementById('dash-savings').textContent    = fmt(totalSavings);
   document.getElementById('dash-savings-sub').textContent = savAccts.length + ' account' + (savAccts.length === 1 ? '' : 's');
 
-  // Recent 5
-  const recent = [...expenses].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  // Recent 5 — positive-amount expenses only (excludes transfers and refunds)
+  const recent = [...expenses].filter(t => effectiveAmt(t) > 0).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
   const el = document.getElementById('recent-txns');
   if (!recent.length) {
     el.innerHTML = '<div class="empty-state" style="padding:32px;"><p>Import a CSV to see transactions</p></div>';
@@ -2092,7 +2083,7 @@ function renderTxns() {
     const amtDisplay = isRefund
       ? `<span class="clr-credit" style="font-weight:600;">−${fmt(Math.abs(t.amount))}</span>`
       : t.incomeType
-      ? `<span class="clr-credit" style="font-weight:600;">+${fmt(t.amount)}</span>`
+      ? `<span class="clr-credit" style="font-weight:600;">−${fmt(Math.abs(t.amount))}</span>`
       : t.savingsAccountId
       ? `<span style="font-weight:600;color:var(--muted);">${fmt(t.amount)}</span>`
       : `<span style="font-weight:600;">${fmt(t.amount)}</span>`;
@@ -2140,10 +2131,11 @@ function renderTxns() {
   const footTot  = document.getElementById('txn-foot-total');
   const footInc  = document.getElementById('txn-foot-income');
   if (foot && footTot) {
-    const expTotal = list.filter(t => !t.incomeType && !t.savingsAccountId).reduce((s,t) => s + t.amount, 0);
-    const incTotal = list.filter(t => t.incomeType).reduce((s,t) => s + t.amount, 0);
+    const effAmt = t => t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount;
+    const expTotal = list.filter(t => t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId)).reduce((s,t) => s + effAmt(t), 0);
+    const incTotal = list.filter(t => t.incomeType && t.incomeType !== 'transfer').reduce((s,t) => s + t.amount, 0);
     foot.style.display = '';
-    footTot.innerHTML = `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-right:6px;">Expenses</span>${fmt(Math.max(expTotal, 0))}`;
+    footTot.innerHTML = `<span style="color:var(--muted);font-weight:400;font-size:11px;margin-right:6px;">Expenses</span>${fmt(expTotal)}`;
     if (incTotal > 0) {
       footInc.style.display = '';
       footInc.innerHTML = `<span class="clr-credit" style="font-weight:600;">+${fmt(incTotal)}</span> <span style="font-size:11px;">income (excluded from total)</span>`;
@@ -2232,9 +2224,9 @@ function applyIncomeFlag(id, type, category) {
   if (!t) return;
   t.incomeType = type;
   if (category) t.incomeCategory = category;
-  // If it was flagged as a refund, clear that — it's income not a refund
   t.refund = false;
-  t.amount = Math.abs(t.amount);
+  // Transfers are negative (reduce expenses like refunds); pure income is positive (excluded from expenses)
+  t.amount = type === 'transfer' ? -Math.abs(t.amount) : Math.abs(t.amount);
   // Add to income tab if not already there
   const already = incomes.some(i => i.fromTxnId === id);
   if (!already) {
@@ -2743,8 +2735,9 @@ function setAddType(type) {
     : type === 'transfer' ? 'e.g. Friend transfer for dinner, Airbnb split'
     : 'e.g. Team lunch, Grocery run';
   document.getElementById('add-merchant').placeholder = ph;
-  document.getElementById('add-offset-field').style.display = type === 'transfer' ? 'block' : 'none';
-  document.getElementById('add-cat-field').style.display    = type === 'transfer' ? 'none'  : 'block';
+  document.getElementById('add-cat-field').style.display = 'block';
+  const catLabel = document.getElementById('add-cat-label');
+  if (catLabel) catLabel.textContent = type === 'transfer' ? 'Expense category it offsets' : 'Category';
 }
 
 function openAddModal() {
@@ -2752,9 +2745,6 @@ function openAddModal() {
   setAddType('expense');
   const sel = document.getElementById('add-cat');
   sel.innerHTML = CATS.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
-  document.getElementById('add-offset-cat').innerHTML =
-    '<option value="">— No specific category —</option>' +
-    CATS.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
   document.getElementById('add-date').value     = new Date().toISOString().slice(0,10);
   document.getElementById('add-amount').value   = '';
   document.getElementById('add-merchant').value = '';
@@ -2783,11 +2773,10 @@ function confirmAdd() {
 
   const isRefund   = addModalType === 'refund';
   const isTransfer = addModalType === 'transfer';
-  const offsetCat  = isTransfer ? document.getElementById('add-offset-cat').value : null;
   const finalAmount = isRefund ? -amount : amount;
-  const newTxn = { id: uid(), date, merchant, amount: finalAmount, category: offsetCat || category, person, card, note, manual: true, refund: isRefund };
+  const newTxn = { id: uid(), date, merchant, amount: finalAmount, category, person, card, note, manual: true, refund: isRefund };
   txns.push(newTxn);
-  if (isTransfer) applyIncomeFlag(newTxn.id, 'transfer', offsetCat || null);
+  if (isTransfer) applyIncomeFlag(newTxn.id, 'transfer', category);
   persist();
   closeAddModal();
 
