@@ -933,8 +933,8 @@ function writeSheet(ss, name, headers, rows) {
   let sheet = ss.getSheetByName(name);
   if (!sheet) sheet = ss.insertSheet(name);
   sheet.clearContents();
-  sheet.appendRow(headers);
-  rows.forEach(r => sheet.appendRow(r));
+  const data = rows.length ? [headers, ...rows] : [headers];
+  sheet.getRange(1, 1, data.length, headers.length).setValues(data);
 }
 
 function readSheet(ss, name, mapper) {
