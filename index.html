@@ -286,7 +286,8 @@ tbody tr:hover .del-btn{opacity:1;}
 
 /* ── INCOME & SAVINGS ── */
 .summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px;}
-.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between;}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:box-shadow .15s;}
+.summary-card:hover{box-shadow:var(--shadow-lg);}
 .sc-left .sc-label{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:6px;}
 .sc-left .sc-val{font-family:'Playfair Display',serif;font-size:28px;}
 .sc-left .sc-sub{font-size:11.5px;color:var(--faint);margin-top:4px;}
@@ -458,7 +459,7 @@ tbody tr:hover .del-btn{opacity:1;}
 
       <!-- Income / Savings summary row -->
       <div class="summary-row" id="summary-row">
-        <div class="summary-card">
+        <div class="summary-card" onclick="goNav('income')">
           <div class="sc-left">
             <div class="sc-label">Income This Month</div>
             <div class="sc-val" id="dash-income">$0</div>
@@ -468,7 +469,7 @@ tbody tr:hover .del-btn{opacity:1;}
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           </div>
         </div>
-        <div class="summary-card">
+        <div class="summary-card" onclick="goNav('transactions')">
           <div class="sc-left">
             <div class="sc-label">Net This Month</div>
             <div class="sc-val" id="dash-net">$0</div>
@@ -478,7 +479,7 @@ tbody tr:hover .del-btn{opacity:1;}
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
           </div>
         </div>
-        <div class="summary-card">
+        <div class="summary-card" onclick="goNav('savings')">
           <div class="sc-left">
             <div class="sc-label">Total Savings</div>
             <div class="sc-val" id="dash-savings">$0</div>
