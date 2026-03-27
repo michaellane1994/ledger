@@ -571,6 +571,14 @@ tbody tr:hover .del-btn{opacity:1;}
             </tr>
           </thead>
           <tbody id="txn-body"></tbody>
+          <tfoot id="txn-foot" style="display:none;">
+            <tr style="border-top:2px solid var(--border);">
+              <td colspan="6" style="padding:10px 14px;font-size:12px;color:var(--muted);">
+                <span id="txn-foot-income" style="margin-right:16px;display:none;"></span>
+              </td>
+              <td style="text-align:right;padding:10px 14px;font-weight:700;font-size:13px;" id="txn-foot-total"></td>
+            </tr>
+          </tfoot>
         </table>
         <div class="empty-state" id="txn-empty" style="display:none;">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
@@ -1253,8 +1261,9 @@ function doGet(e) {
   <div class="modal">
     <div class="modal-title">Add Transaction</div>
     <div style="display:flex;gap:0;margin:10px 0 16px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;width:fit-content;">
-      <button id="add-type-expense" onclick="setAddType('expense')" style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--accent);color:#fff;font-family:'Inter',sans-serif;">Expense</button>
-      <button id="add-type-refund"  onclick="setAddType('refund')"  style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--surface);color:var(--muted);font-family:'Inter',sans-serif;">Refund</button>
+      <button id="add-type-expense"  onclick="setAddType('expense')"  style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--accent);color:#fff;font-family:'Inter',sans-serif;">Expense</button>
+      <button id="add-type-refund"   onclick="setAddType('refund')"   style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--surface);color:var(--muted);font-family:'Inter',sans-serif;">Refund</button>
+      <button id="add-type-transfer" onclick="setAddType('transfer')" style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--surface);color:var(--muted);font-family:'Inter',sans-serif;">Transfer / Split</button>
     </div>
     <div class="add-modal-grid">
       <div class="add-field">
@@ -1269,9 +1278,13 @@ function doGet(e) {
         <label>Merchant / Description</label>
         <input type="text" id="add-merchant" placeholder="e.g. Team lunch, Friend reimbursement">
       </div>
-      <div class="add-field">
+      <div class="add-field" id="add-cat-field">
         <label>Category</label>
         <select id="add-cat"></select>
+      </div>
+      <div class="add-field full" id="add-offset-field" style="display:none;">
+        <label>Offsets which expense category? <span style="color:var(--faint);font-weight:400;">(e.g. friend paid back for Activities)</span></label>
+        <select id="add-offset-cat"></select>
       </div>
       <div class="add-field">
         <label>Person</label>
@@ -1626,7 +1639,7 @@ let timeChart;
 let cashflowChart;
 let chartHiddenCats = new Set();
 let txnSort = 'date';
-let txnTransferFilter = false;
+let txnTypeFilter = ''; // '', 'expenses', 'transfer', 'income'
 let editingIncomeId = null;
 
 function resetChartFilters() {
@@ -1970,14 +1983,14 @@ function setTxnSort(col) {
   renderTxns();
 }
 function setTxnCatPill(key) {
-  txnTransferFilter = false;
+  txnTypeFilter = '';
   const sel = document.getElementById('f-cat');
   sel.value = sel.value === key ? '' : key;
   renderTxns();
 }
-function setTxnTransferPill() {
-  txnTransferFilter = !txnTransferFilter;
-  if (txnTransferFilter) document.getElementById('f-cat').value = '';
+function setTxnTypePill(type) {
+  txnTypeFilter = txnTypeFilter === type ? '' : type;
+  if (txnTypeFilter) document.getElementById('f-cat').value = '';
   renderTxns();
 }
 function saveTxnDate(id, date) {
@@ -2021,16 +2034,17 @@ function renderTxns() {
   cardSel.innerHTML = '<option value="">All cards</option>' + allCards.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
   cardSel.value = currentCardVal;
 
-  // Category pills + Transfer pill
+  // Type pills + Category pills
   const pillsEl = document.getElementById('txn-cat-pills');
   if (pillsEl) {
-    const transferPill = `<span class="tcp tcp-transfer${txnTransferFilter ? ' active' : ''}" onclick="setTxnTransferPill()">Transfers</span>`;
+    const tp = (type, label) => `<span class="tcp tcp-transfer${txnTypeFilter === type ? ' active' : ''}" onclick="setTxnTypePill('${type}')">${label}</span>`;
+    const typePills = tp('expenses','Expenses') + tp('transfer','Transfers') + tp('income','Income');
     const catPills = CATS.map(c => {
-      const active = !txnTransferFilter && cf === c.key;
+      const active = !txnTypeFilter && cf === c.key;
       const style = active ? `background:${c.bg};color:${c.color};border-color:${c.color};` : '';
       return `<span class="tcp" style="${style}" onclick="setTxnCatPill('${c.key}')">${c.label}</span>`;
     }).join('');
-    pillsEl.innerHTML = transferPill + catPills;
+    pillsEl.innerHTML = typePills + '<span style="display:inline-block;width:1px;height:16px;background:var(--border);margin:0 4px;vertical-align:middle;"></span>' + catPills;
   }
   // Sort icons
   const dateIcon = document.getElementById('txn-date-icon');
@@ -2040,8 +2054,13 @@ function renderTxns() {
 
   let list = txns.filter(t => {
     if (s && !t.merchant.toLowerCase().includes(s)) return false;
-    if (txnTransferFilter) {
-      if (!t.incomeType) return false;
+    if (txnTypeFilter === 'transfer') {
+      if (t.incomeType !== 'transfer') return false;
+    } else if (txnTypeFilter === 'income') {
+      if (!t.incomeType || t.incomeType === 'transfer') return false;
+    } else if (txnTypeFilter === 'expenses') {
+      if (t.incomeType || t.savingsAccountId) return false;
+      if (cf && t.category !== cf) return false;
     } else {
       if (cf && (t.incomeType || t.savingsAccountId)) return false;
       if (cf && t.category !== cf) return false;
@@ -2068,6 +2087,10 @@ function renderTxns() {
     const isRefund = t.refund || t.amount < 0;
     const amtDisplay = isRefund
       ? `<span class="clr-credit" style="font-weight:600;">−${fmt(Math.abs(t.amount))}</span>`
+      : t.incomeType
+      ? `<span class="clr-credit" style="font-weight:600;">+${fmt(t.amount)}</span>`
+      : t.savingsAccountId
+      ? `<span style="font-weight:600;color:var(--muted);">${fmt(t.amount)}</span>`
       : `<span style="font-weight:600;">${fmt(t.amount)}</span>`;
     const isIncome  = !!t.incomeType;
     const isSavings = !!t.savingsAccountId;
@@ -2107,6 +2130,23 @@ function renderTxns() {
       </td>
     </tr>`;
   }).join('');
+
+  // Totals footer
+  const foot     = document.getElementById('txn-foot');
+  const footTot  = document.getElementById('txn-foot-total');
+  const footInc  = document.getElementById('txn-foot-income');
+  if (foot && footTot) {
+    const expTotal = list.filter(t => !t.incomeType && !t.savingsAccountId).reduce((s,t) => s + Math.abs(t.amount), 0);
+    const incTotal = list.filter(t => t.incomeType).reduce((s,t) => s + t.amount, 0);
+    foot.style.display = '';
+    footTot.textContent = fmt(expTotal);
+    if (incTotal > 0) {
+      footInc.style.display = '';
+      footInc.innerHTML = `<span class="clr-credit">+${fmt(incTotal)} income</span>`;
+    } else {
+      footInc.style.display = 'none';
+    }
+  }
 }
 
 // ── CATEGORY PICKER ──────────────────────────────────────
@@ -2689,12 +2729,18 @@ let addModalType = 'expense';
 
 function setAddType(type) {
   addModalType = type;
-  const isRefund = type === 'refund';
-  document.getElementById('add-type-expense').style.background = isRefund ? 'var(--surface)' : 'var(--accent)';
-  document.getElementById('add-type-expense').style.color      = isRefund ? 'var(--muted)'   : '#fff';
-  document.getElementById('add-type-refund').style.background  = isRefund ? '#2a9080'        : 'var(--surface)';
-  document.getElementById('add-type-refund').style.color       = isRefund ? '#fff'           : 'var(--muted)';
-  document.getElementById('add-merchant').placeholder = isRefund ? 'e.g. Work expense reimbursement, Insurance claim' : 'e.g. Team lunch, Friend reimbursement';
+  const styles = { expense: ['var(--accent)','#fff'], refund: ['#2a9080','#fff'], transfer: ['#7c3d12','#fff'] };
+  ['expense','refund','transfer'].forEach(t => {
+    const [bg, color] = type === t ? styles[t] : ['var(--surface)', 'var(--muted)'];
+    document.getElementById('add-type-' + t).style.background = bg;
+    document.getElementById('add-type-' + t).style.color = color;
+  });
+  const ph = type === 'refund' ? 'e.g. Work reimbursement, Insurance claim'
+    : type === 'transfer' ? 'e.g. Friend transfer for dinner, Airbnb split'
+    : 'e.g. Team lunch, Grocery run';
+  document.getElementById('add-merchant').placeholder = ph;
+  document.getElementById('add-offset-field').style.display = type === 'transfer' ? 'block' : 'none';
+  document.getElementById('add-cat-field').style.display    = type === 'transfer' ? 'none'  : 'block';
 }
 
 function openAddModal() {
@@ -2702,6 +2748,9 @@ function openAddModal() {
   setAddType('expense');
   const sel = document.getElementById('add-cat');
   sel.innerHTML = CATS.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
+  document.getElementById('add-offset-cat').innerHTML =
+    '<option value="">— No specific category —</option>' +
+    CATS.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
   document.getElementById('add-date').value     = new Date().toISOString().slice(0,10);
   document.getElementById('add-amount').value   = '';
   document.getElementById('add-merchant').value = '';
@@ -2728,9 +2777,13 @@ function confirmAdd() {
   if (!merchant)          { alert('Please enter a merchant or description.'); return; }
   if (isNaN(amount) || amount <= 0) { alert('Please enter a valid amount.'); return; }
 
-  const isRefund = addModalType === 'refund';
+  const isRefund   = addModalType === 'refund';
+  const isTransfer = addModalType === 'transfer';
+  const offsetCat  = isTransfer ? document.getElementById('add-offset-cat').value : null;
   const finalAmount = isRefund ? -amount : amount;
-  txns.push({ id: uid(), date, merchant, amount: finalAmount, category, person, card, note, manual: true, refund: isRefund });
+  const newTxn = { id: uid(), date, merchant, amount: finalAmount, category: offsetCat || category, person, card, note, manual: true, refund: isRefund };
+  txns.push(newTxn);
+  if (isTransfer) applyIncomeFlag(newTxn.id, 'transfer', offsetCat || null);
   persist();
   closeAddModal();
 
