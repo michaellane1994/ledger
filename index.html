@@ -1918,21 +1918,21 @@ function renderCashflowChart() {
           data: incData,
           backgroundColor: incData.map((_,i) => `rgba(45,106,79,${a(isDark?.7:.55, isDark?.28:.18, i)})`),
           borderWidth: 0, borderRadius: 2,
-          stack: 'cf', yAxisID: 'y'
+          stack: 'income', yAxisID: 'y'
         },
         {
           type: 'bar', label: 'Fixed (home + bills)',
-          data: fixedData,
+          data: fixedData.map(v => -v),
           backgroundColor: fixedData.map((_,i) => `rgba(180,83,9,${a(isDark?.75:.5, isDark?.28:.18, i)})`),
           borderWidth: 0, borderRadius: 2,
-          stack: 'cf', yAxisID: 'y'
+          stack: 'spending', yAxisID: 'y'
         },
         {
           type: 'bar', label: 'Discretionary',
-          data: discData,
+          data: discData.map(v => -v),
           backgroundColor: discData.map((_,i) => `rgba(212,96,58,${a(isDark?.75:.5, isDark?.28:.18, i)})`),
           borderWidth: 0, borderRadius: 2,
-          stack: 'cf', yAxisID: 'y'
+          stack: 'spending', yAxisID: 'y'
         },
         {
           type: 'line', label: 'Spending capacity',
@@ -4475,6 +4475,7 @@ const THEMES = {
   'dark-ocean':    { dark:true,  label:'Ocean',    bg:'#091420', surface:'#0e1e30',  border:'#1a3048', ink:'#d0e4f8',  muted:'#6080a8', faint:'#385870', accent:'#4090d8', sidebarBg:'#0a2040', rowHover:'#152538',        navActiveBg:'rgba(64,144,216,.25)', navActiveColor:'#80b8ee', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
   'dark-forest':   { dark:true,  label:'Forest',   bg:'#091410', surface:'#0e1e18',  border:'#183028', ink:'#d0e8dc',  muted:'#508870', faint:'#305848', accent:'#3ab870', sidebarBg:'#0a2215', rowHover:'#132018',        navActiveBg:'rgba(58,184,112,.25)', navActiveColor:'#70d898', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
   'dark-slate':    { dark:true,  label:'Slate',    bg:'#111418', surface:'#1c2028',  border:'#2a3040', ink:'#dce4f0',  muted:'#7080a8', faint:'#485870', accent:'#8090c8', sidebarBg:'#141c30', rowHover:'#222835',        navActiveBg:'rgba(128,144,200,.25)',navActiveColor:'#a8b8e0', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'dark-pink':     { dark:true,  label:'Hot Pink', bg:'#12080f', surface:'#1c1018',  border:'#381528', ink:'#f4dcec',  muted:'#a8688c', faint:'#6e3854', accent:'#e91087', sidebarBg:'#180a14', rowHover:'#241528',        navActiveBg:'rgba(233,16,135,.25)', navActiveColor:'#f070b8', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
 };
 
 function applyTheme(key) {
