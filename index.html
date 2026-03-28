@@ -155,6 +155,24 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .ct-bar-wrap{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
 .ct-bar{height:100%;border-radius:2px;transition:width .5s ease;}
 .ct-pct{font-size:10px;color:var(--faint);margin-top:4px;}
+/* Budget progress bar on tiles */
+.ct-budget-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin:3px 0 2px;}
+.ct-budget-bar{height:3px;border-radius:2px;transition:width .3s;}
+.ct-budget-sub{font-size:9.5px;color:var(--muted);}
+/* Fixed badge on tiles */
+.ct-fixed-badge{position:absolute;top:5px;right:6px;font-size:8px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
+/* Trend badge on tiles */
+.ct-trend{font-size:10px;font-weight:600;margin:1px 0;}
+/* On-track badge */
+.on-track-badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:100px;display:inline-block;margin-top:4px;}
+/* Monthly commitments */
+.commit-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.commit-row:last-child{border-bottom:none;}
+.commit-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.commit-name{flex:1;color:var(--ink);}
+.commit-cat{font-size:11px;color:var(--muted);white-space:nowrap;}
+.commit-freq{font-size:10.5px;color:var(--muted);white-space:nowrap;}
+.commit-amt{font-weight:600;color:var(--ink);white-space:nowrap;}
 
 /* Settings collapsible */
 .sec-toggle{background:none;border:none;cursor:pointer;color:var(--muted);padding:2px 4px;font-size:18px;line-height:1;transition:transform .2s;flex-shrink:0;}
@@ -462,8 +480,24 @@ tbody tr:hover .del-btn{opacity:1;}
             <div class="hs-val" id="hero-largest">—</div>
             <div class="hs-sub" id="hero-lm">—</div>
           </div>
+          <div class="hsi">
+            <div class="hs-label">Fixed</div>
+            <div class="hs-val" id="hero-fixed">—</div>
+            <div class="hs-sub">committed</div>
+          </div>
+          <div class="hsi">
+            <div class="hs-label">Discretionary</div>
+            <div class="hs-val" id="hero-disc">—</div>
+            <div class="hs-sub">flexible</div>
+          </div>
+          <div class="hsi">
+            <div class="hs-label">Savings Rate</div>
+            <div class="hs-val" id="hero-savings-rate">—</div>
+            <div class="hs-sub">of income</div>
+          </div>
         </div>
       </div>
+      <div id="hero-on-track" style="display:none;"></div>
 
       <!-- Income / Savings summary row -->
       <div class="summary-row" id="summary-row">
@@ -517,6 +551,14 @@ tbody tr:hover .del-btn{opacity:1;}
 
       <!-- 13-category grid, 7 + 6 -->
       <div class="cat-grid" id="cat-grid"></div>
+
+      <div class="card" id="commitments-card" style="margin-bottom:18px;display:none;">
+        <div class="card-head">
+          <div class="card-title">Monthly Commitments</div>
+          <div id="commitments-total" style="font-size:13px;font-weight:600;color:var(--ink);"></div>
+        </div>
+        <div class="card-body" id="commitments-body"></div>
+      </div>
 
       <div class="charts-row">
         <div class="card">
@@ -963,8 +1005,8 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
     if (data.action === 'push') {
-      writeSheet(ss, SHEET_NAME, ['id','date','merchant','amount','category','person','card','note','refund','manual','incomeType','savingsAccountId'],
-        (data.txns||[]).map(t => [t.id,t.date,t.merchant,t.amount,t.category,t.person||'',t.card||'',t.note||'',t.refund?'true':'false',t.manual?'true':'false',t.incomeType||'',t.savingsAccountId||'']));
+      writeSheet(ss, SHEET_NAME, ['id','date','merchant','amount','category','person','card','note','refund','manual','incomeType','savingsAccountId','incomeCategory'],
+        (data.txns||[]).map(t => [t.id,t.date,t.merchant,t.amount,t.category,t.person||'',t.card||'',t.note||'',t.refund?'true':'false',t.manual?'true':'false',t.incomeType||'',t.savingsAccountId||'',t.incomeCategory||'']));
       writeSheet(ss, LEARNED_SHEET, ['merchant','category'],
         Object.entries(data.learned||{}).map(([m,c]) => [m,c]));
       writeSheet(ss, INCOME_SHEET, ['id','date','amount','type','person','desc','note','fromTxnId','category'],
@@ -979,7 +1021,7 @@ function doPost(e) {
     }
 
     if (data.action === 'pull') {
-      const txns     = readSheet(ss, SHEET_NAME,   r => ({id:r.id,date:r.date,merchant:r.merchant,amount:parseFloat(r.amount)||0,category:r.category,person:r.person,card:r.card||'',note:r.note,refund:r.refund==='true',manual:r.manual==='true',incomeType:r.incomeType||undefined,savingsAccountId:r.savingsAccountId||undefined}));
+      const txns     = readSheet(ss, SHEET_NAME,   r => ({id:r.id,date:r.date,merchant:r.merchant,amount:parseFloat(r.amount)||0,category:r.category,person:r.person,card:r.card||'',note:r.note,refund:r.refund==='true',manual:r.manual==='true',incomeType:r.incomeType||undefined,savingsAccountId:r.savingsAccountId||undefined,incomeCategory:r.incomeCategory||undefined}));
       const learned  = {}; readSheet(ss, LEARNED_SHEET, r => r).forEach(r => { if(r.merchant) learned[r.merchant]=r.category; });
       const incomes  = readSheet(ss, INCOME_SHEET,  r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,type:r.type,person:r.person,desc:r.desc,note:r.note,fromTxnId:r.fromTxnId||undefined,category:r.category||undefined}));
       const savAccts = readSheet(ss, SAVINGS_SHEET, r => ({id:r.id,name:r.name,type:r.type,person:r.person,balance:parseFloat(r.balance)||0,baseBalance:parseFloat(r.baseBalance)||0,goal:r.goal?parseFloat(r.goal):null}));
@@ -1528,9 +1570,9 @@ const DEFAULT_CATS = [
   { key:'groceries',  label:'Groceries',   color:'#3d8b5e', kw:['safeway','save-on','save on','superstore','loblaws','metro ','sobeys','whole foods','t&t','freshco','costco','independent grocer','farm boy','no frills','walmart','overwaitea','thrifty foods','mayfair','iga ','produce','market','grocery','supermarket','galloway','h-mart','nations','choices market','peninsula farm','buy-low','qualicum','nature\'s fare'] },
   { key:'eatingout',  label:'Eating Out',  color:'#d4603a', kw:['mcdonald','burger king','a&w ','kfc','wendy','subway','pizza','sushi','ramen','restaurant','cafe ','doordash','ubereats','skip','grubhub','earls','cactus','moxies','milestones','boston pizza','the keg','white spot','grill','eatery','bistro','canteen','dine','nandos','chipotle','five guys','toast','lox','miku','cin cin','starbucks','tim horton','second cup','blenz','coffee','bubble tea','boba','korean bbq','hot pot','dim sum','brunch','breakfast ','lunch ','delivery fee','service fee','denny','ihop','cora','jugo juice','booster juice','freshii','poke','burrito','taco','shawarma','falafel','curry','noodle','dumpling','wonton','banh mi','gelato','ice cream'] },
   { key:'liquor',     label:'Liquor',      color:'#9e3060', kw:['bc liquor','bcliquor','bc ldb','private liquor','wine','brewery','distillery','beer store','lcbo','saq','liquor depot','cold beer','wine store','craft beer','spirits','bar ','pub ','nightclub','lounge','cocktail','taproom','sake','cider','mead','bottle shop','liquor mart','vin&fromage'] },
-  { key:'home',       label:'Home',        color:'#6060a8', kw:['rent ','mortgage','strata','home depot','rona','ikea','wayfair','bed bath','leons','the brick','sleep country','restoration hardware','cb2','crate','property tax','home insurance','hardware','plumbing','electrician','furniture','mattress','linen','decor','canadian tire','lordco','pest control','landscaping','lawn','cleaning service','molly maid','mrs clean','property management','locksmith','moving','storage ','u-haul','condo fee','hoa ','building maintenance','window','flooring','carpet','tile ','paint ','roofing','drywall','renovation','contractor','handyman'] },
-  { key:'bills',      label:'Bills',       color:'#3050a8', kw:['bc hydro','bchydro','fortis','shaw ','telus','rogers','bell canada','enbridge','hydro ','internet','wireless plan','phone plan','insurance','strata fee','cra ','government','municipal','property tax','water ','utility','netflix','spotify','apple.com/bill','apple services','google storage','microsoft 365','adobe','disney','crave','paramount','youtube premium','icloud','dropbox','prime video','amazon prime','hulu','hbo','apple tv','nintendo switch','playstation plus','xbox game pass','duolingo','headspace','calm ','subscription','annual fee','membership fee'] },
-  { key:'gym',        label:'Gym',         color:'#0d8a90', kw:['goodlife','anytime fitness','equinox','ymca','limelight','crossfit','soulcycle','orangetheory','fitness','gym ','pilates','yoga ','barre','f45','peloton','boxing','martial arts','jiu jitsu','muay thai','swim ','pool ','tennis','squash','racket','personal trainer','recreation centre','rec centre','studio ','athletic','sport ','curl ','climb','bouldering','trampoline park'] },
+  { key:'home',       label:'Home',        color:'#6060a8', fixed:true, kw:['rent ','mortgage','strata','home depot','rona','ikea','wayfair','bed bath','leons','the brick','sleep country','restoration hardware','cb2','crate','property tax','home insurance','hardware','plumbing','electrician','furniture','mattress','linen','decor','canadian tire','lordco','pest control','landscaping','lawn','cleaning service','molly maid','mrs clean','property management','locksmith','moving','storage ','u-haul','condo fee','hoa ','building maintenance','window','flooring','carpet','tile ','paint ','roofing','drywall','renovation','contractor','handyman'] },
+  { key:'bills',      label:'Bills',       color:'#3050a8', fixed:true, kw:['bc hydro','bchydro','fortis','shaw ','telus','rogers','bell canada','enbridge','hydro ','internet','wireless plan','phone plan','insurance','strata fee','cra ','government','municipal','property tax','water ','utility','netflix','spotify','apple.com/bill','apple services','google storage','microsoft 365','adobe','disney','crave','paramount','youtube premium','icloud','dropbox','prime video','amazon prime','hulu','hbo','apple tv','nintendo switch','playstation plus','xbox game pass','duolingo','headspace','calm ','subscription','annual fee','membership fee'] },
+  { key:'gym',        label:'Gym',         color:'#0d8a90', fixed:true, kw:['goodlife','anytime fitness','equinox','ymca','limelight','crossfit','soulcycle','orangetheory','fitness','gym ','pilates','yoga ','barre','f45','peloton','boxing','martial arts','jiu jitsu','muay thai','swim ','pool ','tennis','squash','racket','personal trainer','recreation centre','rec centre','studio ','athletic','sport ','curl ','climb','bouldering','trampoline park'] },
   { key:'shopping',   label:'Shopping',    color:'#9040c8', kw:['amazon','aritzia','lululemon','h&m','zara','banana republic','gap ','old navy','winners','marshalls','hudson','bay ','nordstrom','saks','ssense','foot locker','nike','adidas','apple store','best buy','sport chek','mec','arcteryx','uniqlo','anthropologie','free people','everlane','holt renfrew','flannels','revolve','clothing','apparel','boutique','thrift','ebay','etsy','aliexpress','shein','fashion','jewellery','jewelry','accessories','watches','shoes ','boots ','purse','handbag','sunglasses','indigo','chapters','book ','toys r us','staples','london drugs','canadian tire','home sense','structube','simons','reitmans','dynamite','garage ','roots ','aldo','sephora','mac cosmetics','bath body','lush ','beauty','drugstore'] },
   { key:'hubby',      label:'Hubby',       color:'#4878b0', kw:[] },
   { key:'wifey',      label:'Wifey',       color:'#c85080', kw:[] },
@@ -1542,7 +1584,7 @@ const DEFAULT_CATS = [
   { key:'puppies',    label:'Puppies',     color:'#d07020', kw:['vet ','veterinary','animal hospital','pet food','petsmart','pet supplies','petco','dog food','cat food','pet store','puppy','dog grooming','dog walker','dog park','doggy daycare','pet insurance','bark','furever','critter','paw ','animal clinic','spca','humane society','pet plan','trupanion','kibble','treats','litter ','aquarium '] },
 ];
 
-function normCat(c) { return { kw:[], ...c, bg: lightenColor(c.color) }; }
+function normCat(c) { return { kw:[], budget:0, fixed:false, ...c, bg: lightenColor(c.color) }; }
 const CAT_COLOR_MIGRATION = {
   '#16a34a':'#3d8b5e','#ea580c':'#d4603a','#be123c':'#9e3060','#92400e':'#6060a8',
   '#1d4ed8':'#3050a8','#0891b2':'#0d8a90','#9333ea':'#9040c8','#6b7280':'#606878',
@@ -2086,6 +2128,31 @@ function renderCashflowChart() {
   });
 }
 
+function detectRecurring() {
+  const last6 = getMonths().slice(0, 6);
+  if (last6.length < 3) return [];
+  const byMerchant = {};
+  txns.forEach(t => {
+    if (t.incomeType || t.savingsAccountId || t.amount <= 0) return;
+    const key = t.merchant.toLowerCase().trim().substring(0, 25);
+    if (!byMerchant[key]) byMerchant[key] = { merchant: t.merchant, category: t.category, months: new Set(), amounts: [] };
+    const m = t.date.substring(0, 7);
+    if (last6.includes(m)) {
+      byMerchant[key].months.add(m);
+      byMerchant[key].amounts.push(t.amount);
+    }
+  });
+  return Object.values(byMerchant)
+    .filter(r => r.months.size >= 3)
+    .map(r => ({
+      merchant: r.merchant,
+      category: r.category,
+      frequency: r.months.size,
+      avgAmount: r.amounts.reduce((s,a) => s + a, 0) / r.amounts.length,
+    }))
+    .sort((a, b) => b.avgAmount - a.avgAmount);
+}
+
 function dashPeriodTest(dateStr) {
   if (dashPeriod) {
     const now = new Date();
@@ -2141,6 +2208,12 @@ function renderDashboard() {
   document.getElementById('hero-largest').textContent = fmt(lg.amount > 0 ? lg.amount : 0);
   document.getElementById('hero-lm').textContent      = lg.merchant || '—';
 
+  // Fixed vs Discretionary
+  const fixedTotal = expenses.filter(t => CAT[t.category]?.fixed).reduce((s,t) => s + effectiveAmt(t), 0);
+  const discTotal = total - fixedTotal;
+  document.getElementById('hero-fixed').textContent = fmt(fixedTotal);
+  document.getElementById('hero-disc').textContent = fmt(discTotal);
+
   // Update period button active states
   document.getElementById('dp-latest')?.classList.toggle('active', dashPeriod === 'latest');
   document.getElementById('dp-3m')?.classList.toggle('active',     dashPeriod === '3m');
@@ -2180,6 +2253,50 @@ function renderDashboard() {
       byCatAll[t.category] = (byCatAll[t.category] || 0) + effectiveAmt(t);
     }
   });
+
+  // Determine viewMonth for single-month periods
+  const viewMonth = dashPeriod === 'latest' ? getMonths()[0] : (dashPeriod === '' ? selMonth : null);
+
+  // Build byCatPrev for trend indicators
+  let prevExpenses = [];
+  if (viewMonth) {
+    const months = getMonths();
+    const idx = months.indexOf(viewMonth);
+    const prevMonth = idx >= 0 && idx + 1 < months.length ? months[idx + 1] : null;
+    if (prevMonth) {
+      const ts2 = txns.filter(t => t.amount !== 0 && t.date.startsWith(prevMonth));
+      prevExpenses = ts2.filter(t => t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId));
+    }
+  } else if (dashPeriod === '3m') {
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const prev3Months = [];
+    for (let i = 3; i <= 5; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      prev3Months.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}`);
+    }
+    const ts2 = txns.filter(t => t.amount !== 0 && prev3Months.some(m => t.date.startsWith(m)));
+    prevExpenses = ts2.filter(t => t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId));
+  } else if (dashPeriod === 'ytd') {
+    const now = new Date();
+    const prevYear = now.getFullYear() - 1;
+    const currentMonth = now.getMonth();
+    const ts2 = txns.filter(t => {
+      if (!t.amount || !t.date.startsWith(String(prevYear))) return false;
+      const m = parseInt(t.date.substring(5, 7)) - 1;
+      return m <= currentMonth;
+    });
+    prevExpenses = ts2.filter(t => t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId));
+  }
+  const byCatPrev = {};
+  prevExpenses.forEach(t => {
+    if (t.incomeType === 'transfer') {
+      if (t.incomeCategory) byCatPrev[t.incomeCategory] = (byCatPrev[t.incomeCategory] || 0) + effectiveAmt(t);
+    } else {
+      byCatPrev[t.category] = (byCatPrev[t.category] || 0) + effectiveAmt(t);
+    }
+  });
+
   const netTotal = total;
 
   // Render category tile grid
@@ -2192,15 +2309,71 @@ function renderDashboard() {
     const tile = document.createElement('div');
     tile.className = 'cat-tile';
     tile.style.borderTopColor = c.color;
+    tile.style.position = 'relative';
     tile.title = `View ${c.label} transactions`;
     tile.onclick = () => goToCatFilter(c.key);
-    tile.innerHTML = `
-      <div class="ct-label" title="${c.label}">${c.label}</div>
-      <div class="ct-amount" style="color:${c.color};">${fmt(amt)}</div>
-      <div class="ct-bar-wrap"><div class="ct-bar" style="width:${Math.min(pct,100).toFixed(1)}%;background:${c.color};"></div></div>
-      <div class="ct-pct">${pct.toFixed(1)}%</div>`;
+
+    // Trend badge
+    const prevAmt = byCatPrev[c.key] || 0;
+    const trendPct = prevAmt > 0 ? ((amt - prevAmt) / prevAmt * 100) : null;
+    const trendHtml = trendPct !== null && Math.abs(trendPct) >= 2
+      ? `<div class="ct-trend" style="color:${trendPct > 0 ? '#dc2626' : '#16a34a'};">${trendPct > 0 ? '\u2191' : '\u2193'} ${Math.abs(trendPct).toFixed(0)}%</div>`
+      : '';
+
+    // Budget bar vs percentage bar
+    const budgetMonths = dashPeriod === '3m' ? 3 : dashPeriod === 'ytd' ? Math.max(1, new Date().getMonth() + 1) : 1;
+    const scaledBudget = (c.budget || 0) * budgetMonths;
+    let barHtml;
+    if (scaledBudget > 0) {
+      const budgetPct = Math.min(amt / scaledBudget * 100, 100);
+      const barColor = budgetPct >= 100 ? '#dc2626' : budgetPct >= 75 ? '#f59e0b' : c.color;
+      const amtColor = budgetPct >= 100 ? '#dc2626' : '';
+      barHtml = `
+        <div class="ct-budget-bar-wrap"><div class="ct-budget-bar" style="width:${budgetPct.toFixed(1)}%;background:${barColor};"></div></div>
+        <div class="ct-budget-sub">${fmt(amt)} / ${fmt(scaledBudget)}</div>`;
+      tile.innerHTML = `
+        ${c.fixed ? '<div class="ct-fixed-badge">Fixed</div>' : ''}
+        <div class="ct-label" title="${c.label}">${c.label}</div>
+        <div class="ct-amount" style="color:${amtColor || c.color};">${fmt(amt)}</div>
+        ${trendHtml}
+        ${barHtml}`;
+    } else {
+      barHtml = `
+        <div class="ct-bar-wrap"><div class="ct-bar" style="width:${Math.min(pct,100).toFixed(1)}%;background:${c.color};"></div></div>
+        <div class="ct-pct">${pct.toFixed(1)}%</div>`;
+      tile.innerHTML = `
+        ${c.fixed ? '<div class="ct-fixed-badge">Fixed</div>' : ''}
+        <div class="ct-label" title="${c.label}">${c.label}</div>
+        <div class="ct-amount" style="color:${c.color};">${fmt(amt)}</div>
+        ${trendHtml}
+        ${barHtml}`;
+    }
     grid.appendChild(tile);
   });
+
+  // Recurring commitments card
+  const recurring = detectRecurring();
+  const commitCard = document.getElementById('commitments-card');
+  const commitBody = document.getElementById('commitments-body');
+  const commitTotal = document.getElementById('commitments-total');
+  if (commitCard && commitBody && recurring.length >= 3) {
+    commitCard.style.display = '';
+    const shown = recurring.slice(0, 5);
+    const hasMore = recurring.length > 5;
+    commitTotal.textContent = 'Est. ' + fmt(recurring.reduce((s,r) => s + r.avgAmount, 0)) + '/mo';
+    commitBody.innerHTML = shown.map(r => {
+      const c = CAT[r.category] || CAT.misc;
+      return `<div class="commit-row">
+        <div class="commit-dot" style="background:${c.color};"></div>
+        <div class="commit-name">${esc(r.merchant)}</div>
+        <div class="commit-cat">${c.label}</div>
+        <div class="commit-freq">${r.frequency}/6 mo</div>
+        <div class="commit-amt">${fmt(r.avgAmount)}</div>
+      </div>`;
+    }).join('') + (hasMore ? `<div style="font-size:12px;color:var(--muted);padding:8px 0 2px;cursor:pointer;" onclick="this.parentElement.innerHTML += document.getElementById('commits-extra').innerHTML; this.remove();">+ ${recurring.length - 5} more</div><template id="commits-extra">${recurring.slice(5).map(r => { const c = CAT[r.category] || CAT.misc; return '<div class=\'commit-row\'><div class=\'commit-dot\' style=\'background:' + c.color + ';\' ></div><div class=\'commit-name\'>' + esc(r.merchant) + '</div><div class=\'commit-cat\'>' + c.label + '</div><div class=\'commit-freq\'>' + r.frequency + '/6 mo</div><div class=\'commit-amt\'>' + fmt(r.avgAmount) + '</div></div>'; }).join('')}</template>` : '');
+  } else if (commitCard) {
+    commitCard.style.display = 'none';
+  }
 
   // Top categories bar list (sorted) — uses unfiltered byCatAll
   const arr = Object.entries(byCatAll).sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -2233,6 +2406,72 @@ function renderDashboard() {
   document.getElementById('dash-net-sub').textContent    = net >= 0 ? 'surplus' : 'shortfall';
   document.getElementById('dash-savings').textContent    = fmt(totalSavings);
   document.getElementById('dash-savings-sub').textContent = savAccts.length + ' account' + (savAccts.length === 1 ? '' : 's');
+
+  // Savings rate
+  const savingsRate = totalIncome > 0 ? ((totalIncome - total) / totalIncome * 100) : null;
+  const srEl = document.getElementById('hero-savings-rate');
+  if (srEl) {
+    if (savingsRate === null) {
+      srEl.textContent = '\u2014';
+      srEl.style.color = '';
+    } else {
+      srEl.textContent = savingsRate.toFixed(1) + '%';
+      srEl.style.color = savingsRate >= 10 ? 'var(--accent)' : savingsRate >= 0 ? '#f59e0b' : '#dc2626';
+    }
+  }
+
+  // On-track spending pace (single-month views only)
+  const onTrackEl = document.getElementById('hero-on-track');
+  if (onTrackEl) {
+    if (viewMonth) {
+      const today = new Date();
+      const [vy, vm] = viewMonth.split('-').map(Number);
+      const daysInViewMonth = new Date(vy, vm, 0).getDate();
+      const isCurrentMonth = (vy === today.getFullYear() && vm === today.getMonth() + 1);
+      const daysElapsed = isCurrentMonth ? today.getDate() : daysInViewMonth;
+      const dailyRate = daysElapsed > 0 ? total / daysElapsed : 0;
+      const projected = dailyRate * daysInViewMonth;
+      const allMonths = getMonths();
+      const vmIdx = allMonths.indexOf(viewMonth);
+      const last3 = allMonths.slice(vmIdx + 1, vmIdx + 4);
+      if (last3.length >= 2) {
+        const baseline = last3.reduce((s, m) => {
+          return s + txns.filter(t => t.amount > 0 && !t.incomeType && !t.savingsAccountId && t.date.startsWith(m))
+                         .reduce((ss, t) => ss + t.amount, 0);
+        }, 0) / last3.length;
+        const pct = baseline > 0 ? ((projected - baseline) / baseline * 100) : null;
+        if (pct !== null) {
+          const abs = Math.abs(pct);
+          if (abs <= 5) {
+            onTrackEl.textContent = 'On track';
+            onTrackEl.className = 'on-track-badge';
+            onTrackEl.style.background = 'var(--surface)';
+            onTrackEl.style.color = 'var(--muted)';
+          } else if (pct > 0) {
+            onTrackEl.textContent = '\u2191 ' + abs.toFixed(0) + '% above pace';
+            onTrackEl.className = 'on-track-badge';
+            onTrackEl.style.background = '#fef2f2';
+            onTrackEl.style.color = '#dc2626';
+          } else {
+            onTrackEl.textContent = '\u2193 ' + abs.toFixed(0) + '% below pace';
+            onTrackEl.className = 'on-track-badge';
+            onTrackEl.style.background = '#f0fdf4';
+            onTrackEl.style.color = '#16a34a';
+          }
+          if (isCurrentMonth) {
+            onTrackEl.title = `Projected: ${fmt(projected)} / Avg: ${fmt(baseline)}`;
+          }
+          onTrackEl.style.display = 'inline-block';
+        } else {
+          onTrackEl.style.display = 'none';
+        }
+      } else {
+        onTrackEl.style.display = 'none';
+      }
+    } else {
+      onTrackEl.style.display = 'none';
+    }
+  }
 
   // Recent 5 — positive-amount expenses only (excludes transfers and refunds)
   const recent = [...expenses].filter(t => effectiveAmt(t) > 0).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
@@ -3605,14 +3844,25 @@ function renderCatManagement() {
   el.innerHTML = CATS.map((c, idx) => {
     const isDefault = DEFAULT_CATS.some(d => d.key === c.key);
     const txnCount  = txns.filter(t => t.category === c.key).length;
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:10px;">
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:8px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
         <div style="width:12px;height:12px;border-radius:50%;background:${c.color};flex-shrink:0;"></div>
         <span style="font-weight:500;font-size:13.5px;">${esc(c.label)}</span>
         <span style="font-size:11px;color:var(--faint);background:var(--bg);padding:2px 7px;border-radius:100px;">${txnCount} transaction${txnCount!==1?'s':''}</span>
         ${isDefault ? '' : '<span class="custom-badge">Custom</span>'}
       </div>
-      <div style="display:flex;gap:6px;align-items:center;">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap;">
+          <span>Budget/mo</span>
+          <input type="number" min="0" placeholder="No budget" value="${c.budget || ''}"
+            style="width:80px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);"
+            onchange="CATS[${idx}].budget=parseFloat(this.value)||0; saveCats(); renderDashboard();">
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer;">
+          <input type="checkbox" ${c.fixed ? 'checked' : ''}
+            onchange="CATS[${idx}].fixed=this.checked; saveCats(); renderDashboard();">
+          <span>Fixed</span>
+        </label>
         <button class="btn btn-ghost btn-sm" onclick="editCat('${c.key}')">Edit</button>
         ${c.key === 'misc' ? '' : `<button class="del-btn always-on" onclick="deleteCat('${c.key}')" title="Remove category">✕</button>`}
       </div>
