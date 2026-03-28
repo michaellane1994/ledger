@@ -2185,15 +2185,13 @@ function filtered() {
 function renderDashboard() {
   renderPills();
   const ts    = filtered();
-  const expenses = ts.filter(t => t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId));
-  const effectiveAmt = t => t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount;
+  const expenses = ts.filter(t => !t.incomeType && !t.savingsAccountId);
+  const effectiveAmt = t => t.amount;
 
   // Apply category filter (dashCatFilter = set of HIDDEN categories)
   // catExpenses = category-filtered view (only affects tiles, NOT hero totals)
   const catExpenses = dashCatFilter.size
-    ? expenses.filter(t => t.incomeType === 'transfer'
-        ? (!t.incomeCategory || !dashCatFilter.has(t.incomeCategory))
-        : !dashCatFilter.has(t.category))
+    ? expenses.filter(t => !dashCatFilter.has(t.category))
     : expenses;
   // Hero totals use expenses (period-filtered only, NOT category-filtered)
   const total = expenses.reduce((s, t) => s + effectiveAmt(t), 0);
@@ -2243,20 +2241,12 @@ function renderDashboard() {
   // Build byCat totals — category-filtered (drives tiles only)
   const byCat = {};
   catExpenses.forEach(t => {
-    if (t.incomeType === 'transfer') {
-      if (t.incomeCategory) byCat[t.incomeCategory] = (byCat[t.incomeCategory] || 0) + effectiveAmt(t);
-    } else {
-      byCat[t.category] = (byCat[t.category] || 0) + effectiveAmt(t);
-    }
+    byCat[t.category] = (byCat[t.category] || 0) + t.amount;
   });
   // Build byCatAll — unfiltered (drives Top Categories, always shows all)
   const byCatAll = {};
   expenses.forEach(t => {
-    if (t.incomeType === 'transfer') {
-      if (t.incomeCategory) byCatAll[t.incomeCategory] = (byCatAll[t.incomeCategory] || 0) + effectiveAmt(t);
-    } else {
-      byCatAll[t.category] = (byCatAll[t.category] || 0) + effectiveAmt(t);
-    }
+    byCatAll[t.category] = (byCatAll[t.category] || 0) + t.amount;
   });
 
   // Determine viewMonth for single-month periods
@@ -2270,7 +2260,7 @@ function renderDashboard() {
     const prevMonth = idx >= 0 && idx + 1 < months.length ? months[idx + 1] : null;
     if (prevMonth) {
       const ts2 = txns.filter(t => t.amount !== 0 && t.date.startsWith(prevMonth));
-      prevExpenses = ts2.filter(t => t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId));
+      prevExpenses = ts2.filter(t => !t.incomeType && !t.savingsAccountId);
     }
   } else if (dashPeriod === '3m') {
     const now = new Date();
@@ -2295,11 +2285,7 @@ function renderDashboard() {
   }
   const byCatPrev = {};
   prevExpenses.forEach(t => {
-    if (t.incomeType === 'transfer') {
-      if (t.incomeCategory) byCatPrev[t.incomeCategory] = (byCatPrev[t.incomeCategory] || 0) + effectiveAmt(t);
-    } else {
-      byCatPrev[t.category] = (byCatPrev[t.category] || 0) + effectiveAmt(t);
-    }
+    byCatPrev[t.category] = (byCatPrev[t.category] || 0) + t.amount;
   });
 
   const netTotal = total;
