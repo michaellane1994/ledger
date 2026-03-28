@@ -120,6 +120,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .month-pills{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;}
 .mpill{padding:4px 11px;border-radius:100px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap;flex-shrink:0;}
 .mpill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.dash-pill{padding:3px 10px;border-radius:100px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap;}
+.dash-pill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .topbar-right{display:flex;gap:8px;align-items:center;flex-shrink:0;}
 .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:500;cursor:pointer;border:none;transition:all .15s;font-family:'Inter',sans-serif;}
 .btn-primary{background:var(--accent);color:#fff;}
@@ -489,6 +491,17 @@ tbody tr:hover .del-btn{opacity:1;}
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
           </div>
         </div>
+      </div>
+
+      <!-- Dashboard filters: period + category -->
+      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;">
+        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-right:4px;white-space:nowrap;">Period</span>
+          <button class="dash-pill" id="dp-last" onclick="setDashPeriod('last')">Last Month</button>
+          <button class="dash-pill" id="dp-3m"   onclick="setDashPeriod('3m')">Last 3 Months</button>
+          <button class="dash-pill" id="dp-ytd"  onclick="setDashPeriod('ytd')">Year to Date</button>
+        </div>
+        <div id="dash-cat-chips" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
       </div>
 
       <!-- 13-category grid, 7 + 6 -->
@@ -1565,6 +1578,8 @@ let sheetsUrl    = localStorage.getItem('l3_sheets_url') || '';
 let showJoint    = localStorage.getItem('l3_show_joint') !== 'false';
 let rentalExpenses = JSON.parse(localStorage.getItem('l3_rental') || '[]');
 let selMonth  = '';
+let dashPeriod    = '';        // '', 'last', '3m', 'ytd'
+let dashCatFilter = new Set(); // empty = show all categories
 
 function persist() {
   localStorage.setItem('l3_txns',       JSON.stringify(txns));
@@ -1624,6 +1639,7 @@ function renderPills() {
     const [y, mo] = m.split('-');
     const label = new Date(y, mo - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
     const onclick = () => {
+      dashPeriod = '';
       selMonth = m;
       renderPills();
       renderDashboard();
@@ -2017,25 +2033,52 @@ function renderCashflowChart() {
   });
 }
 
+function dashPeriodTest(dateStr) {
+  if (dashPeriod) {
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    if (dashPeriod === 'last') {
+      const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return dateStr.startsWith(`${lm.getFullYear()}-${pad(lm.getMonth()+1)}`);
+    }
+    if (dashPeriod === '3m') {
+      for (let i = 0; i <= 2; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        if (dateStr.startsWith(`${d.getFullYear()}-${pad(d.getMonth()+1)}`)) return true;
+      }
+      return false;
+    }
+    if (dashPeriod === 'ytd') return dateStr.startsWith(`${now.getFullYear()}-`);
+    return true;
+  }
+  return selMonth ? dateStr.startsWith(selMonth) : true;
+}
 function filtered() {
-  return selMonth
-    ? txns.filter(t => t.date.startsWith(selMonth) && t.amount !== 0)
-    : txns.filter(t => t.amount !== 0);
+  return txns.filter(t => t.amount !== 0 && dashPeriodTest(t.date));
 }
 
 function renderDashboard() {
   renderPills();
   const ts    = filtered();
-  // Exclude income-flagged transactions from expense calculations
-  // Transfers contribute as negative (reduce total like refunds); pure income excluded entirely
   const expenses = ts.filter(t => t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId));
   const effectiveAmt = t => t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount;
-  const total = expenses.reduce((s, t) => s + effectiveAmt(t), 0);
-  const creditsTotal = expenses.filter(t => effectiveAmt(t) < 0).reduce((s, t) => s + effectiveAmt(t), 0);
 
+  // Apply category filter for hero stats and tile grid
+  const catExpenses = dashCatFilter.size
+    ? expenses.filter(t => t.incomeType === 'transfer'
+        ? (t.incomeCategory && dashCatFilter.has(t.incomeCategory))
+        : dashCatFilter.has(t.category))
+    : expenses;
+  const total = catExpenses.reduce((s, t) => s + effectiveAmt(t), 0);
+  const creditsTotal = catExpenses.filter(t => effectiveAmt(t) < 0).reduce((s, t) => s + effectiveAmt(t), 0);
+
+  const periodLabel = dashPeriod === 'last' ? 'last month'
+    : dashPeriod === '3m' ? 'last 3 months'
+    : dashPeriod === 'ytd' ? 'year to date'
+    : selMonth ? 'in ' + fmtMonth(selMonth) : 'all time';
   document.getElementById('hero-total').textContent = fmt(total);
-  document.getElementById('hero-sub').textContent   = selMonth ? 'in ' + fmtMonth(selMonth) + (creditsTotal < 0 ? '  (' + fmt(Math.abs(creditsTotal)) + ' credited)' : '') : 'all time';
-  const posExpenses = expenses.filter(t => effectiveAmt(t) > 0);
+  document.getElementById('hero-sub').textContent   = periodLabel + (creditsTotal < 0 ? '  (' + fmt(Math.abs(creditsTotal)) + ' credited)' : '');
+  const posExpenses = catExpenses.filter(t => effectiveAmt(t) > 0);
   document.getElementById('hero-txns').textContent  = posExpenses.length;
   const ud = new Set(posExpenses.map(t => t.date)).size || 1;
   document.getElementById('hero-avg').textContent = fmt(posExpenses.reduce((s,t)=>s+effectiveAmt(t),0) / ud);
@@ -2043,9 +2086,24 @@ function renderDashboard() {
   document.getElementById('hero-largest').textContent = fmt(lg.amount > 0 ? lg.amount : 0);
   document.getElementById('hero-lm').textContent      = lg.merchant || '—';
 
+  // Update period button active states
+  document.getElementById('dp-last')?.classList.toggle('active', dashPeriod === 'last');
+  document.getElementById('dp-3m')?.classList.toggle('active',   dashPeriod === '3m');
+  document.getElementById('dp-ytd')?.classList.toggle('active',  dashPeriod === 'ytd');
+
+  // Render category filter chips
+  const chipsEl = document.getElementById('dash-cat-chips');
+  if (chipsEl) {
+    const allOn = dashCatFilter.size === 0;
+    chipsEl.innerHTML = CATS.map(c => {
+      const on = allOn || dashCatFilter.has(c.key);
+      return `<button class="dash-pill" style="${on ? `background:${c.bg};color:${c.color};border-color:${c.color};` : 'opacity:0.4;'}" onclick="toggleDashCat('${c.key}')">${c.label}</button>`;
+    }).join('') + (dashCatFilter.size ? `<button class="dash-pill" onclick="clearDashCatFilter()" style="margin-left:2px;">Clear</button>` : '');
+  }
+
   // Build byCat totals — transfers credited to incomeCategory only; if none, unattributed
   const byCat = {};
-  expenses.forEach(t => {
+  catExpenses.forEach(t => {
     if (t.incomeType === 'transfer') {
       if (t.incomeCategory) byCat[t.incomeCategory] = (byCat[t.incomeCategory] || 0) + effectiveAmt(t);
     } else {
@@ -2054,10 +2112,11 @@ function renderDashboard() {
   });
   const netTotal = total;
 
-  // Render 13-tile grid
+  // Render category tile grid
   const grid = document.getElementById('cat-grid');
   grid.innerHTML = '';
   CATS.forEach(c => {
+    if (dashCatFilter.size > 0 && !dashCatFilter.has(c.key)) return;
     const amt = byCat[c.key] || 0;
     const pct = netTotal ? (amt / netTotal * 100) : 0;
     const tile = document.createElement('div');
@@ -2091,7 +2150,7 @@ function renderDashboard() {
   renderCashflowChart();
 
   // Summary row — exclude transfer-type incomes (already counted as negative in expenses)
-  const monthIncomes = incomes.filter(i => i.type !== 'transfer' && (!selMonth || i.date.startsWith(selMonth)));
+  const monthIncomes = incomes.filter(i => i.type !== 'transfer' && dashPeriodTest(i.date));
   const totalIncome  = monthIncomes.reduce((s, i) => s + i.amount, 0);
   const totalExpenses = total;
   const net = totalIncome - totalExpenses;
@@ -2123,6 +2182,15 @@ function renderDashboard() {
     </tr>`;
   }).join('')}</table>`;
 }
+
+function setDashPeriod(p) { dashPeriod = dashPeriod === p ? '' : p; renderDashboard(); }
+function toggleDashCat(key) {
+  if (dashCatFilter.size === 0) { dashCatFilter = new Set([key]); }
+  else if (dashCatFilter.has(key)) { dashCatFilter.delete(key); }
+  else { dashCatFilter.add(key); }
+  renderDashboard();
+}
+function clearDashCatFilter() { dashCatFilter = new Set(); renderDashboard(); }
 
 // ── TRANSACTIONS ─────────────────────────────────────────
 function setTxnSort(col) {
@@ -4476,6 +4544,7 @@ const THEMES = {
   'dark-forest':   { dark:true,  label:'Forest',   bg:'#091410', surface:'#0e1e18',  border:'#183028', ink:'#d0e8dc',  muted:'#508870', faint:'#305848', accent:'#3ab870', sidebarBg:'#0a2215', rowHover:'#132018',        navActiveBg:'rgba(58,184,112,.25)', navActiveColor:'#70d898', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
   'dark-slate':    { dark:true,  label:'Slate',    bg:'#111418', surface:'#1c2028',  border:'#2a3040', ink:'#dce4f0',  muted:'#7080a8', faint:'#485870', accent:'#8090c8', sidebarBg:'#141c30', rowHover:'#222835',        navActiveBg:'rgba(128,144,200,.25)',navActiveColor:'#a8b8e0', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
   'dark-pink':     { dark:true,  label:'Hot Pink', bg:'#12080f', surface:'#1c1018',  border:'#381528', ink:'#f4dcec',  muted:'#a8688c', faint:'#6e3854', accent:'#e91087', sidebarBg:'#180a14', rowHover:'#241528',        navActiveBg:'rgba(233,16,135,.25)', navActiveColor:'#f070b8', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
+  'light-pink':    { dark:false, label:'Pink',     bg:'#fdf0f7', surface:'#ffffff',  border:'#f0d0e8', ink:'#2d0a1e',  muted:'#9c4878', faint:'#c888b0', accent:'#e91087', sidebarBg:'#2a0a1c', rowHover:'rgba(233,16,135,.04)', navActiveBg:'rgba(233,16,135,.18)', navActiveColor:'#e91087', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
 };
 
 function applyTheme(key) {
