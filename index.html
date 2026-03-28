@@ -3377,7 +3377,7 @@ function renderIncome() {
   repairIncomeDates();
   const body  = document.getElementById('income-body');
   const empty = document.getElementById('income-empty');
-  const all   = [...incomes].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  const all   = [...incomes].filter(i => i.type !== 'transfer').sort((a,b) => (b.date||'').localeCompare(a.date||''));
   const list  = selMonth ? all.filter(i => i.date.startsWith(selMonth)) : all;
   // Update income page total
   const totalEl = document.getElementById('income-page-total');
