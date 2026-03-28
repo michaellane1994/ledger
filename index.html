@@ -114,6 +114,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .dark-toggle-knob{position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;pointer-events:none;}
 .dark-toggle.on .dark-toggle-knob{transform:translateX(16px);}
 .topbar-pills-row{display:none;position:fixed;top:58px;left:228px;right:0;background:var(--surface);border-bottom:1px solid var(--border);padding:9px 16px;gap:6px;overflow-x:auto;z-index:49;-webkit-overflow-scrolling:touch;}
+#dash-period-bar{display:flex;position:fixed;top:58px;left:228px;right:0;background:var(--bg);border-bottom:1px solid var(--border);padding:7px 20px;gap:5px;align-items:center;z-index:48;flex-wrap:wrap;}
+.main.dash-bar-visible{padding-top:94px;}
 .topbar-pills-row::-webkit-scrollbar{display:none;}
 .topbar-left{display:flex;align-items:center;gap:14px;min-width:0;}
 .topbar-title{font-family:'Playfair Display',serif;font-size:17px;white-space:nowrap;}
@@ -319,6 +321,8 @@ tbody tr:hover .del-btn{opacity:1;}
   .topbar{padding:0 16px;left:0;}
   .topbar .month-pills{display:none;}
   .topbar-pills-row{left:0;}
+  #dash-period-bar{top:96px;left:0;}
+  .main.dash-bar-visible{padding-top:134px;}
   .content{padding:16px;}
   .month-hero{flex-direction:column;align-items:flex-start;gap:16px;padding:20px;}
   .hero-total{font-size:38px;}
@@ -429,6 +433,11 @@ tbody tr:hover .del-btn{opacity:1;}
   </header>
   <!-- Mobile month pills bar — fixed below topbar on small screens -->
   <div class="topbar-pills-row" id="mobile-month-pills"></div>
+  <div id="dash-period-bar">
+    <button class="dash-pill" id="dp-latest" onclick="setDashPeriod('latest')">Latest Month</button>
+    <button class="dash-pill" id="dp-3m"     onclick="setDashPeriod('3m')">Last 3 Months</button>
+    <button class="dash-pill" id="dp-ytd"    onclick="setDashPeriod('ytd')">Year to Date</button>
+  </div>
 
   <div class="content">
 
@@ -493,14 +502,9 @@ tbody tr:hover .del-btn{opacity:1;}
         </div>
       </div>
 
-      <!-- Dashboard filters: period + category -->
-      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;">
-        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
-          <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-right:4px;white-space:nowrap;">Period</span>
-          <button class="dash-pill" id="dp-last" onclick="setDashPeriod('last')">Last Month</button>
-          <button class="dash-pill" id="dp-3m"   onclick="setDashPeriod('3m')">Last 3 Months</button>
-          <button class="dash-pill" id="dp-ytd"  onclick="setDashPeriod('ytd')">Year to Date</button>
-        </div>
+      <!-- Dashboard category filter -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;">Expenses by Category</div>
         <div style="position:relative;" id="dash-cat-wrap">
           <button class="dash-pill" onclick="toggleCatDropdown(event)"><span id="dash-cat-label">All Categories</span> ▾</button>
           <div id="dash-cat-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.15);">
@@ -1588,7 +1592,7 @@ let sheetsUrl    = localStorage.getItem('l3_sheets_url') || '';
 let showJoint    = localStorage.getItem('l3_show_joint') !== 'false';
 let rentalExpenses = JSON.parse(localStorage.getItem('l3_rental') || '[]');
 let selMonth  = '';
-let dashPeriod    = '';        // '', 'last', '3m', 'ytd'
+let dashPeriod    = '';        // '', 'latest', '3m', 'ytd'
 let dashCatFilter = new Set(); // empty = show all categories
 
 function persist() {
@@ -1617,7 +1621,16 @@ function goNav(name) {
   document.querySelectorAll('.nav-item')[map[name]].classList.add('active');
   document.getElementById('topbar-title').textContent =
     { dashboard: 'Dashboard', transactions: 'Transactions', income: 'Income', savings: 'Savings', upload: 'Upload Data', trash: 'Bin', rental: 'Rental', settings: 'Settings' }[name];
-  if (name === 'dashboard')    renderDashboard();
+  const periodBar = document.getElementById('dash-period-bar');
+  const mainEl    = document.querySelector('.main');
+  if (name === 'dashboard') {
+    if (periodBar) periodBar.style.display = 'flex';
+    if (mainEl)    mainEl.classList.add('dash-bar-visible');
+    renderDashboard();
+  } else {
+    if (periodBar) periodBar.style.display = 'none';
+    if (mainEl)    mainEl.classList.remove('dash-bar-visible');
+  }
   if (name === 'transactions') {
     const fm = document.getElementById('f-month');
     if (fm && selMonth) fm.value = selMonth;
@@ -2047,9 +2060,9 @@ function dashPeriodTest(dateStr) {
   if (dashPeriod) {
     const now = new Date();
     const pad = n => String(n).padStart(2,'0');
-    if (dashPeriod === 'last') {
-      const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      return dateStr.startsWith(`${lm.getFullYear()}-${pad(lm.getMonth()+1)}`);
+    if (dashPeriod === 'latest') {
+      const latestMonth = getMonths()[0];
+      return latestMonth ? dateStr.startsWith(latestMonth) : false;
     }
     if (dashPeriod === '3m') {
       for (let i = 0; i <= 2; i++) {
@@ -2074,21 +2087,23 @@ function renderDashboard() {
   const effectiveAmt = t => t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount;
 
   // Apply category filter (dashCatFilter = set of HIDDEN categories)
+  // catExpenses = category-filtered view (only affects tiles, NOT hero totals)
   const catExpenses = dashCatFilter.size
     ? expenses.filter(t => t.incomeType === 'transfer'
         ? (!t.incomeCategory || !dashCatFilter.has(t.incomeCategory))
         : !dashCatFilter.has(t.category))
     : expenses;
-  const total = catExpenses.reduce((s, t) => s + effectiveAmt(t), 0);
-  const creditsTotal = catExpenses.filter(t => effectiveAmt(t) < 0).reduce((s, t) => s + effectiveAmt(t), 0);
+  // Hero totals use expenses (period-filtered only, NOT category-filtered)
+  const total = expenses.reduce((s, t) => s + effectiveAmt(t), 0);
+  const creditsTotal = expenses.filter(t => effectiveAmt(t) < 0).reduce((s, t) => s + effectiveAmt(t), 0);
 
-  const periodLabel = dashPeriod === 'last' ? 'last month'
+  const periodLabel = dashPeriod === 'latest' ? 'latest month'
     : dashPeriod === '3m' ? 'last 3 months'
     : dashPeriod === 'ytd' ? 'year to date'
     : selMonth ? 'in ' + fmtMonth(selMonth) : 'all time';
   document.getElementById('hero-total').textContent = fmt(total);
   document.getElementById('hero-sub').textContent   = periodLabel + (creditsTotal < 0 ? '  (' + fmt(Math.abs(creditsTotal)) + ' credited)' : '');
-  const posExpenses = catExpenses.filter(t => effectiveAmt(t) > 0);
+  const posExpenses = expenses.filter(t => effectiveAmt(t) > 0);
   document.getElementById('hero-txns').textContent  = posExpenses.length;
   const ud = new Set(posExpenses.map(t => t.date)).size || 1;
   document.getElementById('hero-avg').textContent = fmt(posExpenses.reduce((s,t)=>s+effectiveAmt(t),0) / ud);
@@ -2097,9 +2112,9 @@ function renderDashboard() {
   document.getElementById('hero-lm').textContent      = lg.merchant || '—';
 
   // Update period button active states
-  document.getElementById('dp-last')?.classList.toggle('active', dashPeriod === 'last');
-  document.getElementById('dp-3m')?.classList.toggle('active',   dashPeriod === '3m');
-  document.getElementById('dp-ytd')?.classList.toggle('active',  dashPeriod === 'ytd');
+  document.getElementById('dp-latest')?.classList.toggle('active', dashPeriod === 'latest');
+  document.getElementById('dp-3m')?.classList.toggle('active',     dashPeriod === '3m');
+  document.getElementById('dp-ytd')?.classList.toggle('active',    dashPeriod === 'ytd');
 
   // Update category dropdown button label and items
   const numHidden = dashCatFilter.size;
