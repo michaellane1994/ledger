@@ -521,11 +521,11 @@ tbody tr:hover .del-btn{opacity:1;}
       <div class="charts-row">
         <div class="card">
           <div class="card-head">
-            <div class="card-title">Spend by Month &amp; Category</div>
-            <div style="display:flex;align-items:center;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="card-title">Spend by Month &amp; Category</div>
               <div style="position:relative;" id="chart-cat-wrap">
                 <button class="dash-pill" onclick="toggleChartCatDropdown(event)"><span id="chart-cat-label">All Categories</span> ▾</button>
-                <div id="chart-cat-menu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.15);">
+                <div id="chart-cat-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.15);">
                   <div style="padding:5px 10px 6px;border-bottom:1px solid var(--border);display:flex;gap:10px;">
                     <button onclick="selectAllChartCats()" style="font-size:11.5px;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;font-family:'Inter',sans-serif;">Select all</button>
                     <span style="color:var(--faint);">·</span>
@@ -534,8 +534,8 @@ tbody tr:hover .del-btn{opacity:1;}
                   <div id="chart-cat-items" style="max-height:260px;overflow-y:auto;padding:2px 0;"></div>
                 </div>
               </div>
-              <button class="btn btn-ghost btn-sm" onclick="resetChartFilters()">Reset</button>
             </div>
+            <button class="btn btn-ghost btn-sm" onclick="resetChartFilters()">Reset</button>
           </div>
           <div class="chart-controls">
             <div class="chart-range">
@@ -2162,13 +2162,22 @@ function renderDashboard() {
     }).join('');
   }
 
-  // Build byCat totals — transfers credited to incomeCategory only; if none, unattributed
+  // Build byCat totals — category-filtered (drives tiles only)
   const byCat = {};
   catExpenses.forEach(t => {
     if (t.incomeType === 'transfer') {
       if (t.incomeCategory) byCat[t.incomeCategory] = (byCat[t.incomeCategory] || 0) + effectiveAmt(t);
     } else {
       byCat[t.category] = (byCat[t.category] || 0) + effectiveAmt(t);
+    }
+  });
+  // Build byCatAll — unfiltered (drives Top Categories, always shows all)
+  const byCatAll = {};
+  expenses.forEach(t => {
+    if (t.incomeType === 'transfer') {
+      if (t.incomeCategory) byCatAll[t.incomeCategory] = (byCatAll[t.incomeCategory] || 0) + effectiveAmt(t);
+    } else {
+      byCatAll[t.category] = (byCatAll[t.category] || 0) + effectiveAmt(t);
     }
   });
   const netTotal = total;
@@ -2193,8 +2202,8 @@ function renderDashboard() {
     grid.appendChild(tile);
   });
 
-  // Top categories bar list (sorted)
-  const arr = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  // Top categories bar list (sorted) — uses unfiltered byCatAll
+  const arr = Object.entries(byCatAll).sort((a, b) => b[1] - a[1]).slice(0, 8);
   const maxV = arr[0] ? arr[0][1] : 1;
   document.getElementById('subcat-rows').innerHTML = arr.map(([k, v]) => {
     const c = CAT[k] || CAT.misc;
