@@ -2213,10 +2213,6 @@ function renderDashboard() {
   const discTotal = total - fixedTotal;
   document.getElementById('hero-fixed').textContent = fmt(fixedTotal);
   document.getElementById('hero-disc').textContent = fmt(discTotal);
-  const fixedSubEl = document.getElementById('hero-fixed-sub');
-  const discSubEl  = document.getElementById('hero-disc-sub');
-  if (fixedSubEl) fixedSubEl.textContent = totalIncome > 0 ? (fixedTotal / totalIncome * 100).toFixed(0) + '% of income' : 'committed';
-  if (discSubEl)  discSubEl.textContent  = totalIncome > 0 ? (discTotal  / totalIncome * 100).toFixed(0) + '% of income' : 'flexible';
 
   // Update period button active states
   document.getElementById('dp-latest')?.classList.toggle('active', dashPeriod === 'latest');
@@ -2399,6 +2395,10 @@ function renderDashboard() {
   // Summary row — exclude transfer-type incomes (already counted as negative in expenses)
   const monthIncomes = incomes.filter(i => i.type !== 'transfer' && dashPeriodTest(i.date));
   const totalIncome  = monthIncomes.reduce((s, i) => s + i.amount, 0);
+  const fixedSubEl = document.getElementById('hero-fixed-sub');
+  const discSubEl  = document.getElementById('hero-disc-sub');
+  if (fixedSubEl) fixedSubEl.textContent = totalIncome > 0 ? (fixedTotal / totalIncome * 100).toFixed(0) + '% of income' : 'committed';
+  if (discSubEl)  discSubEl.textContent  = totalIncome > 0 ? (discTotal  / totalIncome * 100).toFixed(0) + '% of income' : 'flexible';
   const totalExpenses = total;
   const net = totalIncome - totalExpenses;
   const totalSavings = savAccts.reduce((s, a) => s + (a.balance || 0), 0);
