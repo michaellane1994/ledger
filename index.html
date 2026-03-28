@@ -1574,7 +1574,8 @@ const DEFAULT_CATS = [
   { key:'groceries',  label:'Groceries',   color:'#3d8b5e', kw:['safeway','save-on','save on','superstore','loblaws','metro ','sobeys','whole foods','t&t','freshco','costco','independent grocer','farm boy','no frills','walmart','overwaitea','thrifty foods','mayfair','iga ','produce','market','grocery','supermarket','galloway','h-mart','nations','choices market','peninsula farm','buy-low','qualicum','nature\'s fare'] },
   { key:'eatingout',  label:'Eating Out',  color:'#d4603a', kw:['mcdonald','burger king','a&w ','kfc','wendy','subway','pizza','sushi','ramen','restaurant','cafe ','doordash','ubereats','skip','grubhub','earls','cactus','moxies','milestones','boston pizza','the keg','white spot','grill','eatery','bistro','canteen','dine','nandos','chipotle','five guys','toast','lox','miku','cin cin','starbucks','tim horton','second cup','blenz','coffee','bubble tea','boba','korean bbq','hot pot','dim sum','brunch','breakfast ','lunch ','delivery fee','service fee','denny','ihop','cora','jugo juice','booster juice','freshii','poke','burrito','taco','shawarma','falafel','curry','noodle','dumpling','wonton','banh mi','gelato','ice cream'] },
   { key:'liquor',     label:'Liquor',      color:'#9e3060', kw:['bc liquor','bcliquor','bc ldb','private liquor','wine','brewery','distillery','beer store','lcbo','saq','liquor depot','cold beer','wine store','craft beer','spirits','bar ','pub ','nightclub','lounge','cocktail','taproom','sake','cider','mead','bottle shop','liquor mart','vin&fromage'] },
-  { key:'home',       label:'Home',        color:'#6060a8', fixed:true, kw:['rent ','mortgage','strata','home depot','rona','ikea','wayfair','bed bath','leons','the brick','sleep country','restoration hardware','cb2','crate','property tax','home insurance','hardware','plumbing','electrician','furniture','mattress','linen','decor','canadian tire','lordco','pest control','landscaping','lawn','cleaning service','molly maid','mrs clean','property management','locksmith','moving','storage ','u-haul','condo fee','hoa ','building maintenance','window','flooring','carpet','tile ','paint ','roofing','drywall','renovation','contractor','handyman'] },
+  { key:'home',       label:'Home',        color:'#6060a8', fixed:true, kw:['mortgage','strata','home depot','rona','ikea','wayfair','bed bath','leons','the brick','sleep country','restoration hardware','cb2','crate','property tax','home insurance','hardware','plumbing','electrician','furniture','mattress','linen','decor','canadian tire','lordco','pest control','landscaping','lawn','cleaning service','molly maid','mrs clean','property management','locksmith','moving','storage ','u-haul','condo fee','hoa ','building maintenance','window','flooring','carpet','tile ','paint ','roofing','drywall','renovation','contractor','handyman'] },
+  { key:'homerental', label:'Home - Rental', color:'#4a4e90', fixed:true, kw:['rent ','rental payment','monthly rent','apartment rent','condo rent','lease payment'] },
   { key:'bills',      label:'Bills',       color:'#3050a8', fixed:true, kw:['bc hydro','bchydro','fortis','shaw ','telus','rogers','bell canada','enbridge','hydro ','internet','wireless plan','phone plan','insurance','strata fee','cra ','government','municipal','property tax','water ','utility','netflix','spotify','apple.com/bill','apple services','google storage','microsoft 365','adobe','disney','crave','paramount','youtube premium','icloud','dropbox','prime video','amazon prime','hulu','hbo','apple tv','nintendo switch','playstation plus','xbox game pass','duolingo','headspace','calm ','subscription','annual fee','membership fee'] },
   { key:'gym',        label:'Gym',         color:'#0d8a90', fixed:true, kw:['goodlife','anytime fitness','equinox','ymca','limelight','crossfit','soulcycle','orangetheory','fitness','gym ','pilates','yoga ','barre','f45','peloton','boxing','martial arts','jiu jitsu','muay thai','swim ','pool ','tennis','squash','racket','personal trainer','recreation centre','rec centre','studio ','athletic','sport ','curl ','climb','bouldering','trampoline park'] },
   { key:'shopping',   label:'Shopping',    color:'#9040c8', kw:['amazon','aritzia','lululemon','h&m','zara','banana republic','gap ','old navy','winners','marshalls','hudson','bay ','nordstrom','saks','ssense','foot locker','nike','adidas','apple store','best buy','sport chek','mec','arcteryx','uniqlo','anthropologie','free people','everlane','holt renfrew','flannels','revolve','clothing','apparel','boutique','thrift','ebay','etsy','aliexpress','shein','fashion','jewellery','jewelry','accessories','watches','shoes ','boots ','purse','handbag','sunglasses','indigo','chapters','book ','toys r us','staples','london drugs','canadian tire','home sense','structube','simons','reitmans','dynamite','garage ','roots ','aldo','sephora','mac cosmetics','bath body','lush ','beauty','drugstore'] },
@@ -3381,7 +3382,7 @@ function renderIncome() {
   // Update income page total
   const totalEl = document.getElementById('income-page-total');
   if (totalEl) {
-    const total = list.reduce((s,i) => s+i.amount, 0);
+    const total = list.filter(i => i.type !== 'transfer').reduce((s,i) => s+i.amount, 0);
     totalEl.textContent = fmt(total);
   }
   const periodEl = document.getElementById('income-page-period');
@@ -3871,11 +3872,24 @@ function renderCatManagement() {
             onchange="CATS[${idx}].fixed=this.checked; saveCats(); renderDashboard();">
           <span>Fixed</span>
         </label>
+        <div style="display:flex;gap:2px;">
+          <button class="btn btn-ghost btn-sm" onclick="moveCat(${idx},-1)" title="Move up" ${idx===0?'disabled':''} style="padding:2px 6px;">↑</button>
+          <button class="btn btn-ghost btn-sm" onclick="moveCat(${idx},1)" title="Move down" ${idx===CATS.length-1?'disabled':''} style="padding:2px 6px;">↓</button>
+        </div>
         <button class="btn btn-ghost btn-sm" onclick="editCat('${c.key}')">Edit</button>
         ${c.key === 'misc' ? '' : `<button class="del-btn always-on" onclick="deleteCat('${c.key}')" title="Remove category">✕</button>`}
       </div>
     </div>`;
   }).join('');
+}
+
+function moveCat(idx, dir) {
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= CATS.length) return;
+  [CATS[idx], CATS[newIdx]] = [CATS[newIdx], CATS[idx]];
+  saveCats();
+  renderCatManagement();
+  renderDashboard();
 }
 
 function openAddCat() {
