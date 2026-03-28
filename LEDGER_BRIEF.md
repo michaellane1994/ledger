@@ -162,7 +162,8 @@ Nav item order (0-indexed):
 
 The Google Apps Script is displayed in the Settings page (copy button provided). It must be redeployed as a **new version** every time the sheet structure changes. Current sheet columns:
 
-**Transactions**: id, date, merchant, amount, category, person, card, note, refund, manual, incomeType, savingsAccountId, incomeCategory  
+**Transactions**: id, date, merchant, amount, category, person, card, note, refund, manual, incomeType, savingsAccountId, incomeCategory
+**Categories**: key, label, color, fixed, budget, keywords (JSON array)  
 **Learned**: merchant, category  
 **Income**: id, date, amount, type, person, desc, note, fromTxnId, category  
 **Savings**: id, name, type, person, balance, baseBalance, goal  
