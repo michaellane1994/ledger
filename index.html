@@ -483,12 +483,12 @@ tbody tr:hover .del-btn{opacity:1;}
           <div class="hsi">
             <div class="hs-label">Fixed</div>
             <div class="hs-val" id="hero-fixed">—</div>
-            <div class="hs-sub">committed</div>
+            <div class="hs-sub" id="hero-fixed-sub">committed</div>
           </div>
           <div class="hsi">
             <div class="hs-label">Discretionary</div>
             <div class="hs-val" id="hero-disc">—</div>
-            <div class="hs-sub">flexible</div>
+            <div class="hs-sub" id="hero-disc-sub">flexible</div>
           </div>
           <div class="hsi">
             <div class="hs-label">Savings Rate</div>
@@ -2213,6 +2213,10 @@ function renderDashboard() {
   const discTotal = total - fixedTotal;
   document.getElementById('hero-fixed').textContent = fmt(fixedTotal);
   document.getElementById('hero-disc').textContent = fmt(discTotal);
+  const fixedSubEl = document.getElementById('hero-fixed-sub');
+  const discSubEl  = document.getElementById('hero-disc-sub');
+  if (fixedSubEl) fixedSubEl.textContent = totalIncome > 0 ? (fixedTotal / totalIncome * 100).toFixed(0) + '% of income' : 'committed';
+  if (discSubEl)  discSubEl.textContent  = totalIncome > 0 ? (discTotal  / totalIncome * 100).toFixed(0) + '% of income' : 'flexible';
 
   // Update period button active states
   document.getElementById('dp-latest')?.classList.toggle('active', dashPeriod === 'latest');
