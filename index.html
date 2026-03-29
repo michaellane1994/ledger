@@ -2037,7 +2037,7 @@ function renderCashflowChart() {
           stack: 'income', yAxisID: 'y'
         },
         {
-          type: 'bar', label: 'Fixed (home + bills)',
+          type: 'bar', label: 'Fixed costs',
           data: fixedData.map(v => -v),
           backgroundColor: fixedData.map((_,i) => `rgba(180,83,9,${a(isDark?.75:.5, isDark?.28:.18, i)})`),
           borderWidth: 0, borderRadius: 2,
@@ -2111,7 +2111,7 @@ function renderCashflowChart() {
               const v = ctx.raw;
               const abs = n => '$' + Math.abs(n).toLocaleString('en-CA',{minimumFractionDigits:0,maximumFractionDigits:0});
               if (ctx.dataset.label === 'Income')               return ` Income: ${abs(v)}${tag}`;
-              if (ctx.dataset.label === 'Fixed (home + bills)') return ` Fixed costs: ${abs(v)}${tag}`;
+              if (ctx.dataset.label === 'Fixed costs') return ` Fixed costs: ${abs(v)}${tag}`;
               if (ctx.dataset.label === 'Discretionary') {
                 const cap = capData[i];
                 const disc = Math.abs(v);
