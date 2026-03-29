@@ -3865,11 +3865,11 @@ function renderCatManagement() {
           <span>Budget/mo</span>
           <input type="number" min="0" placeholder="No budget" value="${c.budget || ''}"
             style="width:80px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);"
-            onchange="CATS[${idx}].budget=parseFloat(this.value)||0; saveCats(); renderDashboard();">
+            onchange="CATS[${idx}].budget=parseFloat(this.value)||0; saveCats(); renderDashboard(); autoPush();">
         </label>
         <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer;">
           <input type="checkbox" ${c.fixed ? 'checked' : ''}
-            onchange="CATS[${idx}].fixed=this.checked; saveCats(); renderDashboard();">
+            onchange="CATS[${idx}].fixed=this.checked; saveCats(); renderDashboard(); autoPush();">
           <span>Fixed</span>
         </label>
         <div style="display:flex;gap:2px;">
@@ -3890,6 +3890,7 @@ function moveCat(idx, dir) {
   saveCats();
   renderCatManagement();
   renderDashboard();
+  autoPush();
 }
 
 function openAddCat() {
@@ -3945,6 +3946,7 @@ function confirmAddCat() {
   closeAddCat();
   renderCatManagement();
   renderDashboard();
+  autoPush();
 }
 
 function deleteCat(key) {
@@ -3963,6 +3965,7 @@ function deleteCat(key) {
   persist();
   renderCatManagement();
   renderDashboard();
+  autoPush();
 }
 
 // Wire up live preview on color/label change
