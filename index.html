@@ -563,8 +563,12 @@ tbody tr:hover .del-btn{opacity:1;}
       <div class="charts-row">
         <div class="card">
           <div class="card-head">
-            <div style="display:flex;align-items:center;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
               <div class="card-title">Spend by Month &amp; Category</div>
+              <div style="display:flex;gap:2px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px;">
+                <button id="chart-view-cat" class="btn btn-sm" onclick="setChartView('category')" style="padding:2px 9px;font-size:11.5px;">By Category</button>
+                <button id="chart-view-fv"  class="btn btn-sm" onclick="setChartView('fixed-variable')" style="padding:2px 9px;font-size:11.5px;">Fixed vs Variable</button>
+              </div>
               <div style="position:relative;" id="chart-cat-wrap">
                 <button class="dash-pill" onclick="toggleChartCatDropdown(event)"><span id="chart-cat-label">All Categories</span> ▾</button>
                 <div id="chart-cat-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.15);">
@@ -1758,6 +1762,7 @@ window.addEventListener('resize', () => {
 let timeChart;
 let cashflowChart;
 let chartHiddenCats  = new Set();
+let chartViewMode    = 'category'; // 'category' | 'fixed-variable'
 let cfProjWindow     = parseInt(localStorage.getItem('l3_cf_proj') || '3');
 let cfStartBalance   = parseFloat(localStorage.getItem('l3_cf_start') || '0');
 // CF_FIXED_CATS is derived dynamically from CATS where fixed===true (see renderChartSection)
@@ -1767,12 +1772,15 @@ let editingIncomeId = null;
 
 function resetChartFilters() {
   chartHiddenCats.clear();
+  chartViewMode = 'category';
   const allExpenses = txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId));
   const allMonths = [...new Set(allExpenses.map(t => t.date.substring(0,7)))].sort();
   const fromSel = document.getElementById('chart-from');
   const toSel   = document.getElementById('chart-to');
   if (fromSel && allMonths.length) { fromSel.value = allMonths[0]; }
   if (toSel   && allMonths.length) { toSel.value   = allMonths[allMonths.length - 1]; }
+  const catWrap = document.getElementById('chart-cat-wrap');
+  if (catWrap) catWrap.style.display = '';
   renderChartSection();
 }
 
@@ -1801,6 +1809,15 @@ function toggleChartCatDropdown(e) {
     const close = ev => { if (!document.getElementById('chart-cat-wrap').contains(ev.target)) { menu.style.display = 'none'; document.removeEventListener('click', close); } };
     document.addEventListener('click', close);
   }
+}
+
+function setChartView(mode) {
+  chartViewMode = mode;
+  const catWrap = document.getElementById('chart-cat-wrap');
+  if (catWrap) catWrap.style.display = mode === 'category' ? '' : 'none';
+  document.getElementById('chart-view-cat')?.classList.toggle('active', mode === 'category');
+  document.getElementById('chart-view-fv')?.classList.toggle('active', mode === 'fixed-variable');
+  renderChartSection();
 }
 
 function renderChartSection() {
@@ -1848,17 +1865,38 @@ function renderChartSection() {
     }).join('');
   }
 
-  const catDatasets = CATS.filter(c => !chartHiddenCats.has(c.key)).map(c => {
-    const data = filteredMonths.map(m => {
-      const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key)
-                               .reduce((s, t) => s + t.amount, 0);
-      const transferred = incomes.filter(i => i.category === c.key && i.fromTxnId && i.date.startsWith(m))
-                                 .reduce((s, i) => s + i.amount, 0);
-      return gross - transferred;
-    });
-    if (data.every(v => v === 0)) return null;
-    return { label: c.label, data, backgroundColor: c.color, borderWidth: 0, borderRadius: 2 };
-  }).filter(Boolean);
+  // Sync toggle button active state
+  document.getElementById('chart-view-cat')?.classList.toggle('active', chartViewMode === 'category');
+  document.getElementById('chart-view-fv')?.classList.toggle('active', chartViewMode === 'fixed-variable');
+
+  let datasets;
+  if (chartViewMode === 'fixed-variable') {
+    const fvFixedCats = new Set(CATS.filter(c => c.fixed).map(c => c.key));
+    const fixedData = filteredMonths.map(m =>
+      allExpenses.filter(t => t.date.startsWith(m) && fvFixedCats.has(t.category))
+                 .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
+    );
+    const varData = filteredMonths.map(m =>
+      allExpenses.filter(t => t.date.startsWith(m) && !fvFixedCats.has(t.category))
+                 .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
+    );
+    datasets = [
+      { label: 'Fixed costs',    data: fixedData, backgroundColor: '#b45309', borderWidth: 0, borderRadius: 2 },
+      { label: 'Variable costs', data: varData,   backgroundColor: '#2563eb', borderWidth: 0, borderRadius: 2 },
+    ];
+  } else {
+    datasets = CATS.filter(c => !chartHiddenCats.has(c.key)).map(c => {
+      const data = filteredMonths.map(m => {
+        const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key)
+                                 .reduce((s, t) => s + t.amount, 0);
+        const transferred = incomes.filter(i => i.category === c.key && i.fromTxnId && i.date.startsWith(m))
+                                   .reduce((s, i) => s + i.amount, 0);
+        return gross - transferred;
+      });
+      if (data.every(v => v === 0)) return null;
+      return { label: c.label, data, backgroundColor: c.color, borderWidth: 0, borderRadius: 2 };
+    }).filter(Boolean);
+  }
 
   const monthLabels = filteredMonths.map(m => {
     const [y, mo] = m.split('-');
@@ -1875,16 +1913,16 @@ function renderChartSection() {
   const tickColor = isDark ? '#9c9488' : '#71717a';
 
   if (timeChart) timeChart.destroy();
-  if (catDatasets.length && filteredMonths.length) {
+  if (datasets.length && filteredMonths.length) {
     timeChart = new Chart(canvas, {
       type: 'bar',
-      data: { labels: monthLabels, datasets: catDatasets },
+      data: { labels: monthLabels, datasets },
       options: {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false },
+          legend: { display: chartViewMode === 'fixed-variable', position: 'top', labels: { font: { size: 11 }, padding: 12, color: tickColor, usePointStyle: true } },
           tooltip: {
             callbacks: {
               label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.x.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})}`
