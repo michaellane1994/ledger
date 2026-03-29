@@ -1760,8 +1760,7 @@ let cashflowChart;
 let chartHiddenCats  = new Set();
 let cfProjWindow     = parseInt(localStorage.getItem('l3_cf_proj') || '3');
 let cfStartBalance   = parseFloat(localStorage.getItem('l3_cf_start') || '0');
-// Categories treated as fixed recurring costs for spending capacity calculation
-const CF_FIXED_CATS  = new Set(['home', 'bills']);
+// CF_FIXED_CATS is derived dynamically from CATS where fixed===true (see renderChartSection)
 let txnSort = 'date-desc';
 let txnTypeFilter = ''; // '', 'expenses', 'transfer', 'income'
 let editingIncomeId = null;
@@ -1928,7 +1927,8 @@ function renderCashflowChart() {
     if (m) incByMonth[m] = (incByMonth[m]||0) + i.amount;
   });
 
-  // Expenses split: fixed (home+bills) vs discretionary
+  // Expenses split: fixed vs discretionary (uses CATS.fixed flag, same as Settings)
+  const cfFixedCats = new Set(CATS.filter(c => c.fixed).map(c => c.key));
   const fixedByMonth = {};
   const discByMonth  = {};
   txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId)).forEach(t => {
@@ -1936,7 +1936,7 @@ function renderCashflowChart() {
     if (!m) return;
     if (t.incomeType === 'transfer') {
       discByMonth[m] = (discByMonth[m]||0) - Math.abs(t.amount); // transfers reduce spend
-    } else if (CF_FIXED_CATS.has(t.category)) {
+    } else if (cfFixedCats.has(t.category)) {
       fixedByMonth[m] = (fixedByMonth[m]||0) + t.amount;
     } else {
       discByMonth[m] = (discByMonth[m]||0) + t.amount;
