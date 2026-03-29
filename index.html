@@ -2176,6 +2176,7 @@ function detectRecurring() {
   const byMerchant = {};
   txns.forEach(t => {
     if (t.incomeType || t.savingsAccountId || t.amount <= 0) return;
+    if (CAT[t.category]?.fixed) return; // already known fixed cost
     const key = t.merchant.toLowerCase().trim().substring(0, 25);
     if (!byMerchant[key]) byMerchant[key] = { merchant: t.merchant, category: t.category, months: new Set(), amounts: [] };
     const m = t.date.substring(0, 7);
