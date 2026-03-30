@@ -354,7 +354,8 @@ tbody tr:hover .del-btn{opacity:1;}
   .modal{padding:22px 18px;}
   .topbar-title{font-size:15px;}
   .txn-table{overflow-x:auto;}
-  .txn-table table{min-width:620px;}
+  .txn-table table{min-width:0;}
+  .income-table-wrap{overflow-x:auto;}
   .dark-label{display:none;}
   .hide-mobile{display:none !important;}
   .modal-overlay{align-items:flex-start;padding:16px 0;overflow-y:auto;}
@@ -658,7 +659,7 @@ tbody tr:hover .del-btn{opacity:1;}
         <table>
           <thead>
             <tr>
-              <th id="txn-date-th" class="th-sort sort-active" onclick="setTxnSort('date')">Date <span id="txn-date-icon" style="font-size:10px;">↓</span></th><th>Merchant</th><th>Category</th><th>Person</th><th>Card</th><th>Note</th>
+              <th id="txn-date-th" class="th-sort sort-active" onclick="setTxnSort('date')">Date <span id="txn-date-icon" style="font-size:10px;">↓</span></th><th>Merchant</th><th>Category</th><th class="hide-mobile">Person</th><th class="hide-mobile">Card</th><th class="hide-mobile">Note</th>
               <th id="txn-amt-th" style="text-align:right;" class="th-sort" onclick="setTxnSort('amount')">Amount <span id="txn-amt-icon" style="font-size:10px;">↕</span></th>
             </tr>
           </thead>
@@ -712,15 +713,17 @@ tbody tr:hover .del-btn{opacity:1;}
             Add Income
           </button>
         </div>
+        <div class="income-table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Date</th><th>Type</th><th>Description</th><th>Category</th><th>Person</th><th>Note</th>
+              <th>Date</th><th>Type</th><th>Description</th><th class="hide-mobile">Category</th><th class="hide-mobile">Person</th><th class="hide-mobile">Note</th>
               <th style="text-align:right;">Amount</th><th></th>
             </tr>
           </thead>
           <tbody id="income-body"></tbody>
         </table>
+        </div>
         <div class="empty-state" id="income-empty">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           <p>No income entries yet</p>
@@ -2699,16 +2702,16 @@ function renderTxns() {
       <td style="width:100px;"><input type="date" class="txn-date-input" value="${t.date}" onchange="saveTxnDate('${t.id}',this.value)"></td>
       <td style="font-weight:500;">${esc(t.merchant)}</td>
       <td style="position:relative;">${catCell}</td>
-      <td><select onchange="savePerson('${t.id}',this.value)" style="border:none;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;outline:none;padding:2px 4px;border-radius:4px;">
+      <td class="hide-mobile"><select onchange="savePerson('${t.id}',this.value)" style="border:none;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;outline:none;padding:2px 4px;border-radius:4px;">
         <option value="Michael" ${t.person==='Michael'?'selected':''}>Michael</option>
         <option value="Lili" ${t.person==='Lili'?'selected':''}>Lili</option>
         ${showJoint ? `<option value="Joint" ${t.person==='Joint'?'selected':''}>Joint</option>` : ''}
       </select></td>
-      <td><select onchange="saveCard('${t.id}',this.value)" style="border:none;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;outline:none;padding:2px 4px;border-radius:4px;">
+      <td class="hide-mobile"><select onchange="saveCard('${t.id}',this.value)" style="border:none;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;outline:none;padding:2px 4px;border-radius:4px;">
         <option value="">—</option>
         ${allCardOptions.map(card => `<option value="${esc(card)}" ${t.card===card?'selected':''}>${esc(card)}</option>`).join('')}
       </select></td>
-      <td><span class="txn-note" contenteditable="true"
+      <td class="hide-mobile"><span class="txn-note" contenteditable="true"
         onblur="saveNote('${t.id}',this.textContent)">${esc(t.note || '')}</span></td>
       <td style="text-align:right;white-space:nowrap;">
         ${amtDisplay}
@@ -3437,9 +3440,9 @@ function renderIncome() {
       <td style="width:100px;"><span class="txn-date-input" style="cursor:pointer;" onclick="openEditIncome('${i.id}')" title="Click to edit">${i.date||'—'}</span></td>
       <td><span class="cat-badge" style="background:${lightenColor(incomeTypeColor(i.type))};color:${incomeTypeColor(i.type)};">${INCOME_TYPES[i.type]||i.type}</span></td>
       <td style="font-weight:500;"><span class="txn-note" contenteditable="true" onblur="saveIncomeDesc('${i.id}',this.textContent)">${esc(i.desc||'')}</span></td>
-      <td>${catCell}</td>
-      <td><span class="person-tag">${i.person||'—'}</span></td>
-      <td><span class="txn-note" contenteditable="true" onblur="saveIncomeNote('${i.id}',this.textContent)">${esc(i.note||'')}</span></td>
+      <td class="hide-mobile">${catCell}</td>
+      <td class="hide-mobile"><span class="person-tag">${i.person||'—'}</span></td>
+      <td class="hide-mobile"><span class="txn-note" contenteditable="true" onblur="saveIncomeNote('${i.id}',this.textContent)">${esc(i.note||'')}</span></td>
       <td style="text-align:right;font-weight:600;color:#2d6a4f;">${fmt(i.amount)}</td>
       <td style="text-align:right;white-space:nowrap;">
         <button class="del-btn" onclick="openEditIncome('${i.id}')" title="Edit" style="margin-right:4px;">✎</button>
