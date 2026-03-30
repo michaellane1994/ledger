@@ -354,8 +354,21 @@ tbody tr:hover .del-btn{opacity:1;}
   .modal{padding:22px 18px;}
   .topbar-title{font-size:15px;}
   .txn-table{overflow-x:auto;}
-  .txn-table table{min-width:0;}
+  .txn-table table{min-width:0;table-layout:fixed;width:100%;}
+  #txn-date-th{width:78px;}
+  #txn-amt-th{width:84px;}
+  .txn-table td:nth-child(1) input[type="date"]{width:100%;font-size:12px;padding:2px 3px;}
+  .txn-table td:nth-child(2){overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+  .txn-table .cat-badge{font-size:10px;padding:2px 5px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:inline-block;vertical-align:middle;}
   .income-table-wrap{overflow-x:auto;}
+  #f-person,#f-card{display:none;}
+  .income-table-wrap table{table-layout:fixed;width:100%;}
+  .income-table-wrap th:nth-child(1){width:74px;}
+  .income-table-wrap th:nth-child(2){width:72px;}
+  .income-table-wrap th:nth-child(7){width:72px;}
+  .income-table-wrap th:nth-child(8){width:48px;}
+  .income-table-wrap td:nth-child(3){overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+  .income-table-wrap .cat-badge{font-size:10px;padding:2px 5px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:inline-block;}
   .dark-label{display:none;}
   .hide-mobile{display:none !important;}
   .modal-overlay{align-items:flex-start;padding:16px 0;overflow-y:auto;}
