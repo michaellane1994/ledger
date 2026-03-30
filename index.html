@@ -2423,7 +2423,7 @@ function renderDashboard() {
   // Render category tile grid
   const grid = document.getElementById('cat-grid');
   grid.innerHTML = '';
-  CATS.forEach(c => {
+  [...CATS].sort((a, b) => (byCat[b.key] || 0) - (byCat[a.key] || 0)).forEach(c => {
     if (dashCatFilter.has(c.key)) return;
     const amt = byCat[c.key] || 0;
     const pct = netTotal ? (amt / netTotal * 100) : 0;
