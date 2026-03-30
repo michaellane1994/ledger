@@ -1075,7 +1075,7 @@ function readSheet(ss, name, mapper) {
       }
     });
     return mapper(obj);
-  }).filter(r => r.id);
+  }).filter(r => r.id || r.key);
 }
 
 function buildResponse(data) {
@@ -3973,7 +3973,7 @@ function confirmAddCat() {
     const c = CATS.find(x => x.key === editKey);
     if (c) { c.label = label; c.color = color; c.bg = lightenColor(color); }
   } else {
-    const key = 'custom_' + label.toLowerCase().replace(/[^a-z0-9]/g,'_') + '_' + Date.now();
+    const key = 'custom_' + label.toLowerCase().replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
     const miscIdx = CATS.findIndex(c => c.key === 'misc');
     CATS.splice(miscIdx, 0, normCat({ key, label, color, kw: [], budget: 0, fixed: false, custom: true }));
   }
