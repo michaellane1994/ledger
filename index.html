@@ -1509,7 +1509,7 @@ function doGet(e) {
         </div>
       </div>
       <div class="add-field full">
-        <label>Keywords <span style="font-size:11px;color:var(--muted);font-weight:400;">comma-separated — used to auto-categorize transactions</span></label>
+        <label>Extra Keywords <span style="font-size:11px;color:var(--muted);font-weight:400;">comma-separated — parser still uses built-in rules, these are added on top</span></label>
         <textarea id="new-cat-keywords" rows="3" placeholder="e.g. starbucks, coffee, cafe, tim hortons" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;resize:vertical;box-sizing:border-box;"></textarea>
       </div>
     </div>
@@ -1644,6 +1644,10 @@ function rebuildCAT() {
 }
 rebuildCAT();
 
+// Built-in keyword lookup — always available regardless of what's saved in c.kw
+const DEFAULT_KW = {};
+DEFAULT_CATS.forEach(c => { DEFAULT_KW[c.key] = c.kw || []; });
+
 function autoCat(merchant) {
   const key = merchantKey(merchant);
   // 1. Check learned overrides first (exact match)
@@ -1652,11 +1656,13 @@ function autoCat(merchant) {
   for (const [lk, lc] of Object.entries(learned)) {
     if (key.includes(lk) || lk.includes(key)) return lc;
   }
-  // 3. Fall back to keyword rules
+  // 3. Fall back to keyword rules — built-in defaults plus any user-added extras
   const m = key;
   for (const c of CATS) {
     if (c.key === 'misc') continue;
-    if (c.kw.some(k => m.includes(k))) return c.key;
+    const builtIn = DEFAULT_KW[c.key] || [];
+    const extra   = c.kw || [];
+    if ([...builtIn, ...extra].some(k => m.includes(k))) return c.key;
   }
   return 'misc';
 }
