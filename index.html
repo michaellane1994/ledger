@@ -1912,7 +1912,8 @@ function renderChartSection() {
       { label: 'Variable costs', data: varData,    backgroundColor: '#2563eb', borderWidth: 0, borderRadius: 2, stack: 'spend' },
     ];
   } else {
-    datasets = CATS.filter(c => !chartHiddenCats.has(c.key)).map(c => {
+    // Build per-category data with average for sort consistency
+    const catDatasets = CATS.filter(c => !chartHiddenCats.has(c.key)).map(c => {
       const data = filteredMonths.map(m => {
         const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key)
                                  .reduce((s, t) => s + t.amount, 0);
@@ -1921,8 +1922,12 @@ function renderChartSection() {
         return gross - transferred;
       });
       if (data.every(v => v === 0)) return null;
-      return { label: c.label, data, backgroundColor: c.color, borderWidth: 0, borderRadius: 2, stack: 'spend' };
+      const avg = data.reduce((s, v) => s + v, 0) / data.length;
+      return { label: c.label, catKey: c.key, data, avg, backgroundColor: c.color, borderWidth: 0, borderRadius: 2, stack: 'spend' };
     }).filter(Boolean);
+    // Sort by average spend descending for consistent ordering across months
+    catDatasets.sort((a, b) => b.avg - a.avg);
+    datasets = catDatasets;
     // Monthly average reference line
     if (filteredMonths.length > 1) {
       const monthTotals = filteredMonths.map(m =>
@@ -1966,7 +1971,13 @@ function renderChartSection() {
             filter: item => item.text !== 'Monthly avg' } },
           tooltip: {
             callbacks: {
-              label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.x.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})}`,
+              label: ctx => {
+                const val = ` ${ctx.dataset.label}: $${ctx.parsed.x.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+                if (chartViewMode === 'category' && ctx.dataset.avg > 0 && ctx.parsed.x > ctx.dataset.avg * 2) {
+                  return val + '  ⚠ 2x avg';
+                }
+                return val;
+              },
               afterBody: (items) => {
                 if (chartViewMode !== 'fixed-variable') return;
                 const incomeItem = items.find(i => i.dataset.label === 'Income');
@@ -1984,6 +1995,20 @@ function renderChartSection() {
         scales: {
           x: { stacked: true, min: 0, grid: { color: gridColor }, ticks: { font: { size: 10 }, callback: v => '$' + Math.round(v).toLocaleString(), color: tickColor } },
           y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 }, color: tickColor } }
+        },
+        onClick: (e, elements) => {
+          if (chartViewMode !== 'category' || !elements.length) return;
+          const el = elements[0];
+          const catKey = datasets[el.datasetIndex]?.catKey;
+          const month  = filteredMonths[el.index];
+          if (!catKey || !month) return;
+          document.getElementById('f-cat').value   = catKey;
+          document.getElementById('f-month').value = month;
+          txnTypeFilter = 'expenses';
+          goNav('transactions');
+        },
+        onHover: (e, elements) => {
+          e.native.target.style.cursor = (chartViewMode === 'category' && elements.length) ? 'pointer' : 'default';
         }
       }
     });
