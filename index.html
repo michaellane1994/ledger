@@ -1508,6 +1508,10 @@ function doGet(e) {
           <span id="cat-preview-label">Category</span>
         </div>
       </div>
+      <div class="add-field full">
+        <label>Keywords <span style="font-size:11px;color:var(--muted);font-weight:400;">comma-separated — used to auto-categorize transactions</span></label>
+        <textarea id="new-cat-keywords" rows="3" placeholder="e.g. starbucks, coffee, cafe, tim hortons" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;resize:vertical;box-sizing:border-box;"></textarea>
+      </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
       <button class="btn btn-ghost" onclick="closeAddCat()">Cancel</button>
@@ -1897,9 +1901,14 @@ function renderChartSection() {
       allExpenses.filter(t => t.date.startsWith(m) && !fvFixedCats.has(t.category))
                  .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
     );
+    const incomeData = filteredMonths.map(m =>
+      incomes.filter(i => i.date && i.date.startsWith(m) && i.type !== 'transfer')
+             .reduce((s, i) => s + i.amount, 0)
+    );
     datasets = [
-      { label: 'Fixed costs',    data: fixedData, backgroundColor: '#b45309', borderWidth: 0, borderRadius: 2 },
-      { label: 'Variable costs', data: varData,   backgroundColor: '#2563eb', borderWidth: 0, borderRadius: 2 },
+      { label: 'Income',         data: incomeData, backgroundColor: '#2d6a4f', borderWidth: 0, borderRadius: 2 },
+      { label: 'Fixed costs',    data: fixedData,  backgroundColor: '#b45309', borderWidth: 0, borderRadius: 2 },
+      { label: 'Variable costs', data: varData,    backgroundColor: '#2563eb', borderWidth: 0, borderRadius: 2 },
     ];
   } else {
     datasets = CATS.filter(c => !chartHiddenCats.has(c.key)).map(c => {
@@ -3953,6 +3962,7 @@ function openAddCat() {
   document.getElementById('cat-modal-title').textContent = 'Add Category';
   document.getElementById('new-cat-label').value = '';
   document.getElementById('new-cat-color').value = '#c15c1e';
+  document.getElementById('new-cat-keywords').value = '';
   document.getElementById('add-cat-modal').dataset.editKey = '';
   updateCatPreview();
   document.getElementById('add-cat-modal').classList.add('open');
@@ -3963,8 +3973,9 @@ function editCat(key) {
   const c = CATS.find(x => x.key === key);
   if (!c) return;
   document.getElementById('cat-modal-title').textContent = 'Edit Category';
-  document.getElementById('new-cat-label').value  = c.label;
-  document.getElementById('new-cat-color').value  = c.color;
+  document.getElementById('new-cat-label').value    = c.label;
+  document.getElementById('new-cat-color').value    = c.color;
+  document.getElementById('new-cat-keywords').value = (c.kw || []).join(', ');
   document.getElementById('add-cat-modal').dataset.editKey = key;
   updateCatPreview();
   document.getElementById('add-cat-modal').classList.add('open');
@@ -3986,14 +3997,15 @@ function confirmAddCat() {
   const label   = document.getElementById('new-cat-label').value.trim();
   const color   = document.getElementById('new-cat-color').value;
   const editKey = document.getElementById('add-cat-modal').dataset.editKey;
+  const kw      = document.getElementById('new-cat-keywords').value.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
   if (!label) { alert('Please enter a category name.'); return; }
   if (editKey) {
     const c = CATS.find(x => x.key === editKey);
-    if (c) { c.label = label; c.color = color; c.bg = lightenColor(color); }
+    if (c) { c.label = label; c.color = color; c.bg = lightenColor(color); c.kw = kw; }
   } else {
     const key = 'custom_' + label.toLowerCase().replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
     const miscIdx = CATS.findIndex(c => c.key === 'misc');
-    CATS.splice(miscIdx, 0, normCat({ key, label, color, kw: [], budget: 0, fixed: false, custom: true }));
+    CATS.splice(miscIdx, 0, normCat({ key, label, color, kw, budget: 0, fixed: false, custom: true }));
   }
   rebuildCAT();
   saveCats();
