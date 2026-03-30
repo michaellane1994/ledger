@@ -1906,9 +1906,10 @@ function renderChartSection() {
              .reduce((s, i) => s + i.amount, 0)
     );
     datasets = [
-      { label: 'Income',         data: incomeData, backgroundColor: '#2d6a4f', borderWidth: 0, borderRadius: 2 },
-      { label: 'Fixed costs',    data: fixedData,  backgroundColor: '#b45309', borderWidth: 0, borderRadius: 2 },
-      { label: 'Variable costs', data: varData,    backgroundColor: '#2563eb', borderWidth: 0, borderRadius: 2 },
+      { label: 'Income',         data: incomeData, backgroundColor: 'rgba(45,106,79,0.08)', borderColor: '#2d6a4f', borderWidth: 2, borderRadius: 2, borderSkipped: false, stack: 'income',
+        borderDash: [5, 3] },
+      { label: 'Fixed costs',    data: fixedData,  backgroundColor: '#b45309', borderWidth: 0, borderRadius: 2, stack: 'spend' },
+      { label: 'Variable costs', data: varData,    backgroundColor: '#2563eb', borderWidth: 0, borderRadius: 2, stack: 'spend' },
     ];
   } else {
     datasets = CATS.filter(c => !chartHiddenCats.has(c.key)).map(c => {
@@ -1920,8 +1921,21 @@ function renderChartSection() {
         return gross - transferred;
       });
       if (data.every(v => v === 0)) return null;
-      return { label: c.label, data, backgroundColor: c.color, borderWidth: 0, borderRadius: 2 };
+      return { label: c.label, data, backgroundColor: c.color, borderWidth: 0, borderRadius: 2, stack: 'spend' };
     }).filter(Boolean);
+    // Monthly average reference line
+    if (filteredMonths.length > 1) {
+      const monthTotals = filteredMonths.map(m =>
+        allExpenses.filter(t => t.date.startsWith(m) && !t.incomeType && !t.savingsAccountId)
+                   .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
+      );
+      const avg = monthTotals.reduce((s, v) => s + v, 0) / monthTotals.length;
+      datasets.push({
+        type: 'line', label: 'Monthly avg', data: filteredMonths.map(() => avg),
+        borderColor: 'rgba(120,113,108,0.6)', borderWidth: 1.5, borderDash: [5, 3],
+        pointRadius: 0, fill: false, stack: undefined,
+      });
+    }
   }
 
   const monthLabels = filteredMonths.map(m => {
@@ -1948,10 +1962,22 @@ function renderChartSection() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: chartViewMode === 'fixed-variable', position: 'top', labels: { font: { size: 11 }, padding: 12, color: tickColor, usePointStyle: true } },
+          legend: { display: chartViewMode === 'fixed-variable', position: 'top', labels: { font: { size: 11 }, padding: 12, color: tickColor, usePointStyle: true,
+            filter: item => item.text !== 'Monthly avg' } },
           tooltip: {
             callbacks: {
-              label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.x.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})}`
+              label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.x.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})}`,
+              afterBody: (items) => {
+                if (chartViewMode !== 'fixed-variable') return;
+                const incomeItem = items.find(i => i.dataset.label === 'Income');
+                const spendItems = items.filter(i => i.dataset.label !== 'Income');
+                if (!incomeItem || !spendItems.length) return;
+                const income = incomeItem.parsed.x;
+                const spend  = spendItems.reduce((s, i) => s + i.parsed.x, 0);
+                if (income <= 0) return;
+                const savingsPct = Math.round((income - spend) / income * 100);
+                return [``, ` Savings rate: ${savingsPct}%`];
+              }
             }
           }
         },
