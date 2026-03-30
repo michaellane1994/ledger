@@ -4260,7 +4260,7 @@ async function syncFromSheets() {
       persist();
       updateSyncDot('ok');
       setSyncLabel('Synced');
-      showConnStatus(`Pulled ${txns.length} transactions from Google Sheets.`, 'ok');
+      showConnStatus(`Pulled ${txns.length} transactions · ${data.cats ? data.cats.length + ' categories' : 'no categories (using defaults)'} from Google Sheets.`, 'ok');
       renderPills();
       renderDashboard();
     } else {
