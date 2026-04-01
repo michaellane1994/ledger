@@ -502,12 +502,12 @@ tbody tr:hover .del-btn{opacity:1;}
             <div class="hs-sub" id="hero-lm">—</div>
           </div>
           <div class="hsi">
-            <div class="hs-label">Fixed</div>
+            <div class="hs-label">Needs</div>
             <div class="hs-val" id="hero-fixed">—</div>
             <div class="hs-sub" id="hero-fixed-sub">committed</div>
           </div>
           <div class="hsi">
-            <div class="hs-label">Discretionary</div>
+            <div class="hs-label">Wants</div>
             <div class="hs-val" id="hero-disc">—</div>
             <div class="hs-sub" id="hero-disc-sub">flexible</div>
           </div>
@@ -589,7 +589,7 @@ tbody tr:hover .del-btn{opacity:1;}
               <div class="card-title">Spend by Month &amp; Category</div>
               <div style="display:flex;gap:2px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px;">
                 <button id="chart-view-cat" class="btn btn-sm" onclick="setChartView('category')" style="padding:2px 9px;font-size:11.5px;">By Category</button>
-                <button id="chart-view-fv"  class="btn btn-sm" onclick="setChartView('fixed-variable')" style="padding:2px 9px;font-size:11.5px;">Fixed vs Variable</button>
+                <button id="chart-view-fv"  class="btn btn-sm" onclick="setChartView('fixed-variable')" style="padding:2px 9px;font-size:11.5px;">Needs vs Wants</button>
               </div>
               <div style="position:relative;" id="chart-cat-wrap">
                 <button class="dash-pill" onclick="toggleChartCatDropdown(event)"><span id="chart-cat-label">All Categories</span> ▾</button>
@@ -1910,13 +1910,12 @@ function renderChartSection() {
 
   let datasets;
   if (chartViewMode === 'fixed-variable') {
-    const fvFixedCats = new Set(CATS.filter(c => c.fixed).map(c => c.key));
     const fixedData = filteredMonths.map(m =>
-      allExpenses.filter(t => t.date.startsWith(m) && fvFixedCats.has(t.category))
+      allExpenses.filter(t => t.date.startsWith(m) && isNeeds(t))
                  .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
     );
     const varData = filteredMonths.map(m =>
-      allExpenses.filter(t => t.date.startsWith(m) && !fvFixedCats.has(t.category))
+      allExpenses.filter(t => t.date.startsWith(m) && !isNeeds(t))
                  .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
     );
     const incomeData = filteredMonths.map(m =>
@@ -1926,8 +1925,8 @@ function renderChartSection() {
     datasets = [
       { label: 'Income',         data: incomeData, backgroundColor: 'rgba(45,106,79,0.08)', borderColor: '#2d6a4f', borderWidth: 2, borderRadius: 2, borderSkipped: false, stack: 'income',
         borderDash: [5, 3] },
-      { label: 'Fixed costs',    data: fixedData,  backgroundColor: '#b45309', borderWidth: 0, borderRadius: 2, stack: 'spend' },
-      { label: 'Variable costs', data: varData,    backgroundColor: '#2563eb', borderWidth: 0, borderRadius: 2, stack: 'spend' },
+      { label: 'Needs', data: fixedData, backgroundColor: '#b45309', borderWidth: 0, borderRadius: 2, stack: 'spend' },
+      { label: 'Wants', data: varData,  backgroundColor: '#2563eb', borderWidth: 0, borderRadius: 2, stack: 'spend' },
     ];
   } else {
     // Build per-category data with average for sort consistency
@@ -2076,15 +2075,14 @@ function renderCashflowChart() {
   });
 
   // Expenses split: fixed vs discretionary (uses CATS.fixed flag, same as Settings)
-  const cfFixedCats = new Set(CATS.filter(c => c.fixed).map(c => c.key));
   const fixedByMonth = {};
   const discByMonth  = {};
   txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId)).forEach(t => {
     const m = t.date?.substring(0,7);
     if (!m) return;
     if (t.incomeType === 'transfer') {
-      discByMonth[m] = (discByMonth[m]||0) - Math.abs(t.amount); // transfers reduce spend
-    } else if (cfFixedCats.has(t.category)) {
+      discByMonth[m] = (discByMonth[m]||0) - Math.abs(t.amount);
+    } else if (isNeeds(t)) {
       fixedByMonth[m] = (fixedByMonth[m]||0) + t.amount;
     } else {
       discByMonth[m] = (discByMonth[m]||0) + t.amount;
@@ -2142,7 +2140,7 @@ function renderCashflowChart() {
 
   const subEl = document.getElementById('cashflow-sub');
   if (subEl) subEl.textContent = pastComplete.length
-    ? `Faded = projected · capacity = income − fixed costs`
+    ? `Faded = projected · capacity = income − needs`
     : `${currentYear} — add income entries for projections`;
 
   const canvas = document.getElementById('cashflowChart');
@@ -2188,14 +2186,14 @@ function renderCashflowChart() {
           stack: 'income', yAxisID: 'y'
         },
         {
-          type: 'bar', label: 'Fixed costs',
+          type: 'bar', label: 'Needs',
           data: fixedData.map(v => -v),
           backgroundColor: fixedData.map((_,i) => `rgba(180,83,9,${a(isDark?.75:.5, isDark?.28:.18, i)})`),
           borderWidth: 0, borderRadius: 2,
           stack: 'spending', yAxisID: 'y'
         },
         {
-          type: 'bar', label: 'Discretionary',
+          type: 'bar', label: 'Wants',
           data: discData.map(v => -v),
           backgroundColor: discData.map((_,i) => `rgba(212,96,58,${a(isDark?.75:.5, isDark?.28:.18, i)})`),
           borderWidth: 0, borderRadius: 2,
@@ -2262,14 +2260,14 @@ function renderCashflowChart() {
               const v = ctx.raw;
               const abs = n => '$' + Math.abs(n).toLocaleString('en-CA',{minimumFractionDigits:0,maximumFractionDigits:0});
               if (ctx.dataset.label === 'Income')               return ` Income: ${abs(v)}${tag}`;
-              if (ctx.dataset.label === 'Fixed costs') return ` Fixed costs: ${abs(v)}${tag}`;
-              if (ctx.dataset.label === 'Discretionary') {
+              if (ctx.dataset.label === 'Needs') return ` Needs: ${abs(v)}${tag}`;
+              if (ctx.dataset.label === 'Wants') {
                 const cap = capData[i];
                 const disc = Math.abs(v);
                 const remaining = cap - disc;
-                return ` Discretionary: ${abs(v)}${tag}  (${remaining>=0?abs(remaining)+' capacity left':'over capacity by '+abs(remaining)})`;
+                return ` Wants: ${abs(v)}${tag}  (${remaining>=0?abs(remaining)+' capacity left':'over capacity by '+abs(remaining)})`;
               }
-              if (ctx.dataset.label === 'Spending capacity') return ` Capacity for discretionary: ${abs(v)}${tag}`;
+              if (ctx.dataset.label === 'Spending capacity') return ` Capacity for wants: ${abs(v)}${tag}`;
               return ` Running balance: ${v>=0?abs(v):'-'+abs(v)}${tag}`;
             }
           }
@@ -2383,7 +2381,7 @@ function renderDashboard() {
   document.getElementById('hero-lm').textContent      = lg.merchant || '—';
 
   // Fixed vs Discretionary
-  const fixedTotal = expenses.filter(t => CAT[t.category]?.fixed).reduce((s,t) => s + effectiveAmt(t), 0);
+  const fixedTotal = expenses.filter(t => isNeeds(t)).reduce((s,t) => s + effectiveAmt(t), 0);
   const discTotal = total - fixedTotal;
   document.getElementById('hero-fixed').textContent = fmt(fixedTotal);
   document.getElementById('hero-disc').textContent = fmt(discTotal);
@@ -2505,7 +2503,7 @@ function renderDashboard() {
         <div class="ct-budget-bar-wrap"><div class="ct-budget-bar" style="width:${budgetPct.toFixed(1)}%;background:${barColor};"></div></div>
         <div class="ct-budget-sub">${fmt(amt)} / ${fmt(scaledBudget)}</div>`;
       tile.innerHTML = `
-        ${c.fixed ? '<div class="ct-fixed-badge">Fixed</div>' : ''}
+        ${c.fixed ? '<div class="ct-fixed-badge">Needs</div>' : ''}
         <div class="ct-label" title="${c.label}">${c.label}</div>
         <div class="ct-amount" style="color:${amtColor || c.color};">${fmt(amt)}</div>
         ${trendHtml}
@@ -2515,7 +2513,7 @@ function renderDashboard() {
         <div class="ct-bar-wrap"><div class="ct-bar" style="width:${Math.min(pct,100).toFixed(1)}%;background:${c.color};"></div></div>
         <div class="ct-pct">${pct.toFixed(1)}%</div>`;
       tile.innerHTML = `
-        ${c.fixed ? '<div class="ct-fixed-badge">Fixed</div>' : ''}
+        ${c.fixed ? '<div class="ct-fixed-badge">Needs</div>' : ''}
         <div class="ct-label" title="${c.label}">${c.label}</div>
         <div class="ct-amount" style="color:${c.color};">${fmt(amt)}</div>
         ${trendHtml}
@@ -2848,6 +2846,7 @@ function renderTxns() {
         onblur="saveNote('${t.id}',this.textContent)">${esc(t.note || '')}</span></td>
       <td class="txn-td-amount" style="text-align:right;white-space:nowrap;">
         ${amtDisplay}
+        ${(!isIncome && !isSavings && !isRefund) ? `<button onclick="toggleNeeds('${t.id}')" title="Toggle Needs/Wants" style="font-size:10px;padding:1px 6px;border-radius:4px;border:1px solid var(--border);background:${isNeeds(t)?'#fef3e2':'#eaf0f9'};color:${isNeeds(t)?'#b45309':'#2563eb'};cursor:pointer;font-family:'Inter',sans-serif;margin-top:2px;display:block;margin-left:auto;">${isNeeds(t)?'Need':'Want'}</button>` : ''}
         <button class="del-btn" onclick="deleteTxn('${t.id}')" title="Remove transaction">✕</button>
       </td>
     </tr>`;
@@ -4078,7 +4077,7 @@ function renderCatManagement() {
         <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer;">
           <input type="checkbox" ${c.fixed ? 'checked' : ''}
             onchange="CATS[${idx}].fixed=this.checked; saveCats(); renderDashboard(); autoPush();">
-          <span>Fixed</span>
+          <span>Default: Needs</span>
         </label>
         <div style="display:flex;gap:2px;">
           <button class="btn btn-ghost btn-sm" onclick="moveCat(${idx},-1)" title="Move up" ${idx===0?'disabled':''} style="padding:2px 6px;">↑</button>
@@ -5060,6 +5059,14 @@ function exportCSV() {
 
 // ── UTILS ────────────────────────────────────────────────
 function fmt(n) { return '$' + (n || 0).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+// isNeeds: transaction-level needs flag; falls back to category default
+function isNeeds(t) { return t.needs !== undefined ? t.needs : !!CAT[t.category]?.fixed; }
+function toggleNeeds(id) {
+  const t = txns.find(x => x.id === id);
+  if (!t) return;
+  t.needs = !isNeeds(t);
+  persist(); renderTxns(); renderDashboard(); autoPush();
+}
 function fmtMonth(m) { const [y, mo] = m.split('-'); return new Date(y, mo - 1).toLocaleString('default', { month: 'long', year: 'numeric' }); }
 function fmtDate(d) { if (!d) return '—'; const [y, mo, day] = d.split('-'); return new Date(+y, mo - 1, +day).toLocaleString('default', { month: 'short', day: 'numeric', year: 'numeric' }); }
 function uid() { return Math.random().toString(36).substring(2, 10); }
