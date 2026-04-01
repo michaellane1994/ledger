@@ -2743,12 +2743,14 @@ function renderTxns() {
   const allPeople = [...new Set(txns.map(t => t.person).filter(Boolean))].sort();
   personSel.innerHTML = '<option value="">All people</option>' + allPeople.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
   personSel.value = currentPersonVal;
-  // Populate card filter dynamically
+  // Populate card filter — scoped to selected month if one is active
   const cardSel = document.getElementById('f-card');
   const currentCardVal = cardSel.value;
-  const allCards = [...new Set(txns.map(t => t.card).filter(Boolean))].sort();
+  const cardTxns = mf ? txns.filter(t => t.date?.startsWith(mf)) : txns;
+  const allCards = [...new Set(cardTxns.map(t => t.card).filter(Boolean))].sort();
   cardSel.innerHTML = '<option value="">All cards</option>' + allCards.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  cardSel.value = currentCardVal;
+  // Keep current selection if still valid, otherwise reset
+  cardSel.value = allCards.includes(currentCardVal) ? currentCardVal : '';
 
   // Type pills
   const pillsEl = document.getElementById('txn-cat-pills');
