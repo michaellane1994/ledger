@@ -4393,7 +4393,18 @@ async function syncFromSheets() {
       uploads  = data.uploads  || [];
       trash    = data.trash    || [];
       rentalExpenses = data.rentalExpenses || [];
-      if (data.cats) { CATS = data.cats.map(normCat); rebuildCAT(); saveCats(); }
+      if (data.cats) {
+        // Build default fixed map so built-in categories keep their fixed flag
+        // even if the Sheets column is missing or was pushed with fixed:false
+        const defaultFixed = {};
+        DEFAULT_CATS.forEach(c => { if (c.fixed) defaultFixed[c.key] = true; });
+        CATS = data.cats.map(c => {
+          const nc = normCat(c);
+          if (!nc.fixed && defaultFixed[nc.key]) nc.fixed = true;
+          return nc;
+        });
+        rebuildCAT(); saveCats();
+      }
       repairIncomeDates();
       persist();
       updateSyncDot('ok');
