@@ -1923,10 +1923,13 @@ function renderChartSection() {
              .reduce((s, i) => s + i.amount, 0)
     );
     datasets = [
-      { label: 'Income',         data: incomeData, backgroundColor: 'rgba(45,106,79,0.08)', borderColor: '#2d6a4f', borderWidth: 2, borderRadius: 2, borderSkipped: false, stack: 'income',
-        borderDash: [5, 3] },
-      { label: 'Needs', data: fixedData, backgroundColor: '#b45309', borderWidth: 0, borderRadius: 2, stack: 'spend' },
-      { label: 'Wants', data: varData,  backgroundColor: '#2563eb', borderWidth: 0, borderRadius: 2, stack: 'spend' },
+      { label: 'Needs', data: fixedData, backgroundColor: isDark ? 'rgba(160,100,60,0.7)' : 'rgba(180,120,70,0.75)', borderWidth: 0, borderRadius: 2, stack: 'spend' },
+      { label: 'Wants', data: varData,  backgroundColor: isDark ? 'rgba(80,110,160,0.7)' : 'rgba(100,130,190,0.75)', borderWidth: 0, borderRadius: 2, stack: 'spend' },
+      { type: 'line', label: 'Income', data: incomeData,
+        borderColor: isDark ? 'rgba(45,160,100,0.9)' : 'rgba(30,120,70,0.85)',
+        backgroundColor: 'transparent', borderWidth: 2.5,
+        pointRadius: 3, pointBackgroundColor: isDark ? 'rgba(45,160,100,0.9)' : 'rgba(30,120,70,0.85)',
+        pointBorderWidth: 0, tension: 0.1, fill: false, stack: undefined },
     ];
   } else {
     // Build per-category data with average for sort consistency
@@ -1955,7 +1958,7 @@ function renderChartSection() {
       datasets.push({
         type: 'line', label: 'Monthly avg', data: filteredMonths.map(() => avg),
         borderColor: 'rgba(120,113,108,0.6)', borderWidth: 1.5, borderDash: [5, 3],
-        pointRadius: 0, fill: false, stack: undefined,
+        pointRadius: 0, pointHitRadius: 20, fill: false, stack: undefined,
       });
     }
   }
@@ -1989,6 +1992,9 @@ function renderChartSection() {
           tooltip: {
             callbacks: {
               label: ctx => {
+                if (ctx.dataset.label === 'Monthly avg') {
+                  return ` Monthly avg: $${ctx.parsed.x.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})} (across all shown months)`;
+                }
                 const val = ` ${ctx.dataset.label}: $${ctx.parsed.x.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
                 if (chartViewMode === 'category' && ctx.dataset.avg > 0 && ctx.parsed.x > ctx.dataset.avg * 2) {
                   return val + '  ⚠ 2x avg';
