@@ -1159,7 +1159,12 @@ function doGet(e) {
         <label>Description</label>
         <input type="text" id="ai-desc" placeholder="e.g. John transfer for dinner, RBC salary March">
       </div>
-      <div class="add-field full">
+      <div class="add-field">
+        <label>Card / Account <span style="font-size:11px;color:var(--muted);font-weight:400;">optional</span></label>
+        <input type="text" id="ai-card" placeholder="e.g. RBC Chequing" list="ai-card-list">
+        <datalist id="ai-card-list"></datalist>
+      </div>
+      <div class="add-field">
         <label>Note (optional)</label>
         <input type="text" id="ai-note" placeholder="Any additional context">
       </div>
@@ -3589,8 +3594,11 @@ function openAddIncome() {
   document.getElementById('ai-amount').value = '';
   document.getElementById('ai-desc').value   = '';
   document.getElementById('ai-note').value   = '';
+  document.getElementById('ai-card').value   = '';
   document.getElementById('ai-type').innerHTML = INCOME_TYPES_ARR.map(t => `<option value="${t.key}">${t.label}</option>`).join('');
   document.getElementById('ai-category').innerHTML = CATS.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
+  const cardDl = document.getElementById('ai-card-list');
+  if (cardDl) cardDl.innerHTML = [...new Set(txns.map(t => t.card).filter(Boolean))].sort().map(c => `<option value="${esc(c)}">`).join('');
   toggleIncomeCategory();
   document.getElementById('add-income-modal').classList.add('open');
   setTimeout(() => document.getElementById('ai-desc').focus(), 100);
@@ -3610,6 +3618,9 @@ function openEditIncome(id) {
   document.getElementById('ai-person').value = i.person || 'Michael';
   document.getElementById('ai-desc').value   = i.desc || '';
   document.getElementById('ai-note').value   = i.note || '';
+  document.getElementById('ai-card').value   = i.card || '';
+  const cardDl = document.getElementById('ai-card-list');
+  if (cardDl) cardDl.innerHTML = [...new Set(txns.map(t => t.card).filter(Boolean))].sort().map(c => `<option value="${esc(c)}">`).join('');
   if (i.category) document.getElementById('ai-category').value = i.category;
   toggleIncomeCategory();
   document.getElementById('add-income-modal').classList.add('open');
@@ -3630,6 +3641,7 @@ function confirmAddIncome() {
   const person   = document.getElementById('ai-person').value;
   const desc     = document.getElementById('ai-desc').value.trim();
   const note     = document.getElementById('ai-note').value.trim();
+  const card     = document.getElementById('ai-card').value.trim();
   const category = type === 'transfer' ? document.getElementById('ai-category').value : null;
   if (!date)                    { alert('Please enter a date.'); return; }
   if (isNaN(amount)||amount<=0) { alert('Please enter a valid amount.'); return; }
@@ -3638,23 +3650,31 @@ function confirmAddIncome() {
     const i = incomes.find(x => x.id === editingIncomeId);
     if (i) {
       i.date = date; i.amount = amount; i.type = type;
-      i.person = person; i.desc = desc; i.note = note;
+      i.person = person; i.desc = desc; i.note = note; i.card = card;
       i.category = category;
       // Sync linked transaction if any
       if (i.fromTxnId) {
         const t = txns.find(x => x.id === i.fromTxnId);
-        if (t) { t.date = date; t.amount = amount; t.incomeType = type; if (category) t.incomeCategory = category; }
+        if (t) { t.date = date; t.amount = amount; t.incomeType = type; t.card = card; if (category) t.incomeCategory = category; }
       }
     }
   } else {
-    incomes.push({ id:uid(), date, amount, type, person, desc, note, category });
+    // Create a synthetic txn so this income shows on the transactions page
+    const txnId = uid();
+    txns.push({ id: txnId, date, merchant: desc, amount, category: 'misc', person, card: card||'', note, incomeType: type, incomeCategory: category||undefined, manualIncome: true });
+    incomes.push({ id:uid(), date, amount, type, person, desc, note, card, category, fromTxnId: txnId });
   }
   persist(); closeAddIncome(); renderIncome(); renderDashboard(); renderTxns(); autoPush();
 }
 
 function deleteIncome(id) {
+  const inc = incomes.find(x => x.id === id);
+  if (inc?.fromTxnId) {
+    const t = txns.find(x => x.id === inc.fromTxnId);
+    if (t?.manualIncome) txns = txns.filter(x => x.id !== inc.fromTxnId);
+  }
   incomes = incomes.filter(x => x.id !== id);
-  persist(); renderIncome(); renderDashboard();
+  persist(); renderIncome(); renderDashboard(); renderTxns(); autoPush();
 }
 
 function saveIncomeNote(id, note) {
