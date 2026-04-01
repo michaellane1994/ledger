@@ -364,7 +364,7 @@ tbody tr:hover .del-btn{opacity:1;}
   .txn-td-cat .txn-date-mob{font-size:11px;color:var(--muted);white-space:nowrap;}
   .txn-td-amount{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:6px;white-space:nowrap;}
   .income-table-wrap{overflow-x:auto;}
-  #f-person,#f-card{display:none;}
+  #f-person{display:none;}
   .income-table-wrap table{table-layout:fixed;width:100%;}
   .income-table-wrap th:nth-child(1){width:74px;}
   .income-table-wrap th:nth-child(2){width:72px;}
@@ -2044,9 +2044,24 @@ function renderCashflowChart() {
   const currentYear     = now.getFullYear();
   const currentMonthStr = `${currentYear}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
-  const yearMonths = Array.from({length:12}, (_,i) =>
-    `${currentYear}-${String(i+1).padStart(2,'0')}`
-  );
+  // Find earliest month with any data
+  const allDataMonths = [
+    ...txns.map(t => t.date?.substring(0,7)),
+    ...incomes.map(i => i.date?.substring(0,7))
+  ].filter(Boolean);
+  const earliestData = allDataMonths.length ? allDataMonths.reduce((a,b) => a < b ? a : b) : currentMonthStr;
+  // End at December of current year
+  const endMonth = `${currentYear}-12`;
+
+  // Build month list from earliest data month through end of current year
+  const yearMonths = [];
+  let [ey, em] = earliestData.split('-').map(Number);
+  const [endY, endM] = endMonth.split('-').map(Number);
+  while (ey < endY || (ey === endY && em <= endM)) {
+    yearMonths.push(`${ey}-${String(em).padStart(2,'0')}`);
+    em++;
+    if (em > 12) { em = 1; ey++; }
+  }
 
   // Income by month (exclude transfers)
   const incByMonth = {};
@@ -2107,9 +2122,12 @@ function renderCashflowChart() {
   if (p3) { p3.style.fontWeight = cfProjWindow===3?'700':'400'; p3.style.color = cfProjWindow===3?'var(--ink)':''; }
   if (p6) { p6.style.fontWeight = cfProjWindow===6?'700':'400'; p6.style.color = cfProjWindow===6?'var(--ink)':''; }
 
+  const spansMultipleYears = yearMonths.some(m => m.substring(0,4) !== String(currentYear));
   const labels = yearMonths.map(m => {
     const [y,mo] = m.split('-');
-    return new Date(+y,mo-1).toLocaleString('default',{month:'short'});
+    const d = new Date(+y,+mo-1);
+    const label = d.toLocaleString('default',{month:'short'});
+    return (spansMultipleYears && (+mo === 1 || m === yearMonths[0])) ? `${label} '${String(y).slice(2)}` : label;
   });
 
   const isDark    = document.documentElement.getAttribute('data-theme')==='dark';
