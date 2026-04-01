@@ -336,7 +336,8 @@ tbody tr:hover .del-btn{opacity:1;}
   .topbar{padding:0 16px;left:0;}
   .topbar .month-pills{display:none;}
   .topbar-pills-row{left:0;}
-  #dash-period-bar{top:96px;left:0;}
+  #dash-period-bar{top:96px;left:0;flex-wrap:nowrap;}
+  #dash-push-btn .push-label{display:none;}
   .main.dash-bar-visible{padding-top:134px;}
   .content{padding:16px;}
   .month-hero{flex-direction:column;align-items:flex-start;gap:16px;padding:20px;}
@@ -468,9 +469,9 @@ tbody tr:hover .del-btn{opacity:1;}
     <button class="dash-pill" id="dp-latest" onclick="setDashPeriod('latest')">Latest Month</button>
     <button class="dash-pill" id="dp-3m"     onclick="setDashPeriod('3m')">Last 3 Months</button>
     <button class="dash-pill" id="dp-ytd"    onclick="setDashPeriod('ytd')">Year to Date</button>
-    <button id="dash-push-btn" onclick="manualPush()" style="margin-left:auto;display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap;">
+    <button id="dash-push-btn" onclick="manualPush()" style="margin-left:auto;flex-shrink:0;display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-      Push to Sheets
+      <span class="push-label">Push to Sheets</span>
     </button>
   </div>
 
