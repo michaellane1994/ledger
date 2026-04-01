@@ -738,7 +738,7 @@ tbody tr:hover .del-btn{opacity:1;}
         <table>
           <thead>
             <tr>
-              <th>Date</th><th>Type</th><th>Description</th><th class="hide-mobile">Category</th><th class="hide-mobile">Person</th><th class="hide-mobile">Note</th>
+              <th>Date</th><th>Type</th><th>Description</th><th class="hide-mobile">Category</th><th class="hide-mobile">Person</th><th class="hide-mobile">Card</th><th class="hide-mobile">Note</th>
               <th style="text-align:right;">Amount</th><th></th>
             </tr>
           </thead>
@@ -3574,7 +3574,8 @@ function renderIncome() {
       <td><span class="cat-badge" style="background:${lightenColor(incomeTypeColor(i.type))};color:${incomeTypeColor(i.type)};">${INCOME_TYPES[i.type]||i.type}</span></td>
       <td style="font-weight:500;"><span class="txn-note" contenteditable="true" onblur="saveIncomeDesc('${i.id}',this.textContent)">${esc(i.desc||'')}</span></td>
       <td class="hide-mobile">${catCell}</td>
-      <td class="hide-mobile"><span class="person-tag">${i.person||'—'}</span></td>
+      <td class="hide-mobile"><select onchange="saveIncomePerson('${i.id}',this.value)" style="border:none;background:transparent;font-size:12.5px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;padding:0;outline:none;max-width:90px;">${['Michael','Lili','Joint'].map(p=>`<option${p===i.person?' selected':''}>${p}</option>`).join('')}</select></td>
+      <td class="hide-mobile"><span class="txn-note" contenteditable="true" onblur="saveIncomeCard('${i.id}',this.textContent)">${esc(i.card||'')}</span></td>
       <td class="hide-mobile"><span class="txn-note" contenteditable="true" onblur="saveIncomeNote('${i.id}',this.textContent)">${esc(i.note||'')}</span></td>
       <td style="text-align:right;font-weight:600;color:#2d6a4f;">${fmt(i.amount)}</td>
       <td style="text-align:right;white-space:nowrap;">
@@ -3677,6 +3678,20 @@ function deleteIncome(id) {
   persist(); renderIncome(); renderDashboard(); renderTxns(); autoPush();
 }
 
+function saveIncomePerson(id, person) {
+  const i = incomes.find(x => x.id === id);
+  if (!i) return;
+  i.person = person;
+  if (i.fromTxnId) { const t = txns.find(x => x.id === i.fromTxnId); if (t) t.person = person; }
+  persist(); autoPush();
+}
+function saveIncomeCard(id, card) {
+  const i = incomes.find(x => x.id === id);
+  if (!i) return;
+  i.card = card.trim();
+  if (i.fromTxnId) { const t = txns.find(x => x.id === i.fromTxnId); if (t) t.card = card.trim(); }
+  persist(); autoPush();
+}
 function saveIncomeNote(id, note) {
   const i = incomes.find(x => x.id === id);
   if (i) { i.note = note.trim(); persist(); }
