@@ -3737,7 +3737,7 @@ function renderSavings() {
     const col  = acct ? (ACCT_COLORS[acct.type]||'#71717a') : '#71717a';
     const isW  = c.type === 'withdrawal';
     return `<tr>
-      <td style="color:var(--faint);font-size:12px;width:92px;">${c.date}</td>
+      <td style="width:110px;"><input type="date" value="${c.date}" onchange="saveContribDate('${c.id}',this.value)" style="border:none;background:transparent;font-size:12px;color:var(--faint);font-family:'Inter',sans-serif;cursor:pointer;width:100%;padding:0;"></td>
       <td style="font-weight:500;">${esc(acct ? acct.name : '—')}</td>
       <td><span class="cat-badge" style="background:${isW?'#faeaec':'#eaf4ef'};color:${isW?'#9b2335':'#2d6a4f'};">${isW ? 'Withdrawal' : 'Contribution'}</span></td>
       <td><span class="person-tag">${c.person||'—'}</span></td>
@@ -3857,6 +3857,10 @@ function deleteContrib(id) {
 function saveContribNote(id, note) {
   const c = contribs.find(x => x.id === id);
   if (c) { c.note = note.trim(); persist(); }
+}
+function saveContribDate(id, date) {
+  const c = contribs.find(x => x.id === id);
+  if (c && date) { c.date = date; persist(); renderSavings(); renderDashboard(); autoPush(); }
 }
 
 // ── TYPE MANAGEMENT (Income & Savings) ───────────────────
