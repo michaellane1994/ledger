@@ -2598,7 +2598,7 @@ function renderDashboard() {
         <div class="commit-dot" style="background:${c.color};"></div>
         <div class="commit-name">${esc(r.merchant)}</div>
         <div class="commit-cat">${c.label}</div>
-        <div class="commit-freq">${r.frequency}/6 mo</div>
+        <div class="commit-freq">${r.frequency} of last 6 months</div>
         <div class="commit-amt">${fmt(r.avgAmount)}</div>
       </div>`;
     }).join('') + (hasMore ? `<div style="font-size:12px;color:var(--muted);padding:8px 0 2px;cursor:pointer;" onclick="this.parentElement.innerHTML += document.getElementById('commits-extra').innerHTML; this.remove();">+ ${recurring.length - 5} more</div><template id="commits-extra">${recurring.slice(5).map(r => { const c = CAT[r.category] || CAT.misc; return '<div class=\'commit-row\'><div class=\'commit-dot\' style=\'background:' + c.color + ';\' ></div><div class=\'commit-name\'>' + esc(r.merchant) + '</div><div class=\'commit-cat\'>' + c.label + '</div><div class=\'commit-freq\'>' + r.frequency + '/6 mo</div><div class=\'commit-amt\'>' + fmt(r.avgAmount) + '</div></div>'; }).join('')}</template>` : '');
@@ -4515,13 +4515,14 @@ async function syncFromSheets() {
       trash    = data.trash    || [];
       rentalExpenses = data.rentalExpenses || [];
       if (data.cats) {
-        // Build default fixed map so built-in categories keep their fixed flag
-        // even if the Sheets column is missing or was pushed with fixed:false
-        const defaultFixed = {};
-        DEFAULT_CATS.forEach(c => { if (c.fixed) defaultFixed[c.key] = true; });
+        // Build fixed map from DEFAULT_CATS and current local CATS
+        // so fixed flags survive even if the Sheets column was empty/missing
+        const knownFixed = {};
+        DEFAULT_CATS.forEach(c => { if (c.fixed) knownFixed[c.key] = true; });
+        CATS.forEach(c => { if (c.fixed) knownFixed[c.key] = true; });
         CATS = data.cats.map(c => {
           const nc = normCat(c);
-          if (!nc.fixed && defaultFixed[nc.key]) nc.fixed = true;
+          if (!nc.fixed && knownFixed[nc.key]) nc.fixed = true;
           return nc;
         });
         rebuildCAT(); saveCats();
