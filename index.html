@@ -1937,8 +1937,8 @@ function renderChartSection() {
       incomes.filter(i => i.date && i.date.startsWith(m) && i.type !== 'transfer')
              .reduce((s, i) => s + i.amount, 0)
     );
-    const incomeColor = isDark ? 'rgba(45,160,100,0.9)' : 'rgba(30,120,70,0.85)';
-    const incomeFill  = isDark ? 'rgba(45,160,100,0.08)' : 'rgba(30,120,70,0.06)';
+    const incomeColor = isDark ? 'rgba(45,160,100,0.55)' : 'rgba(30,120,70,0.45)';
+    const incomeFill  = isDark ? 'rgba(45,160,100,0.07)' : 'rgba(30,120,70,0.05)';
     datasets = [
       { label: 'Needs', data: fixedData, backgroundColor: isDark ? 'rgba(160,100,60,0.7)' : 'rgba(180,120,70,0.75)', borderWidth: 0, borderRadius: 2, stack: 'spend' },
       { label: 'Wants', data: varData,  backgroundColor: isDark ? 'rgba(80,110,160,0.7)' : 'rgba(100,130,190,0.75)', borderWidth: 0, borderRadius: 2, stack: 'spend' },
@@ -1967,8 +1967,8 @@ function renderChartSection() {
           if (!v) return;
           const {y, height} = bar.getProps(['y', 'height'], true);
           const x1 = xScale.getPixelForValue(v);
-          ctx.fillRect(x0, y, x1 - x0, height);
-          ctx.strokeRect(x0, y, x1 - x0, height);
+          ctx.fillRect(x0, y - height / 2, x1 - x0, height);
+          ctx.strokeRect(x0, y - height / 2, x1 - x0, height);
         });
         ctx.restore();
       }
@@ -2011,7 +2011,7 @@ function renderChartSection() {
     return new Date(+y, mo - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
   });
 
-  const chartHeight = Math.max(200, filteredMonths.length * 44 + 60);
+  const chartHeight = Math.max(200, filteredMonths.length * (chartViewMode === 'fixed-variable' ? 64 : 44) + 60);
   const canvas = document.getElementById('timeChart');
   canvas.style.height    = chartHeight + 'px';
   canvas.style.maxHeight = 'none';
