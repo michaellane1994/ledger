@@ -1044,8 +1044,8 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
     if (data.action === 'push') {
-      writeSheet(ss, SHEET_NAME, ['id','date','merchant','amount','category','person','card','note','refund','manual','incomeType','savingsAccountId','incomeCategory'],
-        (data.txns||[]).map(t => [t.id,t.date,t.merchant,t.amount,t.category,t.person||'',t.card||'',t.note||'',t.refund?'true':'false',t.manual?'true':'false',t.incomeType||'',t.savingsAccountId||'',t.incomeCategory||'']));
+      writeSheet(ss, SHEET_NAME, ['id','date','merchant','amount','category','person','card','note','refund','manual','incomeType','savingsAccountId','incomeCategory','needs'],
+        (data.txns||[]).map(t => [t.id,t.date,t.merchant,t.amount,t.category,t.person||'',t.card||'',t.note||'',t.refund?'true':'false',t.manual?'true':'false',t.incomeType||'',t.savingsAccountId||'',t.incomeCategory||'',t.needs===true?'true':t.needs===false?'false':'']));
       writeSheet(ss, LEARNED_SHEET, ['merchant','category'],
         Object.entries(data.learned||{}).map(([m,c]) => [m,c]));
       writeSheet(ss, INCOME_SHEET, ['id','date','amount','type','person','desc','note','fromTxnId','category'],
@@ -1062,7 +1062,7 @@ function doPost(e) {
     }
 
     if (data.action === 'pull') {
-      const txns     = readSheet(ss, SHEET_NAME,   r => ({id:r.id,date:r.date,merchant:r.merchant,amount:parseFloat(r.amount)||0,category:r.category,person:r.person,card:r.card||'',note:r.note,refund:r.refund==='true',manual:r.manual==='true',incomeType:r.incomeType||undefined,savingsAccountId:r.savingsAccountId||undefined,incomeCategory:r.incomeCategory||undefined}));
+      const txns     = readSheet(ss, SHEET_NAME,   r => ({id:r.id,date:r.date,merchant:r.merchant,amount:parseFloat(r.amount)||0,category:r.category,person:r.person,card:r.card||'',note:r.note,refund:r.refund==='true',manual:r.manual==='true',incomeType:r.incomeType||undefined,savingsAccountId:r.savingsAccountId||undefined,incomeCategory:r.incomeCategory||undefined,needs:r.needs==='true'?true:r.needs==='false'?false:undefined}));
       const learned  = {}; readSheet(ss, LEARNED_SHEET, r => r).forEach(r => { if(r.merchant) learned[r.merchant]=r.category; });
       const incomes  = readSheet(ss, INCOME_SHEET,  r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,type:r.type,person:r.person,desc:r.desc,note:r.note,fromTxnId:r.fromTxnId||undefined,category:r.category||undefined}));
       const savAccts = readSheet(ss, SAVINGS_SHEET, r => ({id:r.id,name:r.name,type:r.type,person:r.person,balance:parseFloat(r.balance)||0,baseBalance:parseFloat(r.baseBalance)||0,goal:r.goal?parseFloat(r.goal):null}));
@@ -1937,13 +1937,13 @@ function renderChartSection() {
              .reduce((s, i) => s + i.amount, 0)
     );
     datasets = [
-      { label: 'Needs', data: fixedData, backgroundColor: isDark ? 'rgba(160,100,60,0.7)' : 'rgba(180,120,70,0.75)', borderWidth: 0, borderRadius: 2, stack: 'spend' },
-      { label: 'Wants', data: varData,  backgroundColor: isDark ? 'rgba(80,110,160,0.7)' : 'rgba(100,130,190,0.75)', borderWidth: 0, borderRadius: 2, stack: 'spend' },
-      { type: 'line', label: 'Income', data: incomeData,
+      { label: 'Needs', data: fixedData, backgroundColor: isDark ? 'rgba(160,100,60,0.7)' : 'rgba(180,120,70,0.75)', borderWidth: 0, borderRadius: 2, stack: 'spend', barPercentage: 1, categoryPercentage: 1 },
+      { label: 'Wants', data: varData,  backgroundColor: isDark ? 'rgba(80,110,160,0.7)' : 'rgba(100,130,190,0.75)', borderWidth: 0, borderRadius: 2, stack: 'spend', barPercentage: 1, categoryPercentage: 1 },
+      { label: 'Income', data: incomeData,
+        backgroundColor: 'transparent',
         borderColor: isDark ? 'rgba(45,160,100,0.9)' : 'rgba(30,120,70,0.85)',
-        backgroundColor: 'transparent', borderWidth: 2.5,
-        pointRadius: 3, pointBackgroundColor: isDark ? 'rgba(45,160,100,0.9)' : 'rgba(30,120,70,0.85)',
-        pointBorderWidth: 0, tension: 0.1, fill: false, stack: undefined },
+        borderWidth: 2.5, borderSkipped: false, borderRadius: 2,
+        stack: 'income', barPercentage: 1, categoryPercentage: 1 },
     ];
   } else {
     // Build per-category data with average for sort consistency
@@ -2309,6 +2309,7 @@ function detectRecurring() {
   txns.forEach(t => {
     if (t.incomeType || t.savingsAccountId || t.amount <= 0) return;
     if (CAT[t.category]?.fixed) return; // already known fixed cost
+    if (t.category === 'home' || t.category === 'home-rental') return;
     const key = t.merchant.toLowerCase().trim().substring(0, 25);
     if (!byMerchant[key]) byMerchant[key] = { merchant: t.merchant, category: t.category, months: new Set(), amounts: [] };
     const m = t.date.substring(0, 7);
