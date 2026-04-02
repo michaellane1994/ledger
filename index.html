@@ -1967,8 +1967,9 @@ function renderChartSection() {
           if (!v) return;
           const {y, height} = bar.getProps(['y', 'height'], true);
           const x1 = xScale.getPixelForValue(v);
-          ctx.fillRect(x0, y - height / 2, x1 - x0, height);
-          ctx.strokeRect(x0, y - height / 2, x1 - x0, height);
+          const h = height * 1.5;
+          ctx.fillRect(x0, y - h / 2, x1 - x0, h);
+          ctx.strokeRect(x0, y - h / 2, x1 - x0, h);
         });
         ctx.restore();
       }
