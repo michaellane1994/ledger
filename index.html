@@ -2598,7 +2598,7 @@ function renderDashboard() {
         <div class="commit-dot" style="background:${c.color};"></div>
         <div class="commit-name">${esc(r.merchant)}</div>
         <div class="commit-cat">${c.label}</div>
-        <div class="commit-freq">${r.frequency} of last 6 months</div>
+        <div class="commit-freq">${r.frequency}/6 mo</div>
         <div class="commit-amt">${fmt(r.avgAmount)}</div>
       </div>`;
     }).join('') + (hasMore ? `<div style="font-size:12px;color:var(--muted);padding:8px 0 2px;cursor:pointer;" onclick="this.parentElement.innerHTML += document.getElementById('commits-extra').innerHTML; this.remove();">+ ${recurring.length - 5} more</div><template id="commits-extra">${recurring.slice(5).map(r => { const c = CAT[r.category] || CAT.misc; return '<div class=\'commit-row\'><div class=\'commit-dot\' style=\'background:' + c.color + ';\' ></div><div class=\'commit-name\'>' + esc(r.merchant) + '</div><div class=\'commit-cat\'>' + c.label + '</div><div class=\'commit-freq\'>' + r.frequency + '/6 mo</div><div class=\'commit-amt\'>' + fmt(r.avgAmount) + '</div></div>'; }).join('')}</template>` : '');
