@@ -1810,6 +1810,7 @@ window.addEventListener('resize', () => {
 // ── DASHBOARD ────────────────────────────────────────────
 let timeChart;
 let cashflowChart;
+let fvIncomePlugin = null;
 let chartHiddenCats  = new Set();
 let chartViewMode    = 'category'; // 'category' | 'fixed-variable'
 let cfProjWindow     = parseInt(localStorage.getItem('l3_cf_proj') || '3');
@@ -1936,16 +1937,44 @@ function renderChartSection() {
       incomes.filter(i => i.date && i.date.startsWith(m) && i.type !== 'transfer')
              .reduce((s, i) => s + i.amount, 0)
     );
+    const incomeColor = isDark ? 'rgba(45,160,100,0.9)' : 'rgba(30,120,70,0.85)';
+    const incomeFill  = isDark ? 'rgba(45,160,100,0.08)' : 'rgba(30,120,70,0.06)';
     datasets = [
-      { label: 'Needs', data: fixedData, backgroundColor: isDark ? 'rgba(160,100,60,0.7)' : 'rgba(180,120,70,0.75)', borderWidth: 0, borderRadius: 2, stack: 'spend', barPercentage: 1, categoryPercentage: 1 },
-      { label: 'Wants', data: varData,  backgroundColor: isDark ? 'rgba(80,110,160,0.7)' : 'rgba(100,130,190,0.75)', borderWidth: 0, borderRadius: 2, stack: 'spend', barPercentage: 1, categoryPercentage: 1 },
-      { label: 'Income', data: incomeData,
-        backgroundColor: 'transparent',
-        borderColor: isDark ? 'rgba(45,160,100,0.9)' : 'rgba(30,120,70,0.85)',
-        borderWidth: 2.5, borderSkipped: false, borderRadius: 2,
-        stack: 'income', barPercentage: 1, categoryPercentage: 1 },
+      { label: 'Needs', data: fixedData, backgroundColor: isDark ? 'rgba(160,100,60,0.7)' : 'rgba(180,120,70,0.75)', borderWidth: 0, borderRadius: 2, stack: 'spend' },
+      { label: 'Wants', data: varData,  backgroundColor: isDark ? 'rgba(80,110,160,0.7)' : 'rgba(100,130,190,0.75)', borderWidth: 0, borderRadius: 2, stack: 'spend' },
+      // Income is invisible here; drawn as dashed overlay by the fvIncomePlugin below
+      { label: 'Income', data: incomeData, backgroundColor: 'transparent', borderWidth: 0, stack: 'income', barPercentage: 0.001, categoryPercentage: 0.001 },
     ];
+    fvIncomePlugin = {
+      id: 'fvIncome',
+      afterDraw(chart) {
+        if (chartViewMode !== 'fixed-variable') return;
+        const {ctx, scales} = chart;
+        const needsIdx = chart.data.datasets.findIndex(d => d.label === 'Needs');
+        const incIdx   = chart.data.datasets.findIndex(d => d.label === 'Income');
+        if (needsIdx === -1 || incIdx === -1) return;
+        const needsMeta = chart.getDatasetMeta(needsIdx);
+        const incData   = chart.data.datasets[incIdx].data;
+        const xScale    = scales.x;
+        const x0 = xScale.getPixelForValue(0);
+        ctx.save();
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = incomeColor;
+        ctx.lineWidth = 2.5;
+        ctx.fillStyle = incomeFill;
+        needsMeta.data.forEach((bar, i) => {
+          const v = incData[i];
+          if (!v) return;
+          const {y, height} = bar.getProps(['y', 'height'], true);
+          const x1 = xScale.getPixelForValue(v);
+          ctx.fillRect(x0, y, x1 - x0, height);
+          ctx.strokeRect(x0, y, x1 - x0, height);
+        });
+        ctx.restore();
+      }
+    };
   } else {
+    fvIncomePlugin = null;
     // Build per-category data with average for sort consistency
     const catDatasets = CATS.filter(c => !chartHiddenCats.has(c.key)).map(c => {
       const data = filteredMonths.map(m => {
@@ -1992,13 +2021,22 @@ function renderChartSection() {
     timeChart = new Chart(canvas, {
       type: 'bar',
       data: { labels: monthLabels, datasets },
+      plugins: fvIncomePlugin ? [fvIncomePlugin] : [],
       options: {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: { display: chartViewMode === 'fixed-variable', position: 'top', labels: { font: { size: 11 }, padding: 12, color: tickColor, usePointStyle: true,
-            filter: item => item.text !== 'Monthly avg' } },
+            filter: item => item.text !== 'Monthly avg' && item.text !== 'Income',
+            generateLabels: chart => {
+              const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+              if (chartViewMode === 'fixed-variable') {
+                labels.push({ text: 'Income', fillStyle: 'transparent', strokeStyle: isDark ? 'rgba(45,160,100,0.9)' : 'rgba(30,120,70,0.85)', lineWidth: 2, lineDash: [6,4], hidden: false, pointStyle: 'rect' });
+              }
+              return labels.filter(l => l.text !== 'Income' || chartViewMode === 'fixed-variable');
+            }
+          } },
           tooltip: {
             callbacks: {
               title: items => {
