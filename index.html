@@ -247,6 +247,16 @@ tbody tr:hover .del-btn{opacity:1;}
 .del-btn:hover{color:#dc2626;background:#fef2f2;}
 .cat-dropdown{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:500;min-width:200px;overflow:hidden;display:none;max-height:360px;overflow-y:auto;}
 .cat-dropdown.open{display:block;animation:fadeIn .12s ease;}
+.row-menu-wrap{position:relative;display:inline-block;}
+.row-menu-btn{background:none;border:none;cursor:pointer;color:var(--faint);padding:4px 7px;border-radius:4px;font-size:16px;line-height:1;opacity:0;transition:opacity .15s;}
+tbody tr:hover .row-menu-btn{opacity:1;}
+.row-menu-btn:hover{color:var(--ink);background:var(--bg);}
+.row-menu-drop{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:600;min-width:130px;display:none;animation:fadeIn .1s ease;}
+.row-menu-drop.open{display:block;}
+.row-menu-drop button{display:block;width:100%;text-align:left;background:none;border:none;padding:8px 14px;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;}
+.row-menu-drop button:hover{background:var(--bg);}
+.row-menu-drop button.danger{color:#dc2626;}
+.row-menu-drop button.danger:hover{background:#fef2f2;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
 .cat-opt{display:flex;align-items:center;gap:8px;padding:8px 13px;cursor:pointer;font-size:13px;transition:background .1s;}
 .cat-opt:hover{background:var(--bg);}
@@ -1908,6 +1918,10 @@ function renderChartSection() {
   document.getElementById('chart-view-cat')?.classList.toggle('active', chartViewMode === 'category');
   document.getElementById('chart-view-fv')?.classList.toggle('active', chartViewMode === 'fixed-variable');
 
+  const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? '#38342c' : '#f0ece6';
+  const tickColor = isDark ? '#9c9488' : '#71717a';
+
   let datasets;
   if (chartViewMode === 'fixed-variable') {
     const fixedData = filteredMonths.map(m =>
@@ -1973,10 +1987,6 @@ function renderChartSection() {
   canvas.style.height    = chartHeight + 'px';
   canvas.style.maxHeight = 'none';
 
-  const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
-  const gridColor = isDark ? '#38342c' : '#f0ece6';
-  const tickColor = isDark ? '#9c9488' : '#71717a';
-
   if (timeChart) timeChart.destroy();
   if (datasets.length && filteredMonths.length) {
     timeChart = new Chart(canvas, {
@@ -1991,9 +2001,13 @@ function renderChartSection() {
             filter: item => item.text !== 'Monthly avg' } },
           tooltip: {
             callbacks: {
+              title: items => {
+                if (items.length && items[0].dataset.label === 'Monthly avg') return 'Monthly Average';
+                return items.length ? items[0].label : '';
+              },
               label: ctx => {
                 if (ctx.dataset.label === 'Monthly avg') {
-                  return ` Monthly avg: $${ctx.parsed.x.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})} (across all shown months)`;
+                  return ` Monthly avg: $${ctx.parsed.x.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
                 }
                 const val = ` ${ctx.dataset.label}: $${ctx.parsed.x.toLocaleString('en-CA', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
                 if (chartViewMode === 'category' && ctx.dataset.avg > 0 && ctx.parsed.x > ctx.dataset.avg * 2) {
@@ -2852,7 +2866,7 @@ function renderTxns() {
         onblur="saveNote('${t.id}',this.textContent)">${esc(t.note || '')}</span></td>
       <td class="txn-td-amount" style="text-align:right;white-space:nowrap;">
         ${amtDisplay}
-        ${(!isIncome && !isSavings && !isRefund) ? `<button onclick="toggleNeeds('${t.id}')" title="Toggle Needs/Wants" style="font-size:10px;padding:1px 6px;border-radius:4px;border:1px solid var(--border);background:${isNeeds(t)?'#fef3e2':'#eaf0f9'};color:${isNeeds(t)?'#b45309':'#2563eb'};cursor:pointer;font-family:'Inter',sans-serif;margin-top:2px;display:block;margin-left:auto;">${isNeeds(t)?'Need':'Want'}</button>` : ''}
+        ${(!isIncome && !isSavings && !isRefund) ? `<select onchange="setNeeds('${t.id}',this.value==='need')" style="font-size:10px;padding:1px 4px;border-radius:4px;border:1px solid var(--border);background:${isNeeds(t)?'#fef3e2':'#eaf0f9'};color:${isNeeds(t)?'#b45309':'#2563eb'};cursor:pointer;font-family:'Inter',sans-serif;margin-top:2px;display:block;margin-left:auto;"><option value="need"${isNeeds(t)?' selected':''}>Need</option><option value="want"${!isNeeds(t)?' selected':''}>Want</option></select>` : ''}
         <button class="del-btn" onclick="deleteTxn('${t.id}')" title="Remove transaction">✕</button>
       </td>
     </tr>`;
@@ -3584,8 +3598,13 @@ function renderIncome() {
       <td class="hide-mobile"><span class="txn-note" contenteditable="true" onblur="saveIncomeNote('${i.id}',this.textContent)">${esc(i.note||'')}</span></td>
       <td style="text-align:right;font-weight:600;color:#2d6a4f;">${fmt(i.amount)}</td>
       <td style="text-align:right;white-space:nowrap;">
-        <button class="del-btn" onclick="openEditIncome('${i.id}')" title="Edit" style="margin-right:4px;">✎</button>
-        <button class="del-btn" onclick="deleteIncome('${i.id}')" title="Remove">✕</button>
+        <div class="row-menu-wrap">
+          <button class="row-menu-btn" onclick="toggleRowMenu(event,'income-menu-${i.id}')" title="Options">⋯</button>
+          <div class="row-menu-drop" id="income-menu-${i.id}">
+            <button onclick="closeRowMenus();openEditIncome('${i.id}')">Edit</button>
+            <button class="danger" onclick="closeRowMenus();deleteIncome('${i.id}')">Delete</button>
+          </div>
+        </div>
       </td>
     </tr>`;
   }).join('');
@@ -3672,6 +3691,23 @@ function confirmAddIncome() {
   }
   persist(); closeAddIncome(); renderIncome(); renderDashboard(); renderTxns(); autoPush();
 }
+
+function toggleRowMenu(e, id) {
+  e.stopPropagation();
+  const menu = document.getElementById(id);
+  const isOpen = menu.classList.contains('open');
+  closeRowMenus();
+  if (!isOpen) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    menu.style.top  = (rect.bottom + 4) + 'px';
+    menu.style.left = (rect.right - 130) + 'px';
+    menu.classList.add('open');
+  }
+}
+function closeRowMenus() {
+  document.querySelectorAll('.row-menu-drop.open').forEach(m => m.classList.remove('open'));
+}
+document.addEventListener('click', closeRowMenus);
 
 function deleteIncome(id) {
   const inc = incomes.find(x => x.id === id);
@@ -5067,10 +5103,10 @@ function exportCSV() {
 function fmt(n) { return '$' + (n || 0).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 // isNeeds: transaction-level needs flag; falls back to category default
 function isNeeds(t) { return t.needs !== undefined ? t.needs : !!CAT[t.category]?.fixed; }
-function toggleNeeds(id) {
+function setNeeds(id, val) {
   const t = txns.find(x => x.id === id);
   if (!t) return;
-  t.needs = !isNeeds(t);
+  t.needs = val;
   persist(); renderTxns(); renderDashboard(); autoPush();
 }
 function fmtMonth(m) { const [y, mo] = m.split('-'); return new Date(y, mo - 1).toLocaleString('default', { month: 'long', year: 'numeric' }); }
