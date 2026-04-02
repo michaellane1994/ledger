@@ -3582,19 +3582,18 @@ function renderIncome() {
   if (periodEl) periodEl.textContent = selMonth ? fmtMonth(selMonth) : 'All time';
   if (!list.length) { body.innerHTML = ''; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
+  const allCards = [...new Set(txns.map(t => t.card).filter(Boolean))].sort();
   body.innerHTML = list.map(i => {
-    const linkedCat = i.category ? (CAT[i.category] || CAT.misc) : null;
-    const catCell = linkedCat
-      ? `<span class="cat-badge" style="background:${linkedCat.bg};color:${linkedCat.color};">${linkedCat.label}</span>`
-      : '<span style="color:var(--faint);font-size:12px;">—</span>';
     const isLinked = !!i.fromTxnId;
+    const catOpts = `<option value="">—</option>` + CATS.map(c => `<option value="${c.key}"${i.category===c.key?' selected':''}>${c.label}</option>`).join('');
+    const cardOpts = `<option value="">—</option>` + allCards.map(c => `<option value="${c}"${i.card===c?' selected':''}>${esc(c)}</option>`).join('');
     return `<tr>
       <td style="width:100px;"><span class="txn-date-input" style="cursor:pointer;" onclick="openEditIncome('${i.id}')" title="Click to edit">${i.date||'—'}</span></td>
       <td><span class="cat-badge" style="background:${lightenColor(incomeTypeColor(i.type))};color:${incomeTypeColor(i.type)};">${INCOME_TYPES[i.type]||i.type}</span></td>
       <td style="font-weight:500;"><span class="txn-note" contenteditable="true" onblur="saveIncomeDesc('${i.id}',this.textContent)">${esc(i.desc||'')}</span></td>
-      <td class="hide-mobile">${catCell}</td>
+      <td class="hide-mobile"><select onchange="saveIncomeCat('${i.id}',this.value)" style="border:none;background:transparent;font-size:12.5px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;padding:0;outline:none;max-width:110px;">${catOpts}</select></td>
       <td class="hide-mobile"><select onchange="saveIncomePerson('${i.id}',this.value)" style="border:none;background:transparent;font-size:12.5px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;padding:0;outline:none;max-width:90px;">${['Michael','Lili','Joint'].map(p=>`<option${p===i.person?' selected':''}>${p}</option>`).join('')}</select></td>
-      <td class="hide-mobile"><span class="txn-note" contenteditable="true" onblur="saveIncomeCard('${i.id}',this.textContent)">${esc(i.card||'')}</span></td>
+      <td class="hide-mobile"><select onchange="saveIncomeCard('${i.id}',this.value)" style="border:none;background:transparent;font-size:12.5px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;padding:0;outline:none;max-width:110px;">${cardOpts}</select></td>
       <td class="hide-mobile"><span class="txn-note" contenteditable="true" onblur="saveIncomeNote('${i.id}',this.textContent)">${esc(i.note||'')}</span></td>
       <td style="text-align:right;font-weight:600;color:#2d6a4f;">${fmt(i.amount)}</td>
       <td style="text-align:right;white-space:nowrap;">
@@ -3729,9 +3728,15 @@ function saveIncomePerson(id, person) {
 function saveIncomeCard(id, card) {
   const i = incomes.find(x => x.id === id);
   if (!i) return;
-  i.card = card.trim();
-  if (i.fromTxnId) { const t = txns.find(x => x.id === i.fromTxnId); if (t) t.card = card.trim(); }
+  i.card = card;
+  if (i.fromTxnId) { const t = txns.find(x => x.id === i.fromTxnId); if (t) t.card = card; }
   persist(); autoPush();
+}
+function saveIncomeCat(id, category) {
+  const i = incomes.find(x => x.id === id);
+  if (!i) return;
+  i.category = category || undefined;
+  persist(); renderDashboard(); autoPush();
 }
 function saveIncomeNote(id, note) {
   const i = incomes.find(x => x.id === id);
