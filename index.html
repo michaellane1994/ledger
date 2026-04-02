@@ -2906,7 +2906,7 @@ function renderTxns() {
         onblur="saveNote('${t.id}',this.textContent)">${esc(t.note || '')}</span></td>
       <td class="txn-td-amount" style="text-align:right;white-space:nowrap;">
         ${amtDisplay}
-        ${(!isIncome && !isSavings && !isRefund) ? `<select onchange="setNeeds('${t.id}',this.value==='need')" style="font-size:10px;padding:1px 4px;border-radius:4px;border:1px solid var(--border);background:${isNeeds(t)?'#fef3e2':'#eaf0f9'};color:${isNeeds(t)?'#b45309':'#2563eb'};cursor:pointer;font-family:'Inter',sans-serif;margin-top:2px;display:block;margin-left:auto;"><option value="need"${isNeeds(t)?' selected':''}>Need</option><option value="want"${!isNeeds(t)?' selected':''}>Want</option></select>` : ''}
+        ${(!isIncome && !isSavings && !isRefund) ? `<button onclick="setNeeds('${t.id}',${!isNeeds(t)})" style="font-size:10px;padding:1px 6px;border-radius:4px;border:1px solid var(--border);background:${isNeeds(t)?'#fef3e2':'#eaf0f9'};color:${isNeeds(t)?'#b45309':'#2563eb'};cursor:pointer;font-family:'Inter',sans-serif;margin-top:2px;display:block;margin-left:auto;">${isNeeds(t)?'Need':'Want'}</button>` : ''}
         <button class="del-btn" onclick="deleteTxn('${t.id}')" title="Remove transaction">✕</button>
       </td>
     </tr>`;
