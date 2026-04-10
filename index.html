@@ -122,6 +122,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 .month-pills{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;}
 .mpill{padding:4px 11px;border-radius:100px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap;flex-shrink:0;}
 .mpill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.mpill.year-pill{font-weight:600;font-size:12px;}
+.pill-sep{width:1px;background:var(--border);margin:2px 4px;align-self:stretch;flex-shrink:0;}
 .dash-pill{padding:3px 10px;border-radius:100px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap;}
 .dash-pill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .topbar-right{display:flex;gap:8px;align-items:center;flex-shrink:0;}
@@ -1718,7 +1720,8 @@ let sheetsUrl    = localStorage.getItem('l3_sheets_url') || '';
 let showJoint    = localStorage.getItem('l3_show_joint') !== 'false';
 let rentalExpenses = JSON.parse(localStorage.getItem('l3_rental') || '[]');
 let selMonth  = '';
-let dashPeriod    = '';        // '', 'latest', '3m', 'ytd'
+let selYear   = String(new Date().getFullYear());
+let dashPeriod    = '';        // '', 'latest', '3m', 'ytd', 'year'
 let dashCatFilter = new Set(); // empty = show all categories
 let dashCatMode   = 'top5';   // 'all', 'top5', 'custom'
 
@@ -1775,47 +1778,79 @@ function getMonths() {
   return [...new Set(txns.map(t => t.date.substring(0, 7)))].sort().reverse();
 }
 function renderPills() {
-  const months = getMonths();
+  const allMonths = getMonths();
   const el  = document.getElementById('month-pills');
   const mel = document.getElementById('mobile-month-pills');
   el.innerHTML = '';
   if (mel) mel.innerHTML = '';
-  if (!months.length) return;
-  if (!selMonth || !months.includes(selMonth)) selMonth = months[0];
-  // Show mobile pills only on small screens
+  if (!allMonths.length) return;
+
+  const years = [...new Set(allMonths.map(m => m.substring(0,4)))].sort().reverse();
+  // Snap selYear to a year that has data
+  if (!years.includes(selYear)) selYear = years[0];
+
+  const yearMonths = allMonths.filter(m => m.startsWith(selYear + '-'));
+  // Snap selMonth to the current year when switching years
+  if (!yearMonths.includes(selMonth)) selMonth = yearMonths[0] || '';
+
   if (mel) mel.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
-  months.forEach(m => {
-    const [y, mo] = m.split('-');
-    const label = new Date(y, mo - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
-    const onclick = () => {
-      dashPeriod = '';
-      selMonth = m;
-      renderPills();
-      renderDashboard();
-      txnMonthFilter = new Set([m]);
-      renderTxns();
-      // Re-render income/savings if those views are active
-      const activeView = document.querySelector('.view.active');
-      if (activeView) {
-        if (activeView.id === 'view-income')  renderIncome();
-        if (activeView.id === 'view-savings') renderSavings();
-      }
-    };
-    // Topbar pill
-    const p = document.createElement('div');
-    p.className = 'mpill' + (m === selMonth ? ' active' : '');
-    p.textContent = label;
-    p.onclick = onclick;
-    el.appendChild(p);
-    // Mobile pill
-    if (mel) {
-      const mp = document.createElement('div');
-      mp.className = 'mpill' + (m === selMonth ? ' active' : '');
-      mp.textContent = label;
-      mp.onclick = onclick;
-      mel.appendChild(mp);
-    }
-  });
+
+  function buildPills(container) {
+    // Year pills
+    years.forEach(y => {
+      const p = document.createElement('div');
+      p.className = 'mpill year-pill' + (y === selYear ? ' active' : '');
+      p.textContent = y;
+      p.onclick = () => setSelYear(y);
+      container.appendChild(p);
+    });
+    // Separator
+    const sep = document.createElement('div');
+    sep.className = 'pill-sep';
+    container.appendChild(sep);
+    // Full Year pill
+    const fy = document.createElement('div');
+    fy.className = 'mpill' + (dashPeriod === 'year' ? ' active' : '');
+    fy.textContent = 'Full Year';
+    fy.onclick = () => { dashPeriod = 'year'; renderPills(); renderDashboard(); };
+    container.appendChild(fy);
+    // Month pills (only for selected year)
+    yearMonths.forEach(m => {
+      const [, mo] = m.split('-');
+      const label = new Date(selYear, mo - 1).toLocaleString('default', { month: 'short' });
+      const p = document.createElement('div');
+      p.className = 'mpill' + (m === selMonth && dashPeriod === '' ? ' active' : '');
+      p.textContent = label;
+      p.onclick = () => {
+        dashPeriod = '';
+        selMonth = m;
+        renderPills();
+        renderDashboard();
+        txnMonthFilter = new Set([m]);
+        renderTxns();
+        const activeView = document.querySelector('.view.active');
+        if (activeView) {
+          if (activeView.id === 'view-income')  renderIncome();
+          if (activeView.id === 'view-savings') renderSavings();
+        }
+      };
+      container.appendChild(p);
+    });
+  }
+
+  buildPills(el);
+  if (mel) buildPills(mel);
+}
+
+function setSelYear(year) {
+  selYear = year;
+  dashPeriod = 'year';
+  const yearMonths = getMonths().filter(m => m.startsWith(selYear + '-'));
+  selMonth = yearMonths[0] || '';
+  renderPills();
+  renderDashboard();
+  txnMonthFilter = new Set();
+  renderTxns();
 }
 
 // Re-check mobile pill visibility on resize
@@ -2431,7 +2466,8 @@ function dashPeriodTest(dateStr) {
       }
       return false;
     }
-    if (dashPeriod === 'ytd') return dateStr.startsWith(`${now.getFullYear()}-`);
+    if (dashPeriod === 'ytd')  return dateStr.startsWith(`${now.getFullYear()}-`);
+    if (dashPeriod === 'year') return dateStr.startsWith(`${selYear}-`);
     return true;
   }
   return selMonth ? dateStr.startsWith(selMonth) : true;
@@ -2475,8 +2511,9 @@ function renderDashboard() {
   const creditsTotal = expenses.filter(t => effectiveAmt(t) < 0).reduce((s, t) => s + effectiveAmt(t), 0);
 
   const periodLabel = dashPeriod === 'latest' ? 'latest month'
-    : dashPeriod === '3m' ? 'last 3 months'
-    : dashPeriod === 'ytd' ? 'year to date'
+    : dashPeriod === '3m'   ? 'last 3 months'
+    : dashPeriod === 'ytd'  ? 'year to date'
+    : dashPeriod === 'year' ? selYear
     : selMonth ? 'in ' + fmtMonth(selMonth) : 'all time';
   document.getElementById('hero-total').textContent = fmt(total);
   document.getElementById('hero-sub').textContent   = periodLabel + (creditsTotal < 0 ? '  (' + fmt(Math.abs(creditsTotal)) + ' credited)' : '');
@@ -2535,6 +2572,10 @@ function renderDashboard() {
 
   // Determine viewMonth for single-month periods
   const viewMonth = dashPeriod === 'latest' ? getMonths()[0] : (dashPeriod === '' ? selMonth : null);
+  // For year view, scope chart to that year
+  if (dashPeriod === 'year') {
+    filteredMonths = filteredMonths.filter(m => m.startsWith(selYear + '-'));
+  }
 
   // Build byCatPrev for trend indicators
   let prevExpenses = [];
