@@ -206,9 +206,18 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 
 /* ── TRANSACTIONS ── */
 .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
-.filter-bar input,.filter-bar select{padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;}
+.filter-bar input,.filter-bar select,.filter-bar .ms-btn{padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;}
 .filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent);}
 .filter-bar input{min-width:180px;}
+.ms-wrap{position:relative;display:inline-block;}
+.ms-btn{padding-right:24px;cursor:pointer;white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis;text-align:left;position:relative;}
+.ms-btn::after{content:'▾';position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--faint);pointer-events:none;}
+.ms-btn.has-filter{border-color:var(--accent);color:var(--accent);}
+.ms-drop{position:absolute;top:calc(100% + 4px);left:0;min-width:180px;max-height:240px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:500;display:none;}
+.ms-drop.open{display:block;animation:fadeIn .1s ease;}
+.ms-opt{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;user-select:none;}
+.ms-opt:hover{background:var(--bg);}
+.ms-opt input[type=checkbox]{margin:0;cursor:pointer;accent-color:var(--accent);flex-shrink:0;}
 .txn-cat-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
 .tcp{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);user-select:none;white-space:nowrap;}
 .tcp:hover{color:var(--ink);border-color:var(--muted);}
@@ -673,18 +682,21 @@ tbody tr:hover .row-menu-btn{opacity:1;}
       </div>
       <div class="filter-bar">
         <input type="text" id="f-search" placeholder="Search merchant..." oninput="renderTxns()">
-        <select id="f-cat" onchange="renderTxns()">
-          <option value="">All categories</option>
-        </select>
+        <div class="ms-wrap" id="ms-cat">
+          <button class="ms-btn" id="ms-cat-btn" onclick="openMs(event,'ms-cat')">All categories</button>
+          <div class="ms-drop" id="ms-cat-drop"></div>
+        </div>
         <select id="f-person" onchange="renderTxns()">
           <option value="">All people</option>
         </select>
-        <select id="f-card" onchange="renderTxns()">
-          <option value="">All cards</option>
-        </select>
-        <select id="f-month" onchange="renderTxns()">
-          <option value="">All months</option>
-        </select>
+        <div class="ms-wrap" id="ms-card">
+          <button class="ms-btn" id="ms-card-btn" onclick="openMs(event,'ms-card')">All cards</button>
+          <div class="ms-drop" id="ms-card-drop"></div>
+        </div>
+        <div class="ms-wrap" id="ms-month">
+          <button class="ms-btn" id="ms-month-btn" onclick="openMs(event,'ms-month')">All months</button>
+          <div class="ms-drop" id="ms-month-drop"></div>
+        </div>
         <button onclick="resetTxnFilters()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Inter',sans-serif;color:var(--faint);cursor:pointer;white-space:nowrap;" title="Reset filters">Reset</button>
       </div>
       <div class="txn-cat-pills" id="txn-cat-pills"></div>
@@ -1743,8 +1755,7 @@ function goNav(name) {
     if (mainEl)    mainEl.classList.remove('dash-bar-visible');
   }
   if (name === 'transactions') {
-    const fm = document.getElementById('f-month');
-    if (fm && selMonth) fm.value = selMonth;
+    if (selMonth) txnMonthFilter = new Set([selMonth]);
     renderTxns();
   }
   if (name === 'upload')    renderUploads();
@@ -1777,8 +1788,8 @@ function renderPills() {
       selMonth = m;
       renderPills();
       renderDashboard();
-      const fm = document.getElementById('f-month');
-      if (fm) { fm.value = m; renderTxns(); }
+      txnMonthFilter = new Set([m]);
+      renderTxns();
       // Re-render income/savings if those views are active
       const activeView = document.querySelector('.view.active');
       if (activeView) {
@@ -1820,7 +1831,10 @@ let cfBonusVisible   = true;
 let cfStartBalance   = parseFloat(localStorage.getItem('l3_cf_start') || '0');
 // CF_FIXED_CATS is derived dynamically from CATS where fixed===true (see renderChartSection)
 let txnSort = 'date-desc';
-let txnTypeFilter = ''; // '', 'expenses', 'transfer', 'income'
+let txnTypeFilter  = ''; // '', 'expenses', 'transfer', 'income'
+let txnCatFilter   = new Set();
+let txnCardFilter  = new Set();
+let txnMonthFilter = new Set();
 let editingIncomeId = null;
 
 function resetChartFilters() {
@@ -2082,12 +2096,12 @@ function renderChartSection() {
           const catKey = datasets[el.datasetIndex]?.catKey;
           const month  = filteredMonths[el.index];
           if (!catKey || !month) return;
-          const s = document.getElementById('f-search');   if (s) s.value = '';
-          document.getElementById('f-cat').value   = catKey;
-          const fp = document.getElementById('f-person');  if (fp) fp.value = '';
-          const fd = document.getElementById('f-card');    if (fd) fd.value = '';
-          document.getElementById('f-month').value = month;
-          txnTypeFilter = 'expenses';
+          const s = document.getElementById('f-search'); if (s) s.value = '';
+          const p = document.getElementById('f-person'); if (p) p.value = '';
+          txnCatFilter   = new Set([catKey]);
+          txnCardFilter  = new Set();
+          txnMonthFilter = new Set([month]);
+          txnTypeFilter  = 'expenses';
           goNav('transactions');
         },
         onHover: (e, elements) => {
@@ -2787,31 +2801,31 @@ function setTxnSort(col) {
 }
 function setTxnCatPill(key) {
   txnTypeFilter = '';
-  const sel = document.getElementById('f-cat');
-  sel.value = sel.value === key ? '' : key;
+  if (txnCatFilter.size === 1 && txnCatFilter.has(key)) txnCatFilter = new Set();
+  else txnCatFilter = new Set([key]);
   renderTxns();
 }
 function goToCatFilter(catKey) {
-  txnTypeFilter = '';
-  const s = document.getElementById('f-search');   if (s) s.value = '';
-  const c = document.getElementById('f-cat');      if (c) c.value = catKey;
-  const p = document.getElementById('f-person');   if (p) p.value = '';
-  const d = document.getElementById('f-card');     if (d) d.value = '';
-  const m = document.getElementById('f-month');    if (m) m.value = '';
+  txnTypeFilter  = '';
+  txnCatFilter   = new Set([catKey]);
+  txnCardFilter  = new Set();
+  txnMonthFilter = new Set();
+  const s = document.getElementById('f-search'); if (s) s.value = '';
+  const p = document.getElementById('f-person'); if (p) p.value = '';
   goNav('transactions');
 }
 function setTxnTypePill(type) {
   txnTypeFilter = txnTypeFilter === type ? '' : type;
-  if (txnTypeFilter) document.getElementById('f-cat').value = '';
+  if (txnTypeFilter) txnCatFilter = new Set();
   renderTxns();
 }
 function resetTxnFilters() {
-  txnTypeFilter = '';
-  const s = document.getElementById('f-search');   if (s) s.value = '';
-  const c = document.getElementById('f-cat');      if (c) c.value = '';
-  const p = document.getElementById('f-person');   if (p) p.value = '';
-  const d = document.getElementById('f-card');     if (d) d.value = '';
-  const m = document.getElementById('f-month');    if (m) m.value = '';
+  txnTypeFilter  = '';
+  txnCatFilter   = new Set();
+  txnCardFilter  = new Set();
+  txnMonthFilter = new Set();
+  const s = document.getElementById('f-search'); if (s) s.value = '';
+  const p = document.getElementById('f-person'); if (p) p.value = '';
   renderTxns();
 }
 function saveTxnDate(id, date) {
@@ -2824,38 +2838,70 @@ function saveTxnDate(id, date) {
   if (linked) linked.date = date;
   persist(); renderDashboard(); renderIncome(); autoPush();
 }
+// ── MULTI-SELECT FILTER WIDGETS ──────────────────────────
+function openMs(e, id) {
+  e.stopPropagation();
+  const drop = document.getElementById(id + '-drop');
+  const isOpen = drop?.classList.contains('open');
+  document.querySelectorAll('.ms-drop.open').forEach(d => d.classList.remove('open'));
+  if (drop && !isOpen) drop.classList.add('open');
+}
+document.addEventListener('click', () => {
+  document.querySelectorAll('.ms-drop.open').forEach(d => d.classList.remove('open'));
+});
+function toggleMsOpt(id, value) {
+  const fs = id === 'ms-cat' ? txnCatFilter : id === 'ms-card' ? txnCardFilter : txnMonthFilter;
+  if (fs.has(value)) fs.delete(value); else fs.add(value);
+  renderTxns();
+}
+function buildMsDrop(id, items, filterSet) {
+  const drop = document.getElementById(id + '-drop');
+  if (!drop) return;
+  drop.innerHTML = items.map(({value, label}) => {
+    const v = value.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<label class="ms-opt"><input type="checkbox" ${filterSet.has(value)?'checked':''} onchange="toggleMsOpt('${id}','${v}')"><span>${esc(label)}</span></label>`;
+  }).join('');
+  const btn = document.getElementById(id + '-btn');
+  if (!btn) return;
+  const empty  = {'ms-cat':'All categories','ms-card':'All cards','ms-month':'All months'};
+  const nouns  = {'ms-cat':'categories','ms-card':'cards','ms-month':'months'};
+  if (filterSet.size === 0) {
+    btn.textContent = empty[id];
+    btn.classList.remove('has-filter');
+  } else if (filterSet.size === 1) {
+    const val = [...filterSet][0];
+    const item = items.find(i => i.value === val);
+    btn.textContent = item ? item.label : val;
+    btn.classList.add('has-filter');
+  } else {
+    btn.textContent = filterSet.size + ' ' + nouns[id];
+    btn.classList.add('has-filter');
+  }
+}
+
 function renderTxns() {
   const s   = (document.getElementById('f-search').value || '').toLowerCase();
-  const cf  = document.getElementById('f-cat').value;
   const cpf = document.getElementById('f-person').value;
-  const cdf = document.getElementById('f-card').value;
 
-  // Populate cat dropdown once
-  const cs = document.getElementById('f-cat');
-  if (cs.options.length <= 1) {
-    CATS.forEach(c => { const o = new Option(c.label, c.key); cs.appendChild(o); });
-  }
-  // Populate month dropdown dynamically so new months appear immediately
-  const ms = document.getElementById('f-month');
-  const currentMf = ms.value;
-  ms.innerHTML = '<option value="">All months</option>';
-  getMonths().forEach(m => { const o = new Option(fmtMonth(m), m); ms.appendChild(o); });
-  ms.value = currentMf;
-  const mf = ms.value;
+  // Rebuild cat multi-select
+  buildMsDrop('ms-cat', CATS.map(c => ({value: c.key, label: c.label})), txnCatFilter);
+
+  // Rebuild month multi-select
+  buildMsDrop('ms-month', getMonths().map(m => ({value: m, label: fmtMonth(m)})), txnMonthFilter);
+
   // Populate person filter dynamically
   const personSel = document.getElementById('f-person');
   const currentPersonVal = personSel.value;
   const allPeople = [...new Set(txns.map(t => t.person).filter(Boolean))].sort();
   personSel.innerHTML = '<option value="">All people</option>' + allPeople.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
   personSel.value = currentPersonVal;
-  // Populate card filter — scoped to selected month if one is active
-  const cardSel = document.getElementById('f-card');
-  const currentCardVal = cardSel.value;
-  const cardTxns = mf ? txns.filter(t => t.date?.startsWith(mf)) : txns;
-  const allCards = [...new Set(cardTxns.map(t => t.card).filter(Boolean))].sort();
-  cardSel.innerHTML = '<option value="">All cards</option>' + allCards.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  // Keep current selection if still valid, otherwise reset
-  cardSel.value = allCards.includes(currentCardVal) ? currentCardVal : '';
+
+  // Rebuild card multi-select — scoped to selected months if any
+  const cardPool = txnMonthFilter.size > 0 ? txns.filter(t => txnMonthFilter.has(t.date?.substring(0,7))) : txns;
+  const allCards = [...new Set(cardPool.map(t => t.card).filter(Boolean))].sort();
+  // Drop any card selections that are no longer valid
+  [...txnCardFilter].filter(v => !allCards.includes(v)).forEach(v => txnCardFilter.delete(v));
+  buildMsDrop('ms-card', allCards.map(c => ({value: c, label: c})), txnCardFilter);
 
   // Type pills
   const pillsEl = document.getElementById('txn-cat-pills');
@@ -2881,14 +2927,14 @@ function renderTxns() {
       if (!t.incomeType || t.incomeType === 'transfer') return false;
     } else if (txnTypeFilter === 'expenses') {
       if (t.incomeType || t.savingsAccountId) return false;
-      if (cf && t.category !== cf) return false;
+      if (txnCatFilter.size > 0 && !txnCatFilter.has(t.category)) return false;
     } else {
-      if (cf && (t.incomeType || t.savingsAccountId)) return false;
-      if (cf && t.category !== cf) return false;
+      if (txnCatFilter.size > 0 && (t.incomeType || t.savingsAccountId)) return false;
+      if (txnCatFilter.size > 0 && !txnCatFilter.has(t.category)) return false;
     }
     if (cpf && t.person !== cpf) return false;
-    if (cdf && t.card !== cdf) return false;
-    if (mf  && !t.date.startsWith(mf)) return false;
+    if (txnCardFilter.size > 0  && !txnCardFilter.has(t.card))                    return false;
+    if (txnMonthFilter.size > 0 && !txnMonthFilter.has(t.date?.substring(0,7)))   return false;
     return true;
   }).sort((a, b) => {
     if (txnSort === 'amount-desc') return Math.abs(b.amount) - Math.abs(a.amount);
@@ -3612,8 +3658,7 @@ function confirmAdd() {
   selMonth = date.substring(0, 7);
   renderPills();
   renderDashboard();
-  const fm = document.getElementById('f-month');
-  if (fm) fm.value = selMonth;
+  txnMonthFilter = new Set([selMonth]);
   renderTxns();
   autoPush();
 }
