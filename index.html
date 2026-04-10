@@ -646,6 +646,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
               <button id="cf-proj-3" class="btn btn-ghost btn-sm" onclick="setCfProj(3)" style="font-size:11px;padding:2px 8px;">3m avg</button>
               <button id="cf-proj-6" class="btn btn-ghost btn-sm" onclick="setCfProj(6)" style="font-size:11px;padding:2px 8px;">6m avg</button>
             </div>
+            <button id="cf-bonus-btn" class="btn btn-ghost btn-sm" onclick="toggleCfBonus()" style="font-size:11px;padding:2px 8px;">Bonus: on</button>
           </div>
         </div>
         <div class="card-body" style="padding-bottom:16px;"><canvas id="cashflowChart"></canvas></div>
@@ -684,6 +685,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
         <select id="f-month" onchange="renderTxns()">
           <option value="">All months</option>
         </select>
+        <button onclick="resetTxnFilters()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Inter',sans-serif;color:var(--faint);cursor:pointer;white-space:nowrap;" title="Reset filters">Reset</button>
       </div>
       <div class="txn-cat-pills" id="txn-cat-pills"></div>
       <div class="txn-table">
@@ -1814,6 +1816,7 @@ let fvIncomePlugin = null;
 let chartHiddenCats  = new Set();
 let chartViewMode    = 'category'; // 'category' | 'fixed-variable'
 let cfProjWindow     = parseInt(localStorage.getItem('l3_cf_proj') || '3');
+let cfBonusVisible   = true;
 let cfStartBalance   = parseFloat(localStorage.getItem('l3_cf_start') || '0');
 // CF_FIXED_CATS is derived dynamically from CATS where fixed===true (see renderChartSection)
 let txnSort = 'date-desc';
@@ -2102,6 +2105,12 @@ function setCfProj(n) {
   localStorage.setItem('l3_cf_proj', n);
   renderCashflowChart();
 }
+function toggleCfBonus() {
+  cfBonusVisible = !cfBonusVisible;
+  const btn = document.getElementById('cf-bonus-btn');
+  if (btn) btn.textContent = cfBonusVisible ? 'Bonus: on' : 'Bonus: off';
+  renderCashflowChart();
+}
 
 function renderCashflowChart() {
   const now = new Date();
@@ -2173,7 +2182,7 @@ function renderCashflowChart() {
     incData.push(inc);
     fixedData.push(-fixed);        // negative = bar goes down
     discData.push(-disc);          // negative = bar goes down (transfers already negative so double-neg = positive reduction)
-    capData.push(inc + bonus - fixed); // spending capacity includes actual bonus for past months
+    capData.push(inc + (cfBonusVisible ? bonus : 0) - fixed); // spending capacity includes actual bonus for past months
     projected.push(isFuture);
     bonusData.push(bonus);
   });
@@ -2181,7 +2190,7 @@ function renderCashflowChart() {
   // Running balance from starting point (include actual bonus, not projected)
   let running = cfStartBalance;
   const runningData = yearMonths.map((_,i) => {
-    running += incData[i] + bonusData[i] + fixedData[i] + discData[i];
+    running += incData[i] + (cfBonusVisible ? bonusData[i] : 0) + fixedData[i] + discData[i];
     return running;
   });
 
@@ -2253,24 +2262,24 @@ function renderCashflowChart() {
           borderWidth: 0, borderRadius: 2,
           stack: 'income', yAxisID: 'y'
         },
-        {
+        ...(cfBonusVisible ? [{
           type: 'bar', label: 'Bonus',
           data: bonusData,
           backgroundColor: `rgba(124,58,237,${isDark?.6:.45})`,
           borderWidth: 0, borderRadius: 2,
           stack: 'income', yAxisID: 'y'
-        },
+        }] : []),
         {
           type: 'bar', label: 'Needs',
           data: fixedData.map(v => -v),
-          backgroundColor: fixedData.map((_,i) => `rgba(180,83,9,${a(isDark?.75:.5, isDark?.28:.18, i)})`),
+          backgroundColor: fixedData.map((_,i) => `rgba(${isDark?'160,100,60':'180,120,70'},${a(isDark?.75:.5, isDark?.28:.18, i)})`),
           borderWidth: 0, borderRadius: 2,
           stack: 'spending', yAxisID: 'y'
         },
         {
           type: 'bar', label: 'Wants',
           data: discData.map(v => -v),
-          backgroundColor: discData.map((_,i) => `rgba(212,96,58,${a(isDark?.75:.5, isDark?.28:.18, i)})`),
+          backgroundColor: discData.map((_,i) => `rgba(${isDark?'80,110,160':'100,130,190'},${a(isDark?.75:.5, isDark?.28:.18, i)})`),
           borderWidth: 0, borderRadius: 2,
           stack: 'spending', yAxisID: 'y'
         },
@@ -2786,6 +2795,15 @@ function goToCatFilter(catKey) {
 function setTxnTypePill(type) {
   txnTypeFilter = txnTypeFilter === type ? '' : type;
   if (txnTypeFilter) document.getElementById('f-cat').value = '';
+  renderTxns();
+}
+function resetTxnFilters() {
+  txnTypeFilter = '';
+  const s = document.getElementById('f-search');   if (s) s.value = '';
+  const c = document.getElementById('f-cat');      if (c) c.value = '';
+  const p = document.getElementById('f-person');   if (p) p.value = '';
+  const d = document.getElementById('f-card');     if (d) d.value = '';
+  const m = document.getElementById('f-month');    if (m) m.value = '';
   renderTxns();
 }
 function saveTxnDate(id, date) {
