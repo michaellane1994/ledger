@@ -652,6 +652,11 @@ tbody tr:hover .row-menu-btn{opacity:1;}
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <span id="cashflow-sub" style="font-size:11px;color:var(--muted);"></span>
             <div style="display:flex;align-items:center;gap:5px;">
+              <label style="font-size:11px;color:var(--muted);white-space:nowrap;">From</label>
+              <select id="cf-from-month" onchange="setCfFrom(this.value)"
+                style="font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;"></select>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;">
               <label style="font-size:11px;color:var(--muted);white-space:nowrap;">Start balance</label>
               <input type="number" id="cf-start-bal" step="1000" placeholder="auto"
                 style="width:88px;font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);"
@@ -1868,6 +1873,7 @@ let chartViewMode    = 'category'; // 'category' | 'fixed-variable'
 let cfProjWindow     = parseInt(localStorage.getItem('l3_cf_proj') || '3');
 let cfBonusVisible   = true;
 let cfStartBalance   = parseFloat(localStorage.getItem('l3_cf_start') || '0');
+let cfFromMonth      = localStorage.getItem('l3_cf_from') || '';
 // CF_FIXED_CATS is derived dynamically from CATS where fixed===true (see renderChartSection)
 let txnSort = 'date-desc';
 let txnTypeFilter  = ''; // '', 'expenses', 'transfer', 'income'
@@ -2156,6 +2162,11 @@ function setCfStart(val) {
   localStorage.setItem('l3_cf_start', cfStartBalance);
   renderCashflowChart();
 }
+function setCfFrom(val) {
+  cfFromMonth = val;
+  localStorage.setItem('l3_cf_from', val);
+  renderCashflowChart();
+}
 function setCfProj(n) {
   cfProjWindow = n;
   localStorage.setItem('l3_cf_proj', n);
@@ -2182,15 +2193,31 @@ function renderCashflowChart() {
   // End at December of current year
   const endMonth = `${currentYear}-12`;
 
-  // Build month list from earliest data month through end of current year
-  const yearMonths = [];
+  // Build full month list from earliest data through end of current year
+  const allCfMonths = [];
   let [ey, em] = earliestData.split('-').map(Number);
   const [endY, endM] = endMonth.split('-').map(Number);
   while (ey < endY || (ey === endY && em <= endM)) {
-    yearMonths.push(`${ey}-${String(em).padStart(2,'0')}`);
+    allCfMonths.push(`${ey}-${String(em).padStart(2,'0')}`);
     em++;
     if (em > 12) { em = 1; ey++; }
   }
+
+  // Populate From dropdown
+  const fromSel = document.getElementById('cf-from-month');
+  if (fromSel) {
+    const prev = fromSel.value || cfFromMonth;
+    fromSel.innerHTML = allCfMonths.map(m => {
+      const [my, mm] = m.split('-');
+      const lbl = new Date(+my, mm - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
+      return `<option value="${m}">${lbl}</option>`;
+    }).join('');
+    fromSel.value = allCfMonths.includes(prev) ? prev : allCfMonths[0];
+    if (cfFromMonth !== fromSel.value) cfFromMonth = fromSel.value;
+  }
+
+  // Apply from-month filter
+  const yearMonths = cfFromMonth ? allCfMonths.filter(m => m >= cfFromMonth) : allCfMonths;
 
   // Income by month (exclude transfers; bonus tracked separately as outlier)
   const incByMonth = {};
