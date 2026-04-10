@@ -628,7 +628,10 @@ tbody tr:hover .row-menu-btn{opacity:1;}
                 </div>
               </div>
             </div>
-            <button class="btn btn-ghost btn-sm" onclick="resetChartFilters()">Reset</button>
+            <div style="display:flex;gap:4px;align-items:center;">
+              <button id="fv-bonus-btn" class="btn btn-ghost btn-sm" onclick="toggleFvBonus()" style="font-size:11px;padding:2px 8px;display:none;">Bonus: on</button>
+              <button class="btn btn-ghost btn-sm" onclick="resetChartFilters()">Reset</button>
+            </div>
           </div>
           <div class="chart-controls">
             <div class="chart-range">
@@ -668,6 +671,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
             <div style="display:flex;gap:3px;">
               <button id="cf-proj-3" class="btn btn-ghost btn-sm" onclick="setCfProj(3)" style="font-size:11px;padding:2px 8px;">3m avg</button>
               <button id="cf-proj-6" class="btn btn-ghost btn-sm" onclick="setCfProj(6)" style="font-size:11px;padding:2px 8px;">6m avg</button>
+              <button id="cf-avg-scope-btn" class="btn btn-ghost btn-sm" onclick="toggleCfAvgScope()" style="font-size:11px;padding:2px 8px;">Avg: all data</button>
             </div>
             <button id="cf-bonus-btn" class="btn btn-ghost btn-sm" onclick="toggleCfBonus()" style="font-size:11px;padding:2px 8px;">Bonus: on</button>
           </div>
@@ -1876,8 +1880,10 @@ let chartViewMode    = 'category'; // 'category' | 'fixed-variable'
 let cfProjWindow     = parseInt(localStorage.getItem('l3_cf_proj') || '3');
 let cfBonusVisible   = true;
 let cfStartBalance   = parseFloat(localStorage.getItem('l3_cf_start') || '0');
-let cfFromMonth      = localStorage.getItem('l3_cf_from') || '';
-let cfToMonth        = localStorage.getItem('l3_cf_to')   || '';
+let cfFromMonth      = localStorage.getItem('l3_cf_from')      || '';
+let cfToMonth        = localStorage.getItem('l3_cf_to')        || '';
+let cfAvgScope       = localStorage.getItem('l3_cf_avg_scope') || 'all'; // 'all' | 'window'
+let fvBonusVisible   = true;
 // CF_FIXED_CATS is derived dynamically from CATS where fixed===true (see renderChartSection)
 let txnSort = 'date-desc';
 let txnTypeFilter  = ''; // '', 'expenses', 'transfer', 'income'
@@ -1984,6 +1990,11 @@ function renderChartSection() {
   // Sync toggle button active state
   document.getElementById('chart-view-cat')?.classList.toggle('active', chartViewMode === 'category');
   document.getElementById('chart-view-fv')?.classList.toggle('active', chartViewMode === 'fixed-variable');
+  const fvBonusBtn = document.getElementById('fv-bonus-btn');
+  if (fvBonusBtn) {
+    fvBonusBtn.style.display = chartViewMode === 'fixed-variable' ? '' : 'none';
+    fvBonusBtn.textContent = fvBonusVisible ? 'Bonus: on' : 'Bonus: off';
+  }
 
   const isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
   const gridColor = isDark ? '#38342c' : '#f0ece6';
@@ -2000,7 +2011,7 @@ function renderChartSection() {
                  .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
     );
     const incomeData = filteredMonths.map(m =>
-      incomes.filter(i => i.date && i.date.startsWith(m) && i.type !== 'transfer')
+      incomes.filter(i => i.date && i.date.startsWith(m) && i.type !== 'transfer' && (fvBonusVisible || i.type !== 'bonus'))
              .reduce((s, i) => s + i.amount, 0)
     );
     const incomeColor = isDark ? 'rgba(45,160,100,0.55)' : 'rgba(30,120,70,0.45)';
@@ -2187,6 +2198,19 @@ function toggleCfBonus() {
   if (btn) btn.textContent = cfBonusVisible ? 'Bonus: on' : 'Bonus: off';
   renderCashflowChart();
 }
+function toggleCfAvgScope() {
+  cfAvgScope = cfAvgScope === 'all' ? 'window' : 'all';
+  localStorage.setItem('l3_cf_avg_scope', cfAvgScope);
+  const btn = document.getElementById('cf-avg-scope-btn');
+  if (btn) btn.textContent = cfAvgScope === 'all' ? 'Avg: all data' : 'Avg: window';
+  renderCashflowChart();
+}
+function toggleFvBonus() {
+  fvBonusVisible = !fvBonusVisible;
+  const btn = document.getElementById('fv-bonus-btn');
+  if (btn) btn.textContent = fvBonusVisible ? 'Bonus: on' : 'Bonus: off';
+  renderChartSection();
+}
 
 function renderCashflowChart() {
   const now = new Date();
@@ -2266,9 +2290,17 @@ function renderCashflowChart() {
   });
 
   // Past complete months for projection avg (exclude current partial month)
-  const pastComplete = yearMonths
+  // cfAvgScope='all' uses all historical data; 'window' uses only months within the From/To window
+  const avgPool = cfAvgScope === 'all'
+    ? [...new Set([...Object.keys(incByMonth), ...Object.keys(fixedByMonth), ...Object.keys(discByMonth)])].sort()
+    : yearMonths;
+  const pastComplete = avgPool
     .filter(m => m < currentMonthStr && (incByMonth[m] || fixedByMonth[m] || discByMonth[m]))
     .slice(-cfProjWindow);
+
+  // Update avg scope button label
+  const avgScopeBtn = document.getElementById('cf-avg-scope-btn');
+  if (avgScopeBtn) avgScopeBtn.textContent = cfAvgScope === 'all' ? 'Avg: all data' : 'Avg: window';
   const avgInc   = pastComplete.length ? pastComplete.reduce((s,m)=>s+(incByMonth[m]||0),0)/pastComplete.length : 0;
   const avgFixed = pastComplete.length ? pastComplete.reduce((s,m)=>s+(fixedByMonth[m]||0),0)/pastComplete.length : 0;
   const avgDisc  = pastComplete.length ? pastComplete.reduce((s,m)=>s+(discByMonth[m]||0),0)/pastComplete.length : 0;
