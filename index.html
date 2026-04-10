@@ -334,6 +334,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .sc-left .sc-label{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:6px;}
 .sc-left .sc-val{font-family:'Playfair Display',serif;font-size:28px;}
 .sc-left .sc-sub{font-size:11.5px;color:var(--faint);margin-top:4px;}
+.sc-yoy{font-size:11px;color:var(--muted);margin-top:4px;}
 .sc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .sc-icon svg{width:18px;height:18px;}
 
@@ -508,6 +509,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
           <div class="hero-label">Total Spent</div>
           <div class="hero-total" id="hero-total">$0.00</div>
           <div class="hero-sub" id="hero-sub">Import a CSV to get started</div>
+          <div id="hero-yoy" style="display:none;font-size:12px;margin-top:5px;"></div>
         </div>
         <div class="hero-stats">
           <div class="hsi">
@@ -552,6 +554,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
             <div class="sc-val" id="dash-income">$0</div>
             <div class="sc-sub" id="dash-income-sub">0 entries</div>
             <div class="sc-sub" id="dash-income-bonus" style="margin-top:2px;font-size:11px;"></div>
+            <div class="sc-yoy" id="dash-income-yoy" style="display:none;"></div>
           </div>
           <div class="sc-icon" style="background:#eaf4ef;color:#2d6a4f;">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -562,6 +565,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
             <div class="sc-label">Total Net</div>
             <div class="sc-val" id="dash-net">$0</div>
             <div class="sc-sub" id="dash-net-sub">income minus expenses</div>
+            <div class="sc-yoy" id="dash-net-yoy" style="display:none;"></div>
           </div>
           <div class="sc-icon" style="background:#eaf0f9;color:#1d4e89;">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
@@ -2816,6 +2820,57 @@ function renderDashboard() {
     }
   }
 
+  // Year-over-year comparison
+  {
+    const now2 = new Date();
+    let priorExpYoY = [], priorIncYoY = [], priorLabel = '';
+    if (dashPeriod === 'year') {
+      const py = String(parseInt(selYear) - 1);
+      priorExpYoY = txns.filter(t => t.amount !== 0 && t.date.startsWith(py) && (t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId)));
+      priorIncYoY = incomes.filter(i => i.type !== 'transfer' && i.date.startsWith(py));
+      priorLabel = py;
+    } else if (dashPeriod === 'ytd') {
+      const py = now2.getFullYear() - 1;
+      const cm = now2.getMonth();
+      priorExpYoY = txns.filter(t => {
+        if (!t.amount || !t.date.startsWith(String(py))) return false;
+        return parseInt(t.date.substring(5, 7)) - 1 <= cm && (t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId));
+      });
+      priorIncYoY = incomes.filter(i => {
+        if (i.type === 'transfer' || !i.date.startsWith(String(py))) return false;
+        return parseInt(i.date.substring(5, 7)) - 1 <= cm;
+      });
+      priorLabel = String(py);
+    } else if (selMonth || dashPeriod === 'latest') {
+      const ref = dashPeriod === 'latest' ? getMonths()[0] : selMonth;
+      if (ref) {
+        const [ry, rm] = ref.split('-');
+        const pm = `${parseInt(ry) - 1}-${rm}`;
+        priorExpYoY = txns.filter(t => t.amount !== 0 && t.date.startsWith(pm) && (t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId)));
+        priorIncYoY = incomes.filter(i => i.type !== 'transfer' && i.date.startsWith(pm));
+        priorLabel = String(parseInt(ry) - 1);
+      }
+    }
+    const priorTotal    = priorExpYoY.reduce((s, t) => s + effectiveAmt(t), 0);
+    const priorInc      = priorIncYoY.reduce((s, i) => s + i.amount, 0);
+    const priorNetYoY   = priorInc - priorTotal;
+    const yoyStr = (curr, prior, higherIsGood) => {
+      if (!prior || Math.abs(prior) < 1) return null;
+      const pct = (curr - prior) / Math.abs(prior) * 100;
+      if (Math.abs(pct) < 1) return null;
+      const isUp = pct > 0;
+      const isGood = higherIsGood ? isUp : !isUp;
+      const color = isGood ? '#16a34a' : '#dc2626';
+      return `<span style="color:${color};font-weight:600;">${isUp ? '↑' : '↓'} ${Math.abs(pct).toFixed(0)}%</span> <span style="color:var(--faint);">vs ${priorLabel}</span>`;
+    };
+    const heroYoyEl = document.getElementById('hero-yoy');
+    if (heroYoyEl) { const s = priorTotal > 0 ? yoyStr(total, priorTotal, false) : null; heroYoyEl.innerHTML = s||''; heroYoyEl.style.display = s ? '' : 'none'; }
+    const incYoyEl  = document.getElementById('dash-income-yoy');
+    if (incYoyEl)  { const s = priorInc > 0 ? yoyStr(totalIncome, priorInc, true) : null; incYoyEl.innerHTML = s||''; incYoyEl.style.display = s ? '' : 'none'; }
+    const netYoyEl  = document.getElementById('dash-net-yoy');
+    if (netYoyEl)  { const s = priorNetYoY !== 0 ? yoyStr(net, priorNetYoY, true) : null; netYoyEl.innerHTML = s||''; netYoyEl.style.display = s ? '' : 'none'; }
+  }
+
   // On-track spending pace (single-month views only)
   const onTrackEl = document.getElementById('hero-on-track');
   if (onTrackEl) {
@@ -4362,9 +4417,10 @@ function renderCatManagement() {
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap;">
           <span>Budget/mo</span>
-          <input type="number" min="0" placeholder="No budget" value="${c.budget || ''}"
-            style="width:80px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);"
-            onchange="CATS[${idx}].budget=parseFloat(this.value)||0; saveCats(); renderDashboard(); autoPush();">
+          <input type="text" inputmode="numeric" placeholder="No budget" value="${c.budget ? Number(c.budget).toLocaleString() : ''}"
+            style="width:95px;font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);"
+            onfocus="this.value=this.value.replace(/,/g,'')"
+            onblur="const v=parseFloat(this.value.replace(/,/g,''))||0; CATS[${idx}].budget=v; if(v) this.value=v.toLocaleString(); else this.value=''; saveCats(); renderDashboard(); autoPush();">
         </label>
         <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer;">
           <input type="checkbox" ${c.fixed ? 'checked' : ''}
