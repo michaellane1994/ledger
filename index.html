@@ -668,10 +668,10 @@ tbody tr:hover .row-menu-btn{opacity:1;}
                 style="width:88px;font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);"
                 onchange="setCfStart(this.value)">
             </div>
-            <div style="display:flex;gap:3px;">
-              <button id="cf-proj-3" class="btn btn-ghost btn-sm" onclick="setCfProj(3)" style="font-size:11px;padding:2px 8px;">3m avg</button>
-              <button id="cf-proj-6" class="btn btn-ghost btn-sm" onclick="setCfProj(6)" style="font-size:11px;padding:2px 8px;">6m avg</button>
-              <button id="cf-avg-scope-btn" class="btn btn-ghost btn-sm" onclick="toggleCfAvgScope()" style="font-size:11px;padding:2px 8px;">Avg: all data</button>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <label style="font-size:11px;color:var(--muted);white-space:nowrap;">Avg from</label>
+              <select id="cf-avg-from" onchange="setCfAvgFrom(this.value)"
+                style="font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;"></select>
             </div>
             <button id="cf-bonus-btn" class="btn btn-ghost btn-sm" onclick="toggleCfBonus()" style="font-size:11px;padding:2px 8px;">Bonus: on</button>
           </div>
@@ -1877,12 +1877,11 @@ let cashflowChart;
 let fvIncomePlugin = null;
 let chartHiddenCats  = new Set();
 let chartViewMode    = 'category'; // 'category' | 'fixed-variable'
-let cfProjWindow     = parseInt(localStorage.getItem('l3_cf_proj') || '3');
 let cfBonusVisible   = true;
 let cfStartBalance   = parseFloat(localStorage.getItem('l3_cf_start') || '0');
-let cfFromMonth      = localStorage.getItem('l3_cf_from')      || '';
-let cfToMonth        = localStorage.getItem('l3_cf_to')        || '';
-let cfAvgScope       = localStorage.getItem('l3_cf_avg_scope') || 'all'; // 'all' | 'window'
+let cfFromMonth      = localStorage.getItem('l3_cf_from')    || '';
+let cfToMonth        = localStorage.getItem('l3_cf_to')      || '';
+let cfAvgFrom        = localStorage.getItem('l3_cf_avg_from') || '';
 let fvBonusVisible   = true;
 // CF_FIXED_CATS is derived dynamically from CATS where fixed===true (see renderChartSection)
 let txnSort = 'date-desc';
@@ -2187,22 +2186,15 @@ function setCfTo(val) {
   localStorage.setItem('l3_cf_to', val);
   renderCashflowChart();
 }
-function setCfProj(n) {
-  cfProjWindow = n;
-  localStorage.setItem('l3_cf_proj', n);
+function setCfAvgFrom(val) {
+  cfAvgFrom = val;
+  localStorage.setItem('l3_cf_avg_from', val);
   renderCashflowChart();
 }
 function toggleCfBonus() {
   cfBonusVisible = !cfBonusVisible;
   const btn = document.getElementById('cf-bonus-btn');
   if (btn) btn.textContent = cfBonusVisible ? 'Bonus: on' : 'Bonus: off';
-  renderCashflowChart();
-}
-function toggleCfAvgScope() {
-  cfAvgScope = cfAvgScope === 'all' ? 'window' : 'all';
-  localStorage.setItem('l3_cf_avg_scope', cfAvgScope);
-  const btn = document.getElementById('cf-avg-scope-btn');
-  if (btn) btn.textContent = cfAvgScope === 'all' ? 'Avg: all data' : 'Avg: window';
   renderCashflowChart();
 }
 function toggleFvBonus() {
@@ -2289,18 +2281,22 @@ function renderCashflowChart() {
     }
   });
 
-  // Past complete months for projection avg (exclude current partial month)
-  // cfAvgScope='all' uses all historical data; 'window' uses only months within the From/To window
-  const avgPool = cfAvgScope === 'all'
-    ? [...new Set([...Object.keys(incByMonth), ...Object.keys(fixedByMonth), ...Object.keys(discByMonth)])].sort()
-    : yearMonths;
-  const pastComplete = avgPool
-    .filter(m => m < currentMonthStr && (incByMonth[m] || fixedByMonth[m] || discByMonth[m]))
-    .slice(-cfProjWindow);
+  // Populate avg-from dropdown with all historical months
+  const allHistoricalMonths = [...new Set([
+    ...Object.keys(incByMonth), ...Object.keys(fixedByMonth), ...Object.keys(discByMonth)
+  ])].sort();
+  const avgFromSel = document.getElementById('cf-avg-from');
+  if (avgFromSel) {
+    const prev = cfAvgFrom || avgFromSel.value;
+    avgFromSel.innerHTML = allHistoricalMonths.map(m => `<option value="${m}">${fmtOpt(m)}</option>`).join('');
+    avgFromSel.value = allHistoricalMonths.includes(prev) ? prev : (allHistoricalMonths[0] || '');
+    if (cfAvgFrom !== avgFromSel.value) cfAvgFrom = avgFromSel.value;
+  }
 
-  // Update avg scope button label
-  const avgScopeBtn = document.getElementById('cf-avg-scope-btn');
-  if (avgScopeBtn) avgScopeBtn.textContent = cfAvgScope === 'all' ? 'Avg: all data' : 'Avg: window';
+  // Past complete months for projection avg — all complete months from cfAvgFrom to today, no cap
+  const pastComplete = allHistoricalMonths
+    .filter(m => (!cfAvgFrom || m >= cfAvgFrom) && m < currentMonthStr && (incByMonth[m] || fixedByMonth[m] || discByMonth[m]));
+
   const avgInc   = pastComplete.length ? pastComplete.reduce((s,m)=>s+(incByMonth[m]||0),0)/pastComplete.length : 0;
   const avgFixed = pastComplete.length ? pastComplete.reduce((s,m)=>s+(fixedByMonth[m]||0),0)/pastComplete.length : 0;
   const avgDisc  = pastComplete.length ? pastComplete.reduce((s,m)=>s+(discByMonth[m]||0),0)/pastComplete.length : 0;
@@ -2330,11 +2326,6 @@ function renderCashflowChart() {
   // Update controls
   const startEl = document.getElementById('cf-start-bal');
   if (startEl && startEl !== document.activeElement) startEl.value = cfStartBalance.toFixed(0);
-  const p3 = document.getElementById('cf-proj-3');
-  const p6 = document.getElementById('cf-proj-6');
-  if (p3) { p3.style.fontWeight = cfProjWindow===3?'700':'400'; p3.style.color = cfProjWindow===3?'var(--ink)':''; }
-  if (p6) { p6.style.fontWeight = cfProjWindow===6?'700':'400'; p6.style.color = cfProjWindow===6?'var(--ink)':''; }
-
   const spansMultipleYears = yearMonths.some(m => m.substring(0,4) !== String(currentYear));
   const labels = yearMonths.map(m => {
     const [y,mo] = m.split('-');
