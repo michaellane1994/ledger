@@ -2082,7 +2082,10 @@ function renderChartSection() {
           const catKey = datasets[el.datasetIndex]?.catKey;
           const month  = filteredMonths[el.index];
           if (!catKey || !month) return;
+          const s = document.getElementById('f-search');   if (s) s.value = '';
           document.getElementById('f-cat').value   = catKey;
+          const fp = document.getElementById('f-person');  if (fp) fp.value = '';
+          const fd = document.getElementById('f-card');    if (fd) fd.value = '';
           document.getElementById('f-month').value = month;
           txnTypeFilter = 'expenses';
           goNav('transactions');
@@ -2788,8 +2791,11 @@ function setTxnCatPill(key) {
 }
 function goToCatFilter(catKey) {
   txnTypeFilter = '';
-  const fc = document.getElementById('f-cat');
-  if (fc) fc.value = catKey;
+  const s = document.getElementById('f-search');   if (s) s.value = '';
+  const c = document.getElementById('f-cat');      if (c) c.value = catKey;
+  const p = document.getElementById('f-person');   if (p) p.value = '';
+  const d = document.getElementById('f-card');     if (d) d.value = '';
+  const m = document.getElementById('f-month');    if (m) m.value = '';
   goNav('transactions');
 }
 function setTxnTypePill(type) {
