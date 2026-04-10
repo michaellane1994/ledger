@@ -2346,8 +2346,9 @@ function renderCashflowChart() {
               const tag = projected[i] ? ' (proj.)' : '';
               const v = ctx.raw;
               const abs = n => '$' + Math.abs(n).toLocaleString('en-CA',{minimumFractionDigits:0,maximumFractionDigits:0});
-              if (ctx.dataset.label === 'Income')               return ` Income: ${abs(v)}${tag}`;
-              if (ctx.dataset.label === 'Needs') return ` Needs: ${abs(v)}${tag}`;
+              if (ctx.dataset.label === 'Income')           return ` Income: ${abs(v)}${tag}`;
+              if (ctx.dataset.label === 'Bonus')            return ` Bonus: ${abs(v)}${tag}`;
+              if (ctx.dataset.label === 'Needs')            return ` Needs: ${abs(v)}${tag}`;
               if (ctx.dataset.label === 'Wants') {
                 const cap = capData[i];
                 const disc = Math.abs(v);
@@ -2355,7 +2356,8 @@ function renderCashflowChart() {
                 return ` Wants: ${abs(v)}${tag}  (${remaining>=0?abs(remaining)+' capacity left':'over capacity by '+abs(remaining)})`;
               }
               if (ctx.dataset.label === 'Spending capacity') return ` Capacity for wants: ${abs(v)}${tag}`;
-              return ` Running balance: ${v>=0?abs(v):'-'+abs(v)}${tag}`;
+              if (ctx.dataset.label === 'Running balance')   return ` Running balance: ${v>=0?abs(v):'-'+abs(v)}${tag}`;
+              return ` ${ctx.dataset.label}: ${abs(v)}${tag}`;
             }
           }
         }
