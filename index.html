@@ -2127,11 +2127,17 @@ function renderCashflowChart() {
     if (em > 12) { em = 1; ey++; }
   }
 
-  // Income by month (exclude transfers)
+  // Income by month (exclude transfers; bonus tracked separately as outlier)
   const incByMonth = {};
+  const bonusByMonth = {};
   incomes.filter(i => i.type !== 'transfer').forEach(i => {
     const m = i.date?.substring(0,7);
-    if (m) incByMonth[m] = (incByMonth[m]||0) + i.amount;
+    if (!m) return;
+    if (i.type === 'bonus') {
+      bonusByMonth[m] = (bonusByMonth[m]||0) + i.amount;
+    } else {
+      incByMonth[m] = (incByMonth[m]||0) + i.amount;
+    }
   });
 
   // Expenses split: fixed vs discretionary (uses CATS.fixed flag, same as Settings)
@@ -2157,23 +2163,25 @@ function renderCashflowChart() {
   const avgFixed = pastComplete.length ? pastComplete.reduce((s,m)=>s+(fixedByMonth[m]||0),0)/pastComplete.length : 0;
   const avgDisc  = pastComplete.length ? pastComplete.reduce((s,m)=>s+(discByMonth[m]||0),0)/pastComplete.length : 0;
 
-  const incData=[], fixedData=[], discData=[], capData=[], projected=[];
+  const incData=[], fixedData=[], discData=[], capData=[], projected=[], bonusData=[];
   yearMonths.forEach(m => {
     const isFuture = m > currentMonthStr;
     const inc   = isFuture ? avgInc   : (incByMonth[m]||0);
     const fixed = isFuture ? avgFixed : (fixedByMonth[m]||0);
     const disc  = isFuture ? avgDisc  : (discByMonth[m]||0);
+    const bonus = isFuture ? 0 : (bonusByMonth[m]||0);
     incData.push(inc);
     fixedData.push(-fixed);        // negative = bar goes down
     discData.push(-disc);          // negative = bar goes down (transfers already negative so double-neg = positive reduction)
-    capData.push(inc - fixed);     // spending capacity for discretionary
+    capData.push(inc + bonus - fixed); // spending capacity includes actual bonus for past months
     projected.push(isFuture);
+    bonusData.push(bonus);
   });
 
-  // Running balance from starting point
+  // Running balance from starting point (include actual bonus, not projected)
   let running = cfStartBalance;
   const runningData = yearMonths.map((_,i) => {
-    running += incData[i] + fixedData[i] + discData[i];
+    running += incData[i] + bonusData[i] + fixedData[i] + discData[i];
     return running;
   });
 
@@ -2242,6 +2250,13 @@ function renderCashflowChart() {
           type: 'bar', label: 'Income',
           data: incData,
           backgroundColor: incData.map((_,i) => `rgba(45,106,79,${a(isDark?.7:.55, isDark?.28:.18, i)})`),
+          borderWidth: 0, borderRadius: 2,
+          stack: 'income', yAxisID: 'y'
+        },
+        {
+          type: 'bar', label: 'Bonus',
+          data: bonusData,
+          backgroundColor: `rgba(124,58,237,${isDark?.6:.45})`,
           borderWidth: 0, borderRadius: 2,
           stack: 'income', yAxisID: 'y'
         },
@@ -3580,6 +3595,7 @@ function confirmAdd() {
 // ── INCOME ───────────────────────────────────────────────
 const DEFAULT_INCOME_TYPES = [
   { key:'salary',    label:'Salary / Paycheck', color:'#1d4e89' },
+  { key:'bonus',     label:'Bonus',             color:'#7c3aed' },
   { key:'rental',    label:'Rental Income',     color:'#2d6a4f' },
   { key:'transfer',  label:'Transfer / Split',  color:'#7c3d12' },
   { key:'other',     label:'Other Income',      color:'#71717a' },
