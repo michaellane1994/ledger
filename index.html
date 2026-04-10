@@ -963,6 +963,20 @@ tbody tr:hover .row-menu-btn{opacity:1;}
       </div>
 
       <div class="card" style="margin-bottom:18px;">
+        <div class="card-head" onclick="toggleSettingsSec('commitments')" style="cursor:pointer;">
+          <div class="card-title">Monthly Commitments</div>
+          <span class="sec-toggle" id="chev-commitments">▾</span>
+        </div>
+        <div class="card-body sec-body" id="sec-commitments">
+          <p style="font-size:12.5px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+            The Monthly Commitments card detects merchants that appear in 3 or more of the last 6 months.
+            Select categories to exclude from this detection (e.g. rent, utilities you track separately).
+          </p>
+          <div id="commit-excl-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
         <div class="card-head" onclick="toggleSettingsSec('income-types')" style="cursor:pointer;">
           <div class="card-title">Income Types</div>
           <div style="display:flex;align-items:center;gap:8px;">
@@ -1883,6 +1897,8 @@ let chartHiddenCats  = new Set();
 let chartViewMode    = 'category'; // 'category' | 'fixed-variable'
 let cfBonusVisible   = true;
 let cfStartBalance   = parseFloat(localStorage.getItem('l3_cf_start') || '0');
+const _commitExclRaw = localStorage.getItem('l3_commit_excl');
+let commitExcludedCats = new Set(_commitExclRaw !== null ? JSON.parse(_commitExclRaw) : ['home','home-rental']);
 let cfFromMonth      = localStorage.getItem('l3_cf_from')    || '';
 let cfToMonth        = localStorage.getItem('l3_cf_to')      || '';
 let cfAvgFrom        = localStorage.getItem('l3_cf_avg_from') || '';
@@ -2502,8 +2518,7 @@ function detectRecurring() {
   const byMerchant = {};
   txns.forEach(t => {
     if (t.incomeType || t.savingsAccountId || t.amount <= 0) return;
-    if (CAT[t.category]?.fixed) return; // already known fixed cost
-    if (t.category === 'home' || t.category === 'home-rental') return;
+    if (commitExcludedCats.has(t.category)) return;
     const key = t.merchant.toLowerCase().trim().substring(0, 25);
     if (!byMerchant[key]) byMerchant[key] = { merchant: t.merchant, category: t.category, months: new Set(), amounts: [] };
     const m = t.date.substring(0, 7);
@@ -4690,7 +4705,28 @@ function renderSettings() {
   initSecStates();
   renderAppearance();
   renderCatManagement();
+  renderCommitExclusions();
   renderTypeManagement();
+}
+
+function renderCommitExclusions() {
+  const el = document.getElementById('commit-excl-list');
+  if (!el) return;
+  el.innerHTML = CATS.map(c => {
+    const checked = commitExcludedCats.has(c.key);
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;padding:6px 8px;border:1px solid var(--border);border-radius:7px;background:${checked ? 'var(--bg)' : 'var(--surface)'};" id="commit-excl-row-${c.key}">
+      <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleCommitExcl('${c.key}',this.checked)" style="accent-color:${c.color};width:13px;height:13px;flex-shrink:0;">
+      <span style="width:8px;height:8px;border-radius:50%;background:${c.color};flex-shrink:0;display:inline-block;"></span>
+      <span>${esc(c.label)}</span>
+    </label>`;
+  }).join('');
+}
+
+function toggleCommitExcl(key, excluded) {
+  if (excluded) commitExcludedCats.add(key); else commitExcludedCats.delete(key);
+  localStorage.setItem('l3_commit_excl', JSON.stringify([...commitExcludedCats]));
+  renderCommitExclusions();
+  renderDashboard();
 }
 
 function saveSheetUrl() {
