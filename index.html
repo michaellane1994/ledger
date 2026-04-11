@@ -1085,6 +1085,7 @@ const CONTRIB_SHEET = 'Contributions';
 const UPLOADS_SHEET = 'Uploads';
 const RENTAL_SHEET = 'Rental';
 const CATS_SHEET = 'Categories';
+const SETTINGS_SHEET = 'Settings';
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
@@ -1108,6 +1109,9 @@ function doPost(e) {
         (data.rentalExpenses||[]).map(r => [r.id,r.date,r.amount,r.cat,r.person||'',r.card||'',r.desc||'',r.note||'']));
       writeSheet(ss, CATS_SHEET, ['key','label','color','fixed','budget','keywords'],
         (data.cats||[]).map(c => [c.key,c.label,c.color,c.fixed?'true':'false',c.budget||0,JSON.stringify(c.kw||[])]));
+      const settings = data.settings || {};
+      writeSheet(ss, SETTINGS_SHEET, ['key','value'],
+        Object.entries(settings).map(([k,v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)]));
       return buildResponse({ok:true, count:(data.txns||[]).length});
     }
 
@@ -1119,7 +1123,10 @@ function doPost(e) {
       const contribs = readSheet(ss, CONTRIB_SHEET, r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,accountId:r.accountId,type:r.type,person:r.person,note:r.note,fromTxnId:r.fromTxnId||undefined}));
       const rentalExpenses = readSheet(ss, RENTAL_SHEET, r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,cat:r.cat,person:r.person,card:r.card||'',desc:r.desc,note:r.note}));
       const catsRaw = readSheet(ss, CATS_SHEET, r => { try { return {key:r.key,label:r.label,color:r.color,fixed:r.fixed==='true',budget:parseFloat(r.budget)||0,kw:JSON.parse(r.keywords||'[]')}; } catch(e) { return {key:r.key,label:r.label,color:r.color,fixed:r.fixed==='true',budget:parseFloat(r.budget)||0,kw:[]}; } });
-      return buildResponse({ok:true, txns, learned, incomes, savAccts, contribs, rentalExpenses, cats:catsRaw.length?catsRaw:null});
+      const settingsRaw = readSheet(ss, SETTINGS_SHEET, r => r);
+      const settings = {};
+      settingsRaw.forEach(r => { if (r.key) { try { settings[r.key] = JSON.parse(r.value); } catch(e) { settings[r.key] = r.value; } } });
+      return buildResponse({ok:true, txns, learned, incomes, savAccts, contribs, rentalExpenses, cats:catsRaw.length?catsRaw:null, settings});
     }
 
     return buildResponse({ok:false, error:'Unknown action'});
@@ -4769,7 +4776,7 @@ async function syncToSheets() {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses }),
+      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats] } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -4823,6 +4830,10 @@ async function syncFromSheets() {
           return nc;
         });
         rebuildCAT(); saveCats();
+      }
+      if (data.settings?.commitExcludedCats) {
+        commitExcludedCats = new Set(data.settings.commitExcludedCats);
+        localStorage.setItem('l3_commit_excl', JSON.stringify([...commitExcludedCats]));
       }
       repairIncomeDates();
       persist();
@@ -4932,7 +4943,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses }),
+        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats] } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
