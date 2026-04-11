@@ -1898,7 +1898,7 @@ let chartViewMode    = 'category'; // 'category' | 'fixed-variable'
 let cfBonusVisible   = true;
 let cfStartBalance   = parseFloat(localStorage.getItem('l3_cf_start') || '0');
 const _commitExclRaw = localStorage.getItem('l3_commit_excl');
-let commitExcludedCats = new Set(_commitExclRaw !== null ? JSON.parse(_commitExclRaw) : ['home','home-rental']);
+let commitExcludedCats = new Set(_commitExclRaw !== null ? JSON.parse(_commitExclRaw) : ['home']);
 let cfFromMonth      = localStorage.getItem('l3_cf_from')    || '';
 let cfToMonth        = localStorage.getItem('l3_cf_to')      || '';
 let cfAvgFrom        = localStorage.getItem('l3_cf_avg_from') || '';
