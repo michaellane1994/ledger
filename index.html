@@ -1109,9 +1109,7 @@ function doPost(e) {
         (data.rentalExpenses||[]).map(r => [r.id,r.date,r.amount,r.cat,r.person||'',r.card||'',r.desc||'',r.note||'']));
       writeSheet(ss, CATS_SHEET, ['key','label','color','fixed','budget','keywords'],
         (data.cats||[]).map(c => [c.key,c.label,c.color,c.fixed?'true':'false',c.budget||0,JSON.stringify(c.kw||[])]));
-      const settings = data.settings || {};
-      writeSheet(ss, SETTINGS_SHEET, ['key','value'],
-        Object.entries(settings).map(([k,v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)]));
+      try { const settings = data.settings || {}; writeSheet(ss, SETTINGS_SHEET, ['key','value'], Object.entries(settings).map(([k,v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)])); } catch(e) {}
       return buildResponse({ok:true, count:(data.txns||[]).length});
     }
 
@@ -1123,9 +1121,8 @@ function doPost(e) {
       const contribs = readSheet(ss, CONTRIB_SHEET, r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,accountId:r.accountId,type:r.type,person:r.person,note:r.note,fromTxnId:r.fromTxnId||undefined}));
       const rentalExpenses = readSheet(ss, RENTAL_SHEET, r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,cat:r.cat,person:r.person,card:r.card||'',desc:r.desc,note:r.note}));
       const catsRaw = readSheet(ss, CATS_SHEET, r => { try { return {key:r.key,label:r.label,color:r.color,fixed:r.fixed==='true',budget:parseFloat(r.budget)||0,kw:JSON.parse(r.keywords||'[]')}; } catch(e) { return {key:r.key,label:r.label,color:r.color,fixed:r.fixed==='true',budget:parseFloat(r.budget)||0,kw:[]}; } });
-      const settingsRaw = readSheet(ss, SETTINGS_SHEET, r => r);
-      const settings = {};
-      settingsRaw.forEach(r => { if (r.key) { try { settings[r.key] = JSON.parse(r.value); } catch(e) { settings[r.key] = r.value; } } });
+      let settings = {};
+      try { const settingsRaw = readSheet(ss, SETTINGS_SHEET, r => r); settingsRaw.forEach(r => { if (r.key) { try { settings[r.key] = JSON.parse(r.value); } catch(e) { settings[r.key] = r.value; } } }); } catch(e) {}
       return buildResponse({ok:true, txns, learned, incomes, savAccts, contribs, rentalExpenses, cats:catsRaw.length?catsRaw:null, settings});
     }
 
