@@ -2800,6 +2800,7 @@ function renderDashboard() {
   }).join('') || '<div style="color:var(--faint);font-size:13px;padding:16px 0;">No data this period</div>';
 
   // Summary row — calculated before charts to avoid any state mutation risk
+  console.log('[income filter] dashPeriod=', dashPeriod, 'selYear=', selYear, 'selMonth=', selMonth, 'incomes.length=', incomes.length);
   const monthIncomes = incomes.filter(i => i.type !== 'transfer' && dashPeriodTest(i.date));
   const totalIncome  = monthIncomes.reduce((s, i) => s + i.amount, 0);
   const fixedSubEl = document.getElementById('hero-fixed-sub');
