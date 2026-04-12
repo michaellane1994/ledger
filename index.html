@@ -2802,11 +2802,7 @@ function renderDashboard() {
     </div>`;
   }).join('') || '<div style="color:var(--faint);font-size:13px;padding:16px 0;">No data this period</div>';
 
-  // Chart with filters
-  renderChartSection();
-  renderCashflowChart();
-
-  // Summary row — exclude transfer-type incomes (already counted as negative in expenses)
+  // Summary row — calculated before charts to avoid any state mutation risk
   const monthIncomes = incomes.filter(i => i.type !== 'transfer' && dashPeriodTest(i.date));
   const totalIncome  = monthIncomes.reduce((s, i) => s + i.amount, 0);
   const fixedSubEl = document.getElementById('hero-fixed-sub');
@@ -2945,6 +2941,10 @@ function renderDashboard() {
       onTrackEl.style.display = 'none';
     }
   }
+
+  // Charts
+  renderChartSection();
+  renderCashflowChart();
 
   // Recent 5 — positive-amount expenses only (excludes transfers and refunds)
   const recent = [...expenses].filter(t => effectiveAmt(t) > 0).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
