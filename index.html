@@ -2568,6 +2568,7 @@ function filtered() {
 }
 
 function renderDashboard() {
+  console.log('[renderDashboard START] dashPeriod=', dashPeriod, 'selYear=', selYear, 'selMonth=', selMonth, new Error().stack.split('\n')[1]);
   renderPills();
   const ts    = filtered();
   const expenses = ts.filter(t => t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId));
