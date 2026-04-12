@@ -3023,6 +3023,9 @@ function openMs(e, id) {
 document.addEventListener('click', () => {
   document.querySelectorAll('.ms-drop.open').forEach(d => d.classList.remove('open'));
 });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.ms-drop.open').forEach(d => d.classList.remove('open'));
+});
 function toggleMsOpt(id, value) {
   const fs = id === 'ms-cat' ? txnCatFilter : id === 'ms-card' ? txnCardFilter : txnMonthFilter;
   if (fs.has(value)) fs.delete(value); else fs.add(value);
