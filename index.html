@@ -3033,7 +3033,7 @@ function buildMsDrop(id, items, filterSet) {
   if (!drop) return;
   drop.innerHTML = items.map(({value, label}) => {
     const v = value.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `<label class="ms-opt"><input type="checkbox" ${filterSet.has(value)?'checked':''} onchange="toggleMsOpt('${id}','${v}')"><span class="ms-check"></span><span>${esc(label)}</span></label>`;
+    return `<label class="ms-opt" onclick="event.stopPropagation()"><input type="checkbox" ${filterSet.has(value)?'checked':''} onchange="toggleMsOpt('${id}','${v}')"><span class="ms-check"></span><span>${esc(label)}</span></label>`;
   }).join('');
   const btn = document.getElementById(id + '-btn');
   if (!btn) return;
