@@ -2568,7 +2568,6 @@ function filtered() {
 }
 
 function renderDashboard() {
-  console.log('[renderDashboard START] dashPeriod=', dashPeriod, 'selYear=', selYear, 'selMonth=', selMonth, new Error().stack.split('\n')[1]);
   renderPills();
   const ts    = filtered();
   const expenses = ts.filter(t => t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId));
@@ -2664,10 +2663,6 @@ function renderDashboard() {
 
   // Determine viewMonth for single-month periods
   const viewMonth = dashPeriod === 'latest' ? getMonths()[0] : (dashPeriod === '' ? selMonth : null);
-  // For year view, scope chart to that year
-  if (dashPeriod === 'year') {
-    filteredMonths = filteredMonths.filter(m => m.startsWith(selYear + '-'));
-  }
 
   // Build byCatPrev for trend indicators
   let prevExpenses = [];
@@ -2801,7 +2796,6 @@ function renderDashboard() {
   }).join('') || '<div style="color:var(--faint);font-size:13px;padding:16px 0;">No data this period</div>';
 
   // Summary row — calculated before charts to avoid any state mutation risk
-  console.log('[income filter] dashPeriod=', dashPeriod, 'selYear=', selYear, 'selMonth=', selMonth, 'incomes.length=', incomes.length);
   const monthIncomes = incomes.filter(i => i.type !== 'transfer' && dashPeriodTest(i.date));
   const totalIncome  = monthIncomes.reduce((s, i) => s + i.amount, 0);
   const fixedSubEl = document.getElementById('hero-fixed-sub');
