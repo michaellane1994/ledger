@@ -780,6 +780,23 @@ tbody tr:hover .row-menu-btn{opacity:1;}
             Add Income
           </button>
         </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center;">
+          <input type="text" id="inc-search" placeholder="Search description..." oninput="renderIncome()"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);min-width:180px;flex:1;">
+          <div class="ms-wrap" id="ms-inc-type">
+            <button class="ms-btn" id="ms-inc-type-btn" onclick="openMs(event,'ms-inc-type')">All types</button>
+            <div class="ms-drop" id="ms-inc-type-drop"></div>
+          </div>
+          <select id="inc-person" onchange="incPersonFilter=this.value;renderIncome();"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);cursor:pointer;">
+            <option value="">All people</option>
+          </select>
+          <div class="ms-wrap" id="ms-inc-month">
+            <button class="ms-btn" id="ms-inc-month-btn" onclick="openMs(event,'ms-inc-month')">All months</button>
+            <div class="ms-drop" id="ms-inc-month-drop"></div>
+          </div>
+          <button onclick="resetIncomeFilters()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Inter',sans-serif;color:var(--faint);cursor:pointer;white-space:nowrap;" title="Reset filters">Reset</button>
+        </div>
         <div class="income-table-wrap">
         <table>
           <thead>
@@ -1900,6 +1917,9 @@ let txnTypeFilter  = ''; // '', 'expenses', 'transfer', 'income'
 let txnCatFilter   = new Set();
 let txnCardFilter  = new Set();
 let txnMonthFilter = new Set();
+let incTypeFilter   = new Set();
+let incMonthFilter  = new Set();
+let incPersonFilter = '';
 let editingIncomeId = null;
 
 function resetChartFilters() {
@@ -3031,17 +3051,23 @@ function toggleMsOpt(id, value) {
   if (fs.has(value)) fs.delete(value); else fs.add(value);
   renderTxns();
 }
+function toggleIncMs(id, value) {
+  const fs = id === 'ms-inc-type' ? incTypeFilter : incMonthFilter;
+  if (fs.has(value)) fs.delete(value); else fs.add(value);
+  renderIncome();
+}
 function buildMsDrop(id, items, filterSet) {
   const drop = document.getElementById(id + '-drop');
   if (!drop) return;
+  const handler = id.startsWith('ms-inc') ? 'toggleIncMs' : 'toggleMsOpt';
   drop.innerHTML = items.map(({value, label}) => {
     const v = value.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `<label class="ms-opt" onclick="event.stopPropagation()"><input type="checkbox" ${filterSet.has(value)?'checked':''} onchange="toggleMsOpt('${id}','${v}')"><span class="ms-check"></span><span>${esc(label)}</span></label>`;
+    return `<label class="ms-opt" onclick="event.stopPropagation()"><input type="checkbox" ${filterSet.has(value)?'checked':''} onchange="${handler}('${id}','${v}')"><span class="ms-check"></span><span>${esc(label)}</span></label>`;
   }).join('');
   const btn = document.getElementById(id + '-btn');
   if (!btn) return;
-  const empty  = {'ms-cat':'All categories','ms-card':'All cards','ms-month':'All months'};
-  const nouns  = {'ms-cat':'categories','ms-card':'cards','ms-month':'months'};
+  const empty  = {'ms-cat':'All categories','ms-card':'All cards','ms-month':'All months','ms-inc-type':'All types','ms-inc-month':'All months'};
+  const nouns  = {'ms-cat':'categories','ms-card':'cards','ms-month':'months','ms-inc-type':'types','ms-inc-month':'months'};
   if (filterSet.size === 0) {
     btn.textContent = empty[id];
     btn.classList.remove('has-filter');
@@ -3303,11 +3329,29 @@ function applyIncomeFlag(id, type, category) {
   autoPush();
 }
 
+function setTransferCat(id, key) {
+  const t = txns.find(x => x.id === id);
+  if (!t) return;
+  t.incomeCategory = key;
+  const inc = incomes.find(i => i.fromTxnId === id);
+  if (inc) inc.category = key;
+  persist();
+  dd.classList.remove('open');
+  renderTxns();
+  renderDashboard();
+  autoPush();
+}
 function openIncomeDD(e, id) {
   e.stopPropagation();
+  const t = txns.find(x => x.id === id);
+  const isTransfer = t?.incomeType === 'transfer';
+  const catSection = isTransfer ? `
+    <div class="cat-opt-group">Change Category</div>
+    ${CATS.map(c => `<div class="cat-opt" onclick="setTransferCat('${id}','${c.key}')"><div class="cat-opt-dot" style="background:${c.color};"></div>${c.label}</div>`).join('')}` : '';
   dd.innerHTML = `
     <div class="cat-opt-group" style="color:#1d4e89;">Change Income Type</div>
     ${INCOME_TYPES_ARR.map(t => `<div class="cat-opt" onclick="flagIncome('${id}','${t.key}')"><div class="cat-opt-dot" style="background:${t.color};"></div>${t.label}</div>`).join('')}
+    ${catSection}
     <div class="cat-opt-group">Convert To</div>
     <div class="cat-opt" onclick="convertToRefund('${id}')"><div class="cat-opt-dot" style="background:#9b2335;"></div>↩ Refund</div>
     <div class="cat-opt" onclick="unflagIncome('${id}')"><div class="cat-opt-dot" style="background:#71717a;"></div>Remove flag (keep as expense)</div>`;
@@ -3871,18 +3915,44 @@ function repairIncomeDates() {
   if (changed) persist();
 }
 
+function resetIncomeFilters() {
+  incTypeFilter   = new Set();
+  incMonthFilter  = new Set();
+  incPersonFilter = '';
+  const s = document.getElementById('inc-search'); if (s) s.value = '';
+  const p = document.getElementById('inc-person'); if (p) p.value = '';
+  renderIncome();
+}
 function renderIncome() {
   repairIncomeDates();
   const body  = document.getElementById('income-body');
   const empty = document.getElementById('income-empty');
-  const all   = [...incomes].filter(i => i.type !== 'transfer').sort((a,b) => (b.date||'').localeCompare(a.date||''));
-  const list  = selMonth ? all.filter(i => i.date.startsWith(selMonth)) : all;
+  const s = (document.getElementById('inc-search')?.value || '').toLowerCase();
+
+  const allInc = [...incomes].filter(i => i.type !== 'transfer').sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+  // Rebuild filter dropdowns
+  const availMonths = [...new Set(allInc.map(i => i.date?.substring(0,7)).filter(Boolean))].sort().reverse();
+  const availTypes  = [...new Set(allInc.map(i => i.type).filter(Boolean))];
+  buildMsDrop('ms-inc-type', availTypes.map(t => ({value:t, label:INCOME_TYPES[t]||t})), incTypeFilter);
+  buildMsDrop('ms-inc-month', availMonths.map(m => ({value:m, label:fmtMonth(m)})), incMonthFilter);
+  const personSel = document.getElementById('inc-person');
+  if (personSel) {
+    const allPeople = [...new Set(allInc.map(i => i.person).filter(Boolean))].sort();
+    const cur = personSel.value;
+    personSel.innerHTML = '<option value="">All people</option>' + allPeople.map(p => `<option value="${esc(p)}"${p===cur?' selected':''}>${esc(p)}</option>`).join('');
+  }
+
+  let list = allInc;
+  if (selMonth) list = list.filter(i => i.date?.startsWith(selMonth));
+  if (s) list = list.filter(i => (i.desc||'').toLowerCase().includes(s));
+  if (incTypeFilter.size)  list = list.filter(i => incTypeFilter.has(i.type));
+  if (incMonthFilter.size) list = list.filter(i => incMonthFilter.has(i.date?.substring(0,7)));
+  if (incPersonFilter)     list = list.filter(i => i.person === incPersonFilter);
+
   // Update income page total
   const totalEl = document.getElementById('income-page-total');
-  if (totalEl) {
-    const total = list.filter(i => i.type !== 'transfer').reduce((s,i) => s+i.amount, 0);
-    totalEl.textContent = fmt(total);
-  }
+  if (totalEl) totalEl.textContent = fmt(list.reduce((s,i) => s+i.amount, 0));
   const periodEl = document.getElementById('income-page-period');
   if (periodEl) periodEl.textContent = selMonth ? fmtMonth(selMonth) : 'All time';
   if (!list.length) { body.innerHTML = ''; empty.style.display = 'block'; return; }
