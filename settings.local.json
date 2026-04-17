@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(APIFY_API_TOKEN=$APIFY_API_TOKEN python3:*)",
+      "Bash(cd:*)",
+      "Bash(python3:*)",
+      "Bash(while true)",
+      "Bash(do)",
+      "Bash(done)",
+      "Bash(pgrep:*)",
+      "Bash(cat:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "enabledMcpjsonServers": [
+    "context7",
+    "gmail",
+    "pandadoc"
+  ],
+  "outputStyle": "default"
+}

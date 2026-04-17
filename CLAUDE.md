@@ -7,7 +7,7 @@ Ledger is a household expense tracker built as single self-contained HTML files.
 ## Two Versions
 
 - `Personal Site/expense-tracker-clean.html` — Michael & Lili's personal version (`l3_` localStorage prefix)
-- `General Template/expense-tracker-template.html` — Generic shareable template (`lt_` localStorage prefix)
+- `General Template/index.html` — Generic shareable template (`lt_` localStorage prefix)
 
 Unless explicitly told otherwise, apply changes to **both files**.
 
@@ -82,3 +82,4 @@ Use !`shell command` to inject dynamic context (runs before Claude sees it).
 - `.claude/skills/savings-rate/SKILL.md` — savings rate % in dashboard hero stats
 - `.claude/skills/on-track/SKILL.md` — spending pace indicator vs 3-month historical average
 - `.claude/skills/recurring-detection/SKILL.md` — Monthly Commitments card: auto-detected recurring merchants
+- `.claude/skills/google-sheets-backend/SKILL.md` — How to set up a static site with Google Sheets as a backend via Apps Script
