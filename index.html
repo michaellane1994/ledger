@@ -460,6 +460,18 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .mort-pmt-row td{font-size:12px;color:var(--muted);}
 .mort-pmt-row{display:none;}
 .mort-pmt-row.vis{display:table-row;}
+.mort-past-yr td{opacity:.5;}
+.mort-curr-yr td:first-child{color:var(--accent);}
+.mort-past-pmt td{opacity:.45;}
+.mort-extra-input{width:88px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;text-align:right;}
+.mort-extra-input:focus{border-color:var(--accent);}
+.mort-vol-impact{display:flex;gap:14px;flex-wrap:wrap;background:#edf5f1;border:1px solid #a8d5be;border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:14px;}
+[data-theme="dark"] .mort-vol-impact{background:#071a10;border-color:#1a4030;}
+.mort-vol-impact-item{display:flex;flex-direction:column;gap:2px;min-width:80px;}
+.mort-vol-impact-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
+.mort-vol-impact-value{font-size:14px;font-weight:600;}
+.mort-vol-impact-item.positive .mort-vol-impact-value{color:#16a34a;}
+@media(max-width:700px){.mort-schedule .income-table{overflow-x:auto;}.mort-schedule table{min-width:580px;}.mort-extra-input{width:70px;}}
 </style>
 </head>
 <body>
@@ -1822,7 +1834,8 @@ let contribs  = JSON.parse(localStorage.getItem('l3_contribs') || '[]'); // cont
 let sheetsUrl    = localStorage.getItem('l3_sheets_url') || '';
 let showJoint    = localStorage.getItem('l3_show_joint') !== 'false';
 let rentalExpenses = JSON.parse(localStorage.getItem('l3_rental') || '[]');
-let mortBalances   = JSON.parse(localStorage.getItem('l3_mort_balances') || '{}');
+let mortBalances      = JSON.parse(localStorage.getItem('l3_mort_balances') || '{}');
+let mortVoluntaryPmts = JSON.parse(localStorage.getItem('l3_mort_voluntary') || '{}');
 let selMonth  = '';
 let selYear   = String(new Date().getFullYear());
 let dashPeriod    = '';        // '', 'latest', '3m', 'ytd', 'year'
@@ -4889,7 +4902,7 @@ async function syncToSheets() {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances } }),
+      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -4952,6 +4965,10 @@ async function syncFromSheets() {
       if (data.settings?.mortBalances) {
         mortBalances = data.settings.mortBalances;
         localStorage.setItem('l3_mort_balances', JSON.stringify(mortBalances));
+      }
+      if (data.settings?.mortVoluntaryPmts) {
+        mortVoluntaryPmts = data.settings.mortVoluntaryPmts;
+        localStorage.setItem('l3_mort_voluntary', JSON.stringify(mortVoluntaryPmts));
       }
       repairIncomeDates();
       persist();
@@ -5061,7 +5078,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances } }),
+        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
@@ -5761,6 +5778,39 @@ function calcMort(balance, annualRate, paymentAmt, frequency, nextDateStr) {
   return { schedule, totalInterest, periods: p, ppy };
 }
 
+function calcMortWithExtras(balance, annualRate, paymentAmt, frequency, firstDateStr, extras) {
+  // extras: [{date:'YYYY-MM-DD', amount:number}] - applied to principal after regular payment on that date
+  const ppy = frequency === 'biweekly' ? 26 : 12;
+  const r = Math.pow(1 + annualRate / 2, 2 / ppy) - 1;
+  const extrasMap = {};
+  for (const e of (extras || [])) extrasMap[e.date] = (extrasMap[e.date] || 0) + e.amount;
+  const schedule = [];
+  let bal = balance;
+  let totalInterest = 0;
+  let p = 0;
+  const base = new Date(firstDateStr + 'T12:00:00');
+  while (bal > 0.005 && p < 3000) {
+    const pmtDate = new Date(base);
+    if (frequency === 'biweekly') {
+      pmtDate.setDate(base.getDate() + p * 14);
+    } else {
+      pmtDate.setMonth(base.getMonth() + p);
+    }
+    const dateStr = pmtDate.toISOString().slice(0, 10);
+    const interest = bal * r;
+    const principal = Math.min(paymentAmt - interest, bal);
+    if (principal < 0.001) break;
+    bal = Math.max(bal - principal, 0);
+    totalInterest += interest;
+    const extra = extrasMap[dateStr] || 0;
+    if (extra > 0 && bal > 0) bal = Math.max(bal - extra, 0);
+    p++;
+    schedule.push({ p, date: pmtDate, pmt: principal + interest, principal, interest, extra, balance: bal });
+    if (bal === 0) break;
+  }
+  return { schedule, totalInterest, periods: p, ppy };
+}
+
 function fmtMortDate(d) {
   return d.toLocaleDateString('en-CA', { year:'numeric', month:'short' });
 }
@@ -5799,10 +5849,11 @@ function calcHistoricalInterest(m) {
   const startDate = new Date(m.startDate + 'T12:00:00');
   const firstPmt = getMortPaymentAfter(m, startDate);
   const firstPmtStr = firstPmt.toISOString().slice(0, 10);
-  const { schedule } = calcMort(m.originalBalance, m.annualRate, m.payment, m.frequency, firstPmtStr);
+  const extras = mortVoluntaryPmts[m.id] || [];
+  const { schedule } = calcMortWithExtras(m.originalBalance, m.annualRate, m.payment, m.frequency, firstPmtStr, extras);
   let interestPaid = 0, principalPaid = 0, pmtCount = 0;
   for (const p of schedule) {
-    if (p.date <= today) { interestPaid += p.interest; principalPaid += p.principal; pmtCount++; }
+    if (p.date <= today) { interestPaid += p.interest; principalPaid += p.principal + (p.extra || 0); pmtCount++; }
     else break;
   }
   return { interestPaid, principalPaid, pmtCount };
@@ -5857,7 +5908,8 @@ function renderMortgages() {
       startDateStr = m.nextDate;
     }
 
-    const res = calcMort(startBal, m.annualRate, m.payment, m.frequency, startDateStr);
+    const extrasForProj = (mortVoluntaryPmts[m.id] || []).filter(e => e.date >= startDateStr);
+    const res = calcMortWithExtras(startBal, m.annualRate, m.payment, m.frequency, startDateStr, extrasForProj);
 
     // Apply all past payments up to today
     let liveBalance = startBal;
@@ -5879,20 +5931,52 @@ function renderMortgages() {
 
   const sel = stats.find(m => m.id === selectedMortId);
 
-  // Group payments into years
-  const yearGroups = [];
-  for (let i = 0; i < sel.schedule.length; i += sel.ppy) {
-    const chunk = sel.schedule.slice(i, i + sel.ppy);
-    yearGroups.push({
-      year: yearGroups.length + 1,
-      principal: chunk.reduce((s, p) => s + p.principal, 0),
-      interest:  chunk.reduce((s, p) => s + p.interest, 0),
-      payments:  chunk.reduce((s, p) => s + p.pmt, 0),
-      closing:   chunk[chunk.length - 1].balance,
-      startDate: chunk[0].date,
-      endDate:   chunk[chunk.length - 1].date,
-      periods:   chunk
-    });
+  // Full inception schedule with voluntary payments (drives the amortization table)
+  const mortExtras = mortVoluntaryPmts[sel.id] || [];
+  const selStartDate = new Date(sel.startDate + 'T12:00:00');
+  const selFirstPmt  = getMortPaymentAfter(sel, selStartDate);
+  const selFirstPmtStr = selFirstPmt.toISOString().slice(0, 10);
+  const fullRes = calcMortWithExtras(sel.originalBalance, sel.annualRate, sel.payment, sel.frequency, selFirstPmtStr, mortExtras);
+
+  // Build extras lookup by date for rendering inputs
+  const mortExtrasMap = {};
+  for (const e of mortExtras) mortExtrasMap[e.date] = (mortExtrasMap[e.date] || 0) + e.amount;
+
+  // Group full schedule by calendar year
+  const yearMap = {};
+  for (const pmt of fullRes.schedule) {
+    const yr = pmt.date.getFullYear();
+    if (!yearMap[yr]) yearMap[yr] = [];
+    yearMap[yr].push(pmt);
+  }
+  const yearGroups = Object.entries(yearMap).map(([yr, periods]) => ({
+    year:      parseInt(yr),
+    principal: periods.reduce((s, p) => s + p.principal, 0),
+    interest:  periods.reduce((s, p) => s + p.interest, 0),
+    payments:  periods.reduce((s, p) => s + p.pmt, 0),
+    extra:     periods.reduce((s, p) => s + (p.extra || 0), 0),
+    closing:   periods[periods.length - 1].balance,
+    startDate: periods[0].date,
+    endDate:   periods[periods.length - 1].date,
+    periods,
+    isPast:    periods[periods.length - 1].date <= today,
+    isCurrent: periods[0].date <= today && periods[periods.length - 1].date > today
+  }));
+
+  // Impact summary vs baseline (no extras)
+  let impactHTML = '';
+  if (mortExtras.length > 0) {
+    const baseRes = calcMort(sel.originalBalance, sel.annualRate, sel.payment, sel.frequency, selFirstPmtStr);
+    const totalVoluntary = mortExtras.reduce((s, e) => s + e.amount, 0);
+    const interestSaved  = baseRes.totalInterest - fullRes.totalInterest;
+    const pmtsSaved      = baseRes.periods - fullRes.periods;
+    const newPayoff      = fullRes.schedule.length ? fullRes.schedule[fullRes.schedule.length - 1].date : sel.payoffDate;
+    impactHTML = `<div class="mort-vol-impact">
+      <div class="mort-vol-impact-item"><div class="mort-vol-impact-label">Extra Paid</div><div class="mort-vol-impact-value">${fmt(totalVoluntary)}</div></div>
+      <div class="mort-vol-impact-item positive"><div class="mort-vol-impact-label">Interest Saved</div><div class="mort-vol-impact-value">${fmt(interestSaved)}</div></div>
+      <div class="mort-vol-impact-item positive"><div class="mort-vol-impact-label">Payments Saved</div><div class="mort-vol-impact-value">${pmtsSaved}</div></div>
+      <div class="mort-vol-impact-item"><div class="mort-vol-impact-label">Adjusted Payoff</div><div class="mort-vol-impact-value">${fmtMortDate(newPayoff)}</div></div>
+    </div>`;
   }
 
   // Term expiry
@@ -5902,10 +5986,10 @@ function renderMortgages() {
   // Simulator
   let simHTML = '<div style="font-size:13px;color:var(--muted);">Enter an amount above to see the impact of a lump-sum payment.</div>';
   if (simAmt > 0) {
-    const newBal  = Math.max(sel.balance - simAmt, 0);
-    const simRes  = calcMort(newBal, sel.annualRate, sel.payment, sel.frequency, sel.nextDate);
-    const iSaved  = sel.totalInterest - simRes.totalInterest;
-    const pSaved  = sel.periods - simRes.periods;
+    const newBal    = Math.max(sel.balance - simAmt, 0);
+    const simRes    = calcMort(newBal, sel.annualRate, sel.payment, sel.frequency, sel.nextDate);
+    const iSaved    = sel.totalInterest - simRes.totalInterest;
+    const pSaved    = sel.periods - simRes.periods;
     const newPayoff = simRes.schedule.length ? simRes.schedule[simRes.schedule.length - 1].date : sel.payoffDate;
     simHTML = `<div class="mort-sim-results">
       <div class="mort-sim-result positive">
@@ -6039,8 +6123,9 @@ function renderMortgages() {
       <div class="mort-schedule">
         <div class="mort-sched-head">
           <div class="mort-sched-title">Amortization Schedule</div>
-          <div style="font-size:12px;color:var(--muted);">From next payment forward &middot; click a row to expand</div>
+          <div style="font-size:12px;color:var(--muted);">From inception &middot; click a year to expand &middot; enter extra payments in expanded rows</div>
         </div>
+        ${impactHTML}
         <div class="income-table">
           <table>
             <thead>
@@ -6051,27 +6136,36 @@ function renderMortgages() {
                 <th style="text-align:right;">Principal</th>
                 <th style="text-align:right;">Interest</th>
                 <th style="text-align:right;">Closing Balance</th>
+                <th style="text-align:right;">Extra Payment</th>
               </tr>
             </thead>
             <tbody>
               ${yearGroups.map((yg, yi) => `
-                <tr class="mort-yr-row" onclick="toggleMortYear(${yi})">
-                  <td><strong>${yg.startDate.getFullYear()}</strong></td>
+                <tr class="mort-yr-row${yg.isPast ? ' mort-past-yr' : yg.isCurrent ? ' mort-curr-yr' : ''}" onclick="toggleMortYear(${yi})">
+                  <td><strong>${yg.year}</strong></td>
                   <td style="font-size:12px;color:var(--muted);">${fmtMortDate(yg.startDate)} &ndash; ${fmtMortDate(yg.endDate)}</td>
                   <td style="text-align:right;">${fmt(yg.payments)}</td>
                   <td style="text-align:right;">${fmt(yg.principal)}</td>
                   <td style="text-align:right;color:var(--muted);">${fmt(yg.interest)}</td>
                   <td style="text-align:right;font-weight:600;">${fmt(yg.closing)}</td>
+                  <td style="text-align:right;color:#16a34a;">${yg.extra > 0 ? fmt(yg.extra) : ''}</td>
                 </tr>
-                ${yg.periods.map((p, pi) => `
-                  <tr class="mort-pmt-row" id="mp-${yi}-${pi}">
+                ${yg.periods.map((p, pi) => {
+                  const dStr = p.date.toISOString().slice(0,10);
+                  const eVal = mortExtrasMap[dStr] || 0;
+                  const isPast = p.date <= today;
+                  return `<tr class="mort-pmt-row${isPast ? ' mort-past-pmt' : ''}" id="mp-${yi}-${pi}">
                     <td style="padding-left:22px;color:var(--faint);">Pmt ${p.p}</td>
                     <td style="font-size:12px;color:var(--muted);">${fmtMortDateFull(p.date)}</td>
                     <td style="text-align:right;">${fmt(p.pmt)}</td>
                     <td style="text-align:right;">${fmt(p.principal)}</td>
                     <td style="text-align:right;color:var(--muted);">${fmt(p.interest)}</td>
                     <td style="text-align:right;">${fmt(p.balance)}</td>
-                  </tr>`).join('')}
+                    <td style="text-align:right;">
+                      <input type="text" class="mort-extra-input" value="${eVal > 0 ? eVal.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2}) : ''}" placeholder="0.00" onfocus="rawBalInput(this)" onblur="saveMortVoluntary('${sel.id}','${dStr}',this.value);fmtBalInput(this);">
+                    </td>
+                  </tr>`;
+                }).join('')}
               `).join('')}
             </tbody>
           </table>
@@ -6087,6 +6181,28 @@ function saveMortBalance(id) {
   const today = new Date().toISOString().slice(0, 10);
   mortBalances[id] = { balance: val, asOf: today };
   localStorage.setItem('l3_mort_balances', JSON.stringify(mortBalances));
+  renderMortgages();
+  autoPush();
+}
+
+function saveMortVoluntary(mortId, dateStr, rawVal) {
+  const amount = parseFloat((rawVal || '').replace(/,/g, '')) || 0;
+  const list = mortVoluntaryPmts[mortId] ? [...mortVoluntaryPmts[mortId]] : [];
+  const idx = list.findIndex(e => e.date === dateStr);
+  if (amount > 0) {
+    if (idx >= 0) {
+      if (list[idx].amount === amount) return;
+      list[idx] = { date: dateStr, amount };
+    } else {
+      list.push({ date: dateStr, amount });
+    }
+  } else {
+    if (idx < 0) return;
+    list.splice(idx, 1);
+  }
+  list.sort((a, b) => a.date < b.date ? -1 : 1);
+  mortVoluntaryPmts[mortId] = list;
+  localStorage.setItem('l3_mort_voluntary', JSON.stringify(mortVoluntaryPmts));
   renderMortgages();
   autoPush();
 }
