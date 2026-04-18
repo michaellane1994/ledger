@@ -4928,7 +4928,7 @@ async function syncToSheets() {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts } }),
+      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts, mortData } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -4995,6 +4995,10 @@ async function syncFromSheets() {
       if (data.settings?.mortVoluntaryPmts) {
         mortVoluntaryPmts = data.settings.mortVoluntaryPmts;
         localStorage.setItem('l3_mort_voluntary', JSON.stringify(mortVoluntaryPmts));
+      }
+      if (data.settings?.mortData) {
+        mortData = data.settings.mortData;
+        localStorage.setItem('l3_mort_data', JSON.stringify(mortData));
       }
       repairIncomeDates();
       persist();
@@ -5104,7 +5108,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts } }),
+        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts, mortData } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
