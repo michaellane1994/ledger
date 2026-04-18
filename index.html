@@ -5777,19 +5777,57 @@ function fmtYrs(periods, ppy) {
   return y + 'yr ' + m + 'mo';
 }
 
+function getNextMortPaymentAfter(m, afterDate) {
+  const base = new Date(m.nextDate + 'T12:00:00');
+  if (base > afterDate) return base;
+  if (m.frequency === 'biweekly') {
+    const daysDiff = Math.round((afterDate - base) / 86400000);
+    const k = Math.floor(daysDiff / 14) + 1;
+    const next = new Date(base);
+    next.setDate(base.getDate() + k * 14);
+    return next;
+  } else {
+    const next = new Date(base);
+    while (next <= afterDate) next.setMonth(next.getMonth() + 1);
+    return next;
+  }
+}
+
 function renderMortgages() {
   const wrap = document.getElementById('mort-inner');
   if (!wrap) return;
   const simAmt = mortSimAmt;
 
+  const today = new Date(); today.setHours(23, 59, 59, 0);
+
   const stats = MORT_DATA.map(m => {
     const saved = mortBalances[m.id];
-    const balance = saved ? saved.balance : m.balance;
-    const asOf = saved ? saved.asOf : null;
-    const res = calcMort(balance, m.annualRate, m.payment, m.frequency, m.nextDate);
+
+    // Determine starting point: hardcoded original, or last manual correction
+    let startBal, startDateStr;
+    if (saved) {
+      startBal = saved.balance;
+      const asOfDate = new Date(saved.asOf + 'T12:00:00');
+      const nextPmt = getNextMortPaymentAfter(m, asOfDate);
+      startDateStr = nextPmt.toISOString().slice(0, 10);
+    } else {
+      startBal = m.balance;
+      startDateStr = m.nextDate;
+    }
+
+    const res = calcMort(startBal, m.annualRate, m.payment, m.frequency, startDateStr);
+
+    // Apply all past payments up to today
+    let liveBalance = startBal;
+    let lastPmtDate = null;
+    for (const pmt of res.schedule) {
+      if (pmt.date <= today) { liveBalance = pmt.balance; lastPmtDate = pmt.date; }
+      else break;
+    }
+
     const payoffDate = res.schedule.length ? res.schedule[res.schedule.length - 1].date : new Date();
     const monthlyEq = m.frequency === 'biweekly' ? m.payment * 26 / 12 : m.payment;
-    return { ...m, ...res, balance, asOf, payoffDate, monthlyEq };
+    return { ...m, ...res, balance: liveBalance, lastPmtDate, correctedAsOf: saved?.asOf || null, payoffDate, monthlyEq };
   });
 
   const totalBalance  = stats.reduce((s, m) => s + m.balance, 0);
@@ -5893,11 +5931,14 @@ function renderMortgages() {
         <div class="mort-stat-box">
           <div class="mort-stat-box-label">Outstanding Balance</div>
           <div class="mort-stat-box-value">${fmt(sel.balance)}</div>
-          ${sel.asOf ? `<div class="mort-stat-box-sub">as of ${sel.asOf}</div>` : '<div class="mort-stat-box-sub">original</div>'}
-          <div style="margin-top:8px;display:flex;gap:6px;align-items:center;">
-            <input type="number" id="mort-bal-input" style="width:130px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;" placeholder="${sel.balance.toFixed(2)}" value="${sel.balance.toFixed(2)}">
-            <button class="btn btn-primary btn-sm" style="font-size:11px;padding:5px 10px;" onclick="saveMortBalance('${sel.id}')">Update</button>
-          </div>
+          <div class="mort-stat-box-sub">${sel.lastPmtDate ? 'after pmt ' + fmtMortDateFull(sel.lastPmtDate) : sel.correctedAsOf ? 'corrected ' + sel.correctedAsOf : 'no payments yet'}</div>
+          <details style="margin-top:8px;">
+            <summary style="font-size:11px;color:var(--accent);cursor:pointer;user-select:none;">Correct balance</summary>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+              <input type="number" id="mort-bal-input" style="width:130px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;" placeholder="${sel.balance.toFixed(2)}">
+              <button class="btn btn-primary btn-sm" style="font-size:11px;padding:5px 10px;" onclick="saveMortBalance('${sel.id}')">Save</button>
+            </div>
+          </details>
         </div>
         <div class="mort-stat-box">
           <div class="mort-stat-box-label">Interest Rate</div>
