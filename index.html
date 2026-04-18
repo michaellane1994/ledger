@@ -1870,13 +1870,15 @@ function goNav(name) {
     { dashboard: 'Dashboard', transactions: 'Transactions', income: 'Income', savings: 'Savings', upload: 'Upload Data', trash: 'Bin', rental: 'Rental', mortgages: 'Mortgages', settings: 'Settings' }[name];
   const periodBar = document.getElementById('dash-period-bar');
   const mainEl    = document.querySelector('.main');
+  const mobilePills = document.getElementById('mobile-month-pills');
   if (name === 'dashboard') {
-    if (periodBar) periodBar.style.display = 'flex';
-    if (mainEl)    mainEl.classList.add('dash-bar-visible');
+    if (periodBar)   periodBar.style.display = 'flex';
+    if (mainEl)      mainEl.classList.add('dash-bar-visible');
     renderDashboard();
   } else {
-    if (periodBar) periodBar.style.display = 'none';
-    if (mainEl)    mainEl.classList.remove('dash-bar-visible');
+    if (periodBar)   periodBar.style.display = 'none';
+    if (mobilePills) mobilePills.style.display = 'none';
+    if (mainEl)      mainEl.classList.remove('dash-bar-visible');
   }
   if (name === 'transactions') {
     if (selMonth) txnMonthFilter = new Set([selMonth]);
@@ -6124,7 +6126,10 @@ function renderMortgages() {
                     <td style="text-align:right;color:var(--muted);">${fmt(p.interest)}</td>
                     <td style="text-align:right;">${fmt(p.balance)}</td>
                     <td style="text-align:right;">
-                      <input type="text" class="mort-extra-input" value="${eVal > 0 ? eVal.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2}) : ''}" placeholder="0.00" onfocus="rawBalInput(this)" onblur="saveMortVoluntary('${sel.id}','${dStr}',this.value);fmtBalInput(this);">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;">
+                        <input type="text" class="mort-extra-input" value="${eVal > 0 ? eVal.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2}) : ''}" placeholder="0.00" onfocus="rawBalInput(this)" onblur="saveMortVoluntary('${sel.id}','${dStr}',this.value);fmtBalInput(this);">
+                        ${eVal > 0 ? `<button onclick="saveMortVoluntary('${sel.id}','${dStr}','0')" style="background:none;border:none;color:var(--faint);cursor:pointer;padding:2px 3px;font-size:12px;line-height:1;flex-shrink:0;" title="Remove">&#x2715;</button>` : '<span style="width:18px;flex-shrink:0;"></span>'}
+                      </div>
                     </td>
                   </tr>`;
                 }).join('')}
