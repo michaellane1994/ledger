@@ -5743,13 +5743,12 @@ function renderAppearance() {
 // ── MORTGAGES ────────────────────────────────────────────
 
 const MORT_DATA = [
-  { id:'primary',  label:'Primary',     property:'Personal Home',   balance:565324.67, originalBalance:600515.00,   annualRate:0.0419, payment:1347.92, frequency:'biweekly', nextDate:'2026-04-20', startDate:'2023-09-25', termEnd:'2028-09-25', color:'#3050a8' },
+  { id:'primary',  label:'Primary',     property:'Personal Home',   balance:565324.67, originalBalance:600516.00,   annualRate:0.0419, payment:1347.92, frequency:'biweekly', nextDate:'2026-04-20', startDate:'2023-09-25', termEnd:'2028-09-25', color:'#3050a8' },
   { id:'refi',     label:'Refinancing', property:'Personal Home',   balance:146621.70, originalBalance:148235.58,   annualRate:0.0419, payment:359.89,  frequency:'biweekly', nextDate:'2026-04-20', startDate:'2025-11-30', termEnd:'2030-11-30', color:'#6060a8' },
   { id:'rental_m', label:'Rental',      property:'Rental Property', balance:562355.03, originalBalance:565599.00,   annualRate:0.0409, payment:2718.42, frequency:'monthly',  nextDate:'2026-04-25', startDate:'2025-11-25', termEnd:'2030-11-25', color:'#2d6a4f' }
 ];
 
 let selectedMortId = 'primary';
-let mortSimAmt = 0;
 
 function calcMort(balance, annualRate, paymentAmt, frequency, nextDateStr) {
   const ppy = frequency === 'biweekly' ? 26 : 12;
@@ -5889,8 +5888,6 @@ function getNextMortPaymentAfter(m, afterDate) {
 function renderMortgages() {
   const wrap = document.getElementById('mort-inner');
   if (!wrap) return;
-  const simAmt = mortSimAmt;
-
   const today = new Date(); today.setHours(23, 59, 59, 0);
 
   const stats = MORT_DATA.map(m => {
@@ -5982,33 +5979,6 @@ function renderMortgages() {
   // Term expiry
   const termEnd    = new Date(sel.termEnd + 'T12:00:00');
   const daysToTerm = Math.round((termEnd - new Date()) / 86400000);
-
-  // Simulator
-  let simHTML = '<div style="font-size:13px;color:var(--muted);">Enter an amount above to see the impact of a lump-sum payment.</div>';
-  if (simAmt > 0) {
-    const newBal    = Math.max(sel.balance - simAmt, 0);
-    const simRes    = calcMort(newBal, sel.annualRate, sel.payment, sel.frequency, sel.nextDate);
-    const iSaved    = sel.totalInterest - simRes.totalInterest;
-    const pSaved    = sel.periods - simRes.periods;
-    const newPayoff = simRes.schedule.length ? simRes.schedule[simRes.schedule.length - 1].date : sel.payoffDate;
-    simHTML = `<div class="mort-sim-results">
-      <div class="mort-sim-result positive">
-        <div class="mort-sim-result-label">Interest Saved</div>
-        <div class="mort-sim-result-value">${fmt(iSaved)}</div>
-        <div class="mort-sim-result-sub">vs. current schedule</div>
-      </div>
-      <div class="mort-sim-result positive">
-        <div class="mort-sim-result-label">Time Saved</div>
-        <div class="mort-sim-result-value">${fmtYrs(pSaved, sel.ppy)}</div>
-        <div class="mort-sim-result-sub">${pSaved} fewer payments</div>
-      </div>
-      <div class="mort-sim-result">
-        <div class="mort-sim-result-label">New Payoff Date</div>
-        <div class="mort-sim-result-value">${fmtMortDate(newPayoff)}</div>
-        <div class="mort-sim-result-sub">was ${fmtMortDate(sel.payoffDate)}</div>
-      </div>
-    </div>`;
-  }
 
   const termNotice = daysToTerm < 548 ? `
     <div class="mort-term-notice">
@@ -6107,19 +6077,6 @@ function renderMortgages() {
 
       ${termNotice}
 
-      <div class="mort-sim">
-        <div class="mort-sim-title">Lump-Sum Paydown Simulator</div>
-        <div class="mort-sim-row">
-          <div class="mort-sim-field">
-            <label>Extra Payment Amount</label>
-            <input type="text" id="mort-sim-amount" class="mort-sim-input" placeholder="e.g. 25,000" value="${simAmt ? simAmt.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2}) : ''}" onfocus="rawBalInput(this)" onblur="fmtBalInput(this)">
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="runMortSim()">Calculate</button>
-          ${simAmt > 0 ? '<button class="btn btn-ghost btn-sm" onclick="clearMortSim()">Clear</button>' : ''}
-        </div>
-        ${simHTML}
-      </div>
-
       <div class="mort-schedule">
         <div class="mort-sched-head">
           <div class="mort-sched-title">Amortization Schedule</div>
@@ -6140,6 +6097,11 @@ function renderMortgages() {
               </tr>
             </thead>
             <tbody>
+              <tr style="background:var(--bg);">
+                <td colspan="2" style="font-size:12px;color:var(--muted);font-style:italic;">Opening Balance &mdash; ${sel.startDate}</td>
+                <td colspan="4" style="text-align:right;font-weight:600;">${fmt(sel.originalBalance)}</td>
+                <td></td>
+              </tr>
               ${yearGroups.map((yg, yi) => `
                 <tr class="mort-yr-row${yg.isPast ? ' mort-past-yr' : yg.isCurrent ? ' mort-curr-yr' : ''}" onclick="toggleMortYear(${yi})">
                   <td><strong>${yg.year}</strong></td>
@@ -6209,18 +6171,6 @@ function saveMortVoluntary(mortId, dateStr, rawVal) {
 
 function selectMort(id) {
   selectedMortId = id;
-  mortSimAmt = 0;
-  renderMortgages();
-}
-
-function runMortSim() {
-  const val = readBalInput('mort-sim-amount');
-  mortSimAmt = val;
-  renderMortgages();
-}
-
-function clearMortSim() {
-  mortSimAmt = 0;
   renderMortgages();
 }
 
