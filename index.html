@@ -425,6 +425,11 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .mort-card-stat-value{font-size:13px;font-weight:600;margin-top:2px;}
 .mort-term-badge{position:absolute;top:12px;right:12px;font-size:10px;background:#fef3e8;color:#c15c1e;border:1px solid #f5c07a;padding:2px 8px;border-radius:100px;font-weight:600;}
 [data-theme="dark"] .mort-term-badge{background:#2a1f08;border-color:#7c4e1a;color:#e8a060;}
+.mort-rate-type-badge{position:absolute;top:36px;right:12px;font-size:10px;padding:2px 8px;border-radius:100px;font-weight:600;}
+.mort-rate-type-badge.fixed{background:#e8f0fe;color:#2a4da8;border:1px solid #a8c0f0;}
+.mort-rate-type-badge.variable{background:#fef9e8;color:#9a6010;border:1px solid #f0d890;}
+[data-theme="dark"] .mort-rate-type-badge.fixed{background:#0d1a3a;border-color:#2a4da8;color:#7090e0;}
+[data-theme="dark"] .mort-rate-type-badge.variable{background:#2a1f08;border-color:#7c5010;color:#d4a850;}
 .mort-detail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:18px;}
 .mort-detail-title{font-family:'Playfair Display',serif;font-size:20px;margin-bottom:18px;}
 .mort-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
@@ -6085,6 +6090,11 @@ function renderMortgages() {
       <div class="mort-term-notice-text">The <strong>${sel.label}</strong> term expires <strong>${fmtMortDateFull(termEnd)}</strong> (${daysToTerm} days). Plan to renew or refinance at the prevailing rate.</div>
     </div>` : '';
 
+  const rateTypeBadge = (m) => {
+    const rt = m.rateType || 'fixed';
+    return `<span class="mort-rate-type-badge ${rt}">${rt === 'variable' ? 'Variable' : 'Fixed'}</span>`;
+  };
+
   wrap.innerHTML = `
     <div class="mort-hero">
       <div>
@@ -6110,6 +6120,7 @@ function renderMortgages() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
           <span class="mort-term-badge">Term to ${m.termEnd.substring(0,7)}</span>
+          ${rateTypeBadge(m)}
           <div class="mort-card-label" style="color:${m.color};">${m.label}</div>
           <div class="mort-card-property">${m.property}</div>
           <div class="mort-card-balance">${fmt(m.balance)}</div>
@@ -6146,7 +6157,7 @@ function renderMortgages() {
         <div class="mort-stat-box">
           <div class="mort-stat-box-label">Interest Rate</div>
           <div class="mort-stat-box-value">${(sel.annualRate*100).toFixed(2)}%</div>
-          <div class="mort-stat-box-sub">Semi-annual compounding</div>
+          <div class="mort-stat-box-sub">${(sel.rateType || 'fixed') === 'variable' ? 'Variable rate' : 'Fixed rate'} &middot; Semi-annual compounding</div>
         </div>
         <div class="mort-stat-box">
           <div class="mort-stat-box-label">Payment</div>
@@ -6336,6 +6347,13 @@ function showMortForm(id) {
           <input class="mort-form-input" id="mf-rate" type="number" step="0.001" min="0" max="30" value="${m ? (m.annualRate * 100).toFixed(3) : ''}" placeholder="e.g. 4.190">
         </div>
         <div class="mort-form-group">
+          <div class="mort-form-label">Rate Type</div>
+          <select class="mort-form-input" id="mf-rate-type">
+            <option value="fixed" ${!m || (m.rateType || 'fixed') === 'fixed' ? 'selected' : ''}>Fixed</option>
+            <option value="variable" ${m?.rateType === 'variable' ? 'selected' : ''}>Variable</option>
+          </select>
+        </div>
+        <div class="mort-form-group">
           <div class="mort-form-label">Regular Payment ($)</div>
           <input class="mort-form-input" id="mf-payment" value="${m ? m.payment.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2}) : ''}" placeholder="e.g. 1,347.92" onfocus="rawBalInput(this)" onblur="fmtBalInput(this)">
         </div>
@@ -6383,6 +6401,7 @@ function submitMortForm() {
   const property = document.getElementById('mf-property').value.trim();
   const origBal  = parseFloat((document.getElementById('mf-orig-bal').value || '').replace(/,/g, '')) || 0;
   const rateRaw  = parseFloat(document.getElementById('mf-rate').value) || 0;
+  const rateType = document.getElementById('mf-rate-type').value;
   const payment  = parseFloat((document.getElementById('mf-payment').value || '').replace(/,/g, '')) || 0;
   const freq     = document.getElementById('mf-freq').value;
   const startDate = document.getElementById('mf-start').value;
@@ -6396,10 +6415,10 @@ function submitMortForm() {
   const annualRate = rateRaw / 100;
   if (_mortEditId) {
     const idx = mortData.findIndex(m => m.id === _mortEditId);
-    if (idx >= 0) mortData[idx] = { ...mortData[idx], label, property, originalBalance: origBal, annualRate, payment, frequency: freq, startDate, nextDate, termEnd, color };
+    if (idx >= 0) mortData[idx] = { ...mortData[idx], label, property, originalBalance: origBal, annualRate, rateType, payment, frequency: freq, startDate, nextDate, termEnd, color };
   } else {
     const id = 'mort_' + Date.now();
-    mortData.push({ id, label, property, originalBalance: origBal, annualRate, payment, frequency: freq, startDate, nextDate, termEnd, color });
+    mortData.push({ id, label, property, originalBalance: origBal, annualRate, rateType, payment, frequency: freq, startDate, nextDate, termEnd, color });
     selectedMortId = id;
   }
   saveMortData();
