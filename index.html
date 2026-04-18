@@ -1870,15 +1870,18 @@ function goNav(name) {
     { dashboard: 'Dashboard', transactions: 'Transactions', income: 'Income', savings: 'Savings', upload: 'Upload Data', trash: 'Bin', rental: 'Rental', mortgages: 'Mortgages', settings: 'Settings' }[name];
   const periodBar = document.getElementById('dash-period-bar');
   const mainEl    = document.querySelector('.main');
-  const mobilePills = document.getElementById('mobile-month-pills');
+  const mobilePills  = document.getElementById('mobile-month-pills');
+  const desktopPills = document.getElementById('month-pills');
   if (name === 'dashboard') {
-    if (periodBar)   periodBar.style.display = 'flex';
-    if (mainEl)      mainEl.classList.add('dash-bar-visible');
+    if (periodBar)    periodBar.style.display = 'flex';
+    if (desktopPills) desktopPills.style.display = '';
+    if (mainEl)       mainEl.classList.add('dash-bar-visible');
     renderDashboard();
   } else {
-    if (periodBar)   periodBar.style.display = 'none';
-    if (mobilePills) mobilePills.style.display = 'none';
-    if (mainEl)      mainEl.classList.remove('dash-bar-visible');
+    if (periodBar)    periodBar.style.display = 'none';
+    if (mobilePills)  mobilePills.style.display = 'none';
+    if (desktopPills) desktopPills.style.display = 'none';
+    if (mainEl)       mainEl.classList.remove('dash-bar-visible');
   }
   if (name === 'transactions') {
     if (selMonth) txnMonthFilter = new Set([selMonth]);
