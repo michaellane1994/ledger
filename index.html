@@ -1822,6 +1822,7 @@ let contribs  = JSON.parse(localStorage.getItem('l3_contribs') || '[]'); // cont
 let sheetsUrl    = localStorage.getItem('l3_sheets_url') || '';
 let showJoint    = localStorage.getItem('l3_show_joint') !== 'false';
 let rentalExpenses = JSON.parse(localStorage.getItem('l3_rental') || '[]');
+let mortBalances   = JSON.parse(localStorage.getItem('l3_mort_balances') || '{}');
 let selMonth  = '';
 let selYear   = String(new Date().getFullYear());
 let dashPeriod    = '';        // '', 'latest', '3m', 'ytd', 'year'
@@ -4888,7 +4889,7 @@ async function syncToSheets() {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats] } }),
+      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -4947,6 +4948,10 @@ async function syncFromSheets() {
         commitExcludedCats = new Set(data.settings.commitExcludedCats);
         localStorage.setItem('l3_commit_excl', JSON.stringify([...commitExcludedCats]));
         renderCommitExclusions();
+      }
+      if (data.settings?.mortBalances) {
+        mortBalances = data.settings.mortBalances;
+        localStorage.setItem('l3_mort_balances', JSON.stringify(mortBalances));
       }
       repairIncomeDates();
       persist();
@@ -5056,7 +5061,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats] } }),
+        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
@@ -5778,10 +5783,13 @@ function renderMortgages() {
   const simAmt = mortSimAmt;
 
   const stats = MORT_DATA.map(m => {
-    const res = calcMort(m.balance, m.annualRate, m.payment, m.frequency, m.nextDate);
+    const saved = mortBalances[m.id];
+    const balance = saved ? saved.balance : m.balance;
+    const asOf = saved ? saved.asOf : null;
+    const res = calcMort(balance, m.annualRate, m.payment, m.frequency, m.nextDate);
     const payoffDate = res.schedule.length ? res.schedule[res.schedule.length - 1].date : new Date();
     const monthlyEq = m.frequency === 'biweekly' ? m.payment * 26 / 12 : m.payment;
-    return { ...m, ...res, payoffDate, monthlyEq };
+    return { ...m, ...res, balance, asOf, payoffDate, monthlyEq };
   });
 
   const totalBalance  = stats.reduce((s, m) => s + m.balance, 0);
@@ -5885,6 +5893,11 @@ function renderMortgages() {
         <div class="mort-stat-box">
           <div class="mort-stat-box-label">Outstanding Balance</div>
           <div class="mort-stat-box-value">${fmt(sel.balance)}</div>
+          ${sel.asOf ? `<div class="mort-stat-box-sub">as of ${sel.asOf}</div>` : '<div class="mort-stat-box-sub">original</div>'}
+          <div style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+            <input type="number" id="mort-bal-input" style="width:130px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;" placeholder="${sel.balance.toFixed(2)}" value="${sel.balance.toFixed(2)}">
+            <button class="btn btn-primary btn-sm" style="font-size:11px;padding:5px 10px;" onclick="saveMortBalance('${sel.id}')">Update</button>
+          </div>
         </div>
         <div class="mort-stat-box">
           <div class="mort-stat-box-label">Interest Rate</div>
@@ -5979,6 +5992,16 @@ function renderMortgages() {
       </div>
     </div>
   `;
+}
+
+function saveMortBalance(id) {
+  const val = parseFloat(document.getElementById('mort-bal-input')?.value);
+  if (isNaN(val) || val <= 0) { alert('Please enter a valid balance.'); return; }
+  const today = new Date().toISOString().slice(0, 10);
+  mortBalances[id] = { balance: val, asOf: today };
+  localStorage.setItem('l3_mort_balances', JSON.stringify(mortBalances));
+  renderMortgages();
+  autoPush();
 }
 
 function selectMort(id) {
