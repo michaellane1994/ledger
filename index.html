@@ -1132,6 +1132,20 @@ tbody tr:hover .row-menu-btn{opacity:1;}
             <button class="btn btn-primary" onclick="saveSheetUrl()">Connect</button>
             <button class="btn btn-ghost" onclick="testConnection()">Test</button>
           </div>
+          <div style="margin-top:12px;">
+            <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;font-weight:500;">Shared secret</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="text" id="sheets-secret" placeholder="Auto-generated on first load"
+                style="flex:1;padding:8px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'SF Mono',Menlo,monospace;outline:none;background:var(--bg);color:var(--ink);"
+                onchange="saveSheetsSecret()">
+              <button class="btn btn-ghost btn-sm" onclick="rotateSheetsSecret()" title="Generate a new random secret">↻ Rotate</button>
+            </div>
+            <p style="font-size:11.5px;color:var(--faint);margin-top:6px;line-height:1.5;">
+              Must match the <code>SECRET</code> line at the top of your Apps Script.
+              Anyone with <em>both</em> your URL and this secret can read your sheet — keep it private.
+              If you change it here, update it in the Apps Script and redeploy.
+            </p>
+          </div>
           <div id="conn-status" style="margin-top:10px;font-size:12.5px;"></div>
         </div>
       </div>
@@ -1182,7 +1196,11 @@ tbody tr:hover .row-menu-btn{opacity:1;}
             <div style="margin-top:18px;">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);font-weight:600;margin-bottom:8px;">Apps Script Code — paste this into the editor</div>
               <div style="position:relative;">
-                <pre id="apps-script-code" style="background:#0d1117;color:#c9d1d9;padding:16px;border-radius:var(--radius-sm);font-size:11.5px;line-height:1.7;overflow-x:auto;white-space:pre-wrap;">const SHEET_NAME = 'Transactions';
+                <pre id="apps-script-code" style="background:#0d1117;color:#c9d1d9;padding:16px;border-radius:var(--radius-sm);font-size:11.5px;line-height:1.7;overflow-x:auto;white-space:pre-wrap;">// Shared secret — must match the one saved in your Ledger Settings.
+// Rotate this string + update it in Settings if you ever suspect the URL leaked.
+const SECRET = '__LEDGER_SECRET__';
+
+const SHEET_NAME = 'Transactions';
 const LEARNED_SHEET = 'Learned';
 const INCOME_SHEET = 'Income';
 const SAVINGS_SHEET = 'Savings';
@@ -1192,7 +1210,19 @@ const RENTAL_SHEET = 'Rental';
 const CATS_SHEET = 'Categories';
 const SETTINGS_SHEET = 'Settings';
 
+function authorized(e) {
+  try {
+    if (e && e.parameter && e.parameter.secret === SECRET) return true;
+    if (e && e.postData && e.postData.contents) {
+      const parsed = JSON.parse(e.postData.contents);
+      if (parsed && parsed.secret === SECRET) return true;
+    }
+  } catch(_) {}
+  return false;
+}
+
 function doPost(e) {
+  if (!authorized(e)) return buildResponse({ok:false, error:'Unauthorized'});
   const lock = LockService.getScriptLock();
   lock.tryLock(10000);
   try {
@@ -1276,6 +1306,7 @@ function buildResponse(data) {
 }
 
 function doGet(e) {
+  if (!authorized(e)) return buildResponse({ok:false, error:'Unauthorized'});
   return buildResponse({ok:true, status:'Ledger connected'});
 }</pre>
                 <button class="btn btn-ghost btn-sm" onclick="copyScript()" style="position:absolute;top:10px;right:10px;">Copy</button>
@@ -1856,6 +1887,7 @@ let incomes   = JSON.parse(localStorage.getItem('l3_incomes')  || '[]');
 let savAccts  = JSON.parse(localStorage.getItem('l3_savaccts') || '[]'); // savings accounts
 let contribs  = JSON.parse(localStorage.getItem('l3_contribs') || '[]'); // contribution log
 let sheetsUrl    = localStorage.getItem('l3_sheets_url') || '';
+let sheetsSecret = localStorage.getItem('l3_sheets_secret') || '';
 let showJoint    = localStorage.getItem('l3_show_joint') !== 'false';
 let rentalExpenses = JSON.parse(localStorage.getItem('l3_rental') || '[]');
 let mortBalances      = JSON.parse(localStorage.getItem('l3_mort_balances') || '{}');
@@ -2134,7 +2166,8 @@ function renderChartSection() {
   document.getElementById('chart-view-fv')?.classList.toggle('active', chartViewMode === 'fixed-variable');
   const fvBonusBtn = document.getElementById('fv-bonus-btn');
   if (fvBonusBtn) {
-    fvBonusBtn.style.display = chartViewMode === 'fixed-variable' ? '' : 'none';
+    const hasBonusIncome = incomes.some(i => i.type === 'bonus' && i.amount);
+    fvBonusBtn.style.display = (chartViewMode === 'fixed-variable' && hasBonusIncome) ? '' : 'none';
     fvBonusBtn.textContent = fvBonusVisible ? 'Bonus: on' : 'Bonus: off';
   }
 
@@ -2408,6 +2441,11 @@ function renderCashflowChart() {
       incByMonth[m] = (incByMonth[m]||0) + i.amount;
     }
   });
+
+  // Hide Bonus toggle entirely if no bonus income has ever been recorded
+  const hasBonus = incomes.some(i => i.type === 'bonus' && i.amount);
+  const cfBonusBtn = document.getElementById('cf-bonus-btn');
+  if (cfBonusBtn) cfBonusBtn.style.display = hasBonus ? '' : 'none';
 
   // Expenses split: fixed vs discretionary (uses CATS.fixed flag, same as Settings)
   const fixedByMonth = {};
@@ -4876,6 +4914,9 @@ function initSecStates() {
 function renderSettings() {
   const inp = document.getElementById('sheets-url');
   if (inp && sheetsUrl) inp.value = sheetsUrl;
+  const sec = document.getElementById('sheets-secret');
+  if (sec) sec.value = sheetsSecret;
+  _injectSecretIntoAppsScript();
   updateSyncDot(sheetsUrl ? 'ok' : 'off');
   const jt = document.getElementById('toggle-joint');
   if (jt) jt.checked = showJoint;
@@ -4903,15 +4944,50 @@ function saveSheetUrl() {
   showConnStatus('URL saved. Click Test to verify the connection.', 'ok');
 }
 
+function saveSheetsSecret() {
+  const inp = document.getElementById('sheets-secret');
+  if (!inp) return;
+  sheetsSecret = inp.value.trim();
+  localStorage.setItem('l3_sheets_secret', sheetsSecret);
+  _injectSecretIntoAppsScript();
+  showConnStatus('Secret updated. Paste the updated Apps Script code and redeploy.', 'ok');
+}
+
+function rotateSheetsSecret() {
+  if (!confirm('Generate a new secret? You will need to update the Apps Script code and redeploy for sync to work.')) return;
+  sheetsSecret = _genSheetsSecret();
+  localStorage.setItem('l3_sheets_secret', sheetsSecret);
+  const inp = document.getElementById('sheets-secret');
+  if (inp) inp.value = sheetsSecret;
+  _injectSecretIntoAppsScript();
+  showConnStatus('New secret generated. Copy the updated Apps Script code and redeploy.', 'ok');
+}
+
+function _genSheetsSecret() {
+  const bytes = new Uint8Array(24);
+  (window.crypto || window.msCrypto).getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function _injectSecretIntoAppsScript() {
+  const codeEl = document.getElementById('apps-script-code');
+  if (!codeEl) return;
+  codeEl.textContent = codeEl.textContent.replace(/const SECRET = '[^']*';/, `const SECRET = '${sheetsSecret}';`);
+}
+
 async function testConnection() {
   if (!sheetsUrl) { showConnStatus('No URL saved yet.', 'err'); return; }
   showConnStatus('Testing...', 'busy');
   try {
-    const res = await fetchWithTimeout(sheetsUrl, {});
+    const sep = sheetsUrl.includes('?') ? '&' : '?';
+    const res = await fetchWithTimeout(sheetsUrl + sep + 'secret=' + encodeURIComponent(sheetsSecret), {});
     const data = await res.json();
     if (data.ok) {
       showConnStatus('Connected successfully.', 'ok');
       updateSyncDot('ok');
+    } else if (data.error === 'Unauthorized') {
+      showConnStatus('Unauthorized — your secret does not match the Apps Script. Update the script and redeploy.', 'err');
+      updateSyncDot('err');
     } else {
       showConnStatus('Connected but got unexpected response.', 'err');
     }
@@ -4934,7 +5010,7 @@ async function syncToSheets() {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts, mortData } }),
+      body: JSON.stringify({ action: 'push', secret: sheetsSecret, txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts, mortData } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -4959,7 +5035,7 @@ async function syncFromSheets() {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'pull' }),
+      body: JSON.stringify({ action: 'pull', secret: sheetsSecret }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -5114,7 +5190,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts, mortData } }),
+        body: JSON.stringify({ action: 'push', secret: sheetsSecret, txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts, mortData } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
@@ -6450,6 +6526,11 @@ const trashCutoff = new Date(); trashCutoff.setDate(trashCutoff.getDate() - 30);
 trash = trash.filter(t => new Date(t.deletedAt) > trashCutoff);
 // Update trash badge
 (function() { const b = document.getElementById('trash-count'); if (b && trash.length) { b.textContent = trash.length; b.style.display = 'inline'; } })();
+if (!sheetsSecret) {
+  sheetsSecret = _genSheetsSecret();
+  localStorage.setItem('l3_sheets_secret', sheetsSecret);
+}
+_injectSecretIntoAppsScript();
 updateSyncDot(sheetsUrl ? 'ok' : 'off');
 setSyncLabel(sheetsUrl ? 'Connected' : 'Not connected');
 applyJointSetting();
