@@ -5998,14 +5998,16 @@ function renderMortgages() {
           <div class="mort-stat-box-value">${fmt(sel.monthlyEq)}/mo</div>
         </div>
         <div class="mort-stat-box">
-          <div class="mort-stat-box-label">Interest Paid to Date</div>
-          <div class="mort-stat-box-value">${fmt(sel.interestPaid)}</div>
-          <div class="mort-stat-box-sub">${sel.pmtCount} payments since ${sel.startDate}</div>
+          <div class="mort-stat-box-label">Paid to Date</div>
+          <div class="mort-stat-box-value">${fmt(sel.interestPaid + sel.principalPaid)}</div>
+          <div class="mort-stat-box-sub">Interest: ${fmt(sel.interestPaid)}</div>
+          <div class="mort-stat-box-sub">Principal: ${fmt(sel.principalPaid)}</div>
+          <div class="mort-stat-box-sub">${sel.pmtCount} pmts since ${sel.startDate}</div>
         </div>
         <div class="mort-stat-box">
-          <div class="mort-stat-box-label">Total Interest Remaining</div>
+          <div class="mort-stat-box-label">Interest Remaining</div>
           <div class="mort-stat-box-value">${fmt(sel.totalInterest)}</div>
-          <div class="mort-stat-box-sub">Lifetime: ${fmt(sel.interestPaid + sel.totalInterest)}</div>
+          <div class="mort-stat-box-sub">Lifetime total: ${fmt(sel.interestPaid + sel.totalInterest)}</div>
         </div>
         <div class="mort-stat-box">
           <div class="mort-stat-box-label">Payoff Date</div>
@@ -6037,7 +6039,7 @@ function renderMortgages() {
       <div class="mort-schedule">
         <div class="mort-sched-head">
           <div class="mort-sched-title">Amortization Schedule</div>
-          <div style="font-size:12px;color:var(--muted);">Click any year row to expand individual payments</div>
+          <div style="font-size:12px;color:var(--muted);">From next payment forward &middot; click a row to expand</div>
         </div>
         <div class="income-table">
           <table>
@@ -6054,7 +6056,7 @@ function renderMortgages() {
             <tbody>
               ${yearGroups.map((yg, yi) => `
                 <tr class="mort-yr-row" onclick="toggleMortYear(${yi})">
-                  <td><strong>Year ${yg.year}</strong></td>
+                  <td><strong>${yg.startDate.getFullYear()}</strong></td>
                   <td style="font-size:12px;color:var(--muted);">${fmtMortDate(yg.startDate)} &ndash; ${fmtMortDate(yg.endDate)}</td>
                   <td style="text-align:right;">${fmt(yg.payments)}</td>
                   <td style="text-align:right;">${fmt(yg.principal)}</td>
