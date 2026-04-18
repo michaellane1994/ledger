@@ -5726,9 +5726,9 @@ function renderAppearance() {
 // ── MORTGAGES ────────────────────────────────────────────
 
 const MORT_DATA = [
-  { id:'primary',  label:'Primary',     property:'Personal Home',   balance:565324.67, annualRate:0.0419, payment:1347.92, frequency:'biweekly', nextDate:'2026-04-20', termEnd:'2028-09-25', color:'#3050a8' },
-  { id:'refi',     label:'Refinancing', property:'Personal Home',   balance:146621.70, annualRate:0.0419, payment:359.89,  frequency:'biweekly', nextDate:'2026-04-20', termEnd:'2030-11-30', color:'#6060a8' },
-  { id:'rental_m', label:'Rental',      property:'Rental Property', balance:562355.03, annualRate:0.0409, payment:2718.42, frequency:'monthly',  nextDate:'2026-04-25', termEnd:'2030-11-25', color:'#2d6a4f' }
+  { id:'primary',  label:'Primary',     property:'Personal Home',   balance:565324.67, originalBalance:600515.00,   annualRate:0.0419, payment:1347.92, frequency:'biweekly', nextDate:'2026-04-20', startDate:'2023-09-25', termEnd:'2028-09-25', color:'#3050a8' },
+  { id:'refi',     label:'Refinancing', property:'Personal Home',   balance:146621.70, originalBalance:148235.58,   annualRate:0.0419, payment:359.89,  frequency:'biweekly', nextDate:'2026-04-20', startDate:'2025-11-30', termEnd:'2030-11-30', color:'#6060a8' },
+  { id:'rental_m', label:'Rental',      property:'Rental Property', balance:562355.03, originalBalance:565599.00,   annualRate:0.0409, payment:2718.42, frequency:'monthly',  nextDate:'2026-04-25', startDate:'2025-11-25', termEnd:'2030-11-25', color:'#2d6a4f' }
 ];
 
 let selectedMortId = 'primary';
@@ -5775,6 +5775,48 @@ function fmtYrs(periods, ppy) {
   if (y === 0) return m + 'mo';
   if (m === 0) return y + 'yr';
   return y + 'yr ' + m + 'mo';
+}
+
+function getMortPaymentAfter(m, afterDate) {
+  // Returns the first scheduled payment date strictly after afterDate (handles past dates too)
+  const anchor = new Date(m.nextDate + 'T12:00:00');
+  if (m.frequency === 'biweekly') {
+    const daysDiff = Math.round((afterDate - anchor) / 86400000);
+    const k = Math.floor(daysDiff / 14) + 1;
+    const result = new Date(anchor);
+    result.setDate(anchor.getDate() + k * 14);
+    return result;
+  } else {
+    const result = new Date(anchor);
+    while (result > afterDate) result.setMonth(result.getMonth() - 1);
+    result.setMonth(result.getMonth() + 1);
+    return result;
+  }
+}
+
+function calcHistoricalInterest(m) {
+  const today = new Date(); today.setHours(23, 59, 59, 0);
+  const startDate = new Date(m.startDate + 'T12:00:00');
+  const firstPmt = getMortPaymentAfter(m, startDate);
+  const firstPmtStr = firstPmt.toISOString().slice(0, 10);
+  const { schedule } = calcMort(m.originalBalance, m.annualRate, m.payment, m.frequency, firstPmtStr);
+  let interestPaid = 0, principalPaid = 0, pmtCount = 0;
+  for (const p of schedule) {
+    if (p.date <= today) { interestPaid += p.interest; principalPaid += p.principal; pmtCount++; }
+    else break;
+  }
+  return { interestPaid, principalPaid, pmtCount };
+}
+
+function fmtBalInput(el) {
+  const n = parseFloat((el.value || '').replace(/,/g, ''));
+  if (!isNaN(n)) el.value = n.toLocaleString('en-CA', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+function rawBalInput(el) {
+  el.value = (el.value || '').replace(/,/g, '');
+}
+function readBalInput(id) {
+  return parseFloat((document.getElementById(id)?.value || '').replace(/,/g, '')) || 0;
 }
 
 function getNextMortPaymentAfter(m, afterDate) {
@@ -5827,7 +5869,8 @@ function renderMortgages() {
 
     const payoffDate = res.schedule.length ? res.schedule[res.schedule.length - 1].date : new Date();
     const monthlyEq = m.frequency === 'biweekly' ? m.payment * 26 / 12 : m.payment;
-    return { ...m, ...res, balance: liveBalance, lastPmtDate, correctedAsOf: saved?.asOf || null, payoffDate, monthlyEq };
+    const hist = calcHistoricalInterest(m);
+    return { ...m, ...res, balance: liveBalance, lastPmtDate, correctedAsOf: saved?.asOf || null, payoffDate, monthlyEq, ...hist };
   });
 
   const totalBalance  = stats.reduce((s, m) => s + m.balance, 0);
@@ -5935,7 +5978,7 @@ function renderMortgages() {
           <details style="margin-top:8px;">
             <summary style="font-size:11px;color:var(--accent);cursor:pointer;user-select:none;">Correct balance</summary>
             <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
-              <input type="number" id="mort-bal-input" style="width:130px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;" placeholder="${sel.balance.toFixed(2)}">
+              <input type="text" id="mort-bal-input" style="width:140px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;" placeholder="${fmt(sel.balance).replace('$','')}" onfocus="rawBalInput(this)" onblur="fmtBalInput(this)">
               <button class="btn btn-primary btn-sm" style="font-size:11px;padding:5px 10px;" onclick="saveMortBalance('${sel.id}')">Save</button>
             </div>
           </details>
@@ -5955,9 +5998,14 @@ function renderMortgages() {
           <div class="mort-stat-box-value">${fmt(sel.monthlyEq)}/mo</div>
         </div>
         <div class="mort-stat-box">
-          <div class="mort-stat-box-label">Term Expires</div>
-          <div class="mort-stat-box-value">${fmtMortDateFull(termEnd)}</div>
-          <div class="mort-stat-box-sub">${daysToTerm > 0 ? daysToTerm + ' days away' : 'Expired'}</div>
+          <div class="mort-stat-box-label">Interest Paid to Date</div>
+          <div class="mort-stat-box-value">${fmt(sel.interestPaid)}</div>
+          <div class="mort-stat-box-sub">${sel.pmtCount} payments since ${sel.startDate}</div>
+        </div>
+        <div class="mort-stat-box">
+          <div class="mort-stat-box-label">Total Interest Remaining</div>
+          <div class="mort-stat-box-value">${fmt(sel.totalInterest)}</div>
+          <div class="mort-stat-box-sub">Lifetime: ${fmt(sel.interestPaid + sel.totalInterest)}</div>
         </div>
         <div class="mort-stat-box">
           <div class="mort-stat-box-label">Payoff Date</div>
@@ -5965,13 +6013,9 @@ function renderMortgages() {
           <div class="mort-stat-box-sub">${fmtYrs(sel.periods, sel.ppy)} remaining</div>
         </div>
         <div class="mort-stat-box">
-          <div class="mort-stat-box-label">Total Interest Remaining</div>
-          <div class="mort-stat-box-value">${fmt(sel.totalInterest)}</div>
-        </div>
-        <div class="mort-stat-box">
-          <div class="mort-stat-box-label">Interest as % of Balance</div>
-          <div class="mort-stat-box-value">${((sel.totalInterest / sel.balance) * 100).toFixed(0)}%</div>
-          <div class="mort-stat-box-sub">of current balance owed in interest</div>
+          <div class="mort-stat-box-label">Term Expires</div>
+          <div class="mort-stat-box-value">${fmtMortDateFull(termEnd)}</div>
+          <div class="mort-stat-box-sub">${daysToTerm > 0 ? daysToTerm + ' days away' : 'Expired'}</div>
         </div>
       </div>
 
@@ -5982,7 +6026,7 @@ function renderMortgages() {
         <div class="mort-sim-row">
           <div class="mort-sim-field">
             <label>Extra Payment Amount</label>
-            <input type="number" id="mort-sim-amount" class="mort-sim-input" placeholder="e.g. 25000" value="${simAmt || ''}">
+            <input type="text" id="mort-sim-amount" class="mort-sim-input" placeholder="e.g. 25,000" value="${simAmt ? simAmt.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2}) : ''}" onfocus="rawBalInput(this)" onblur="fmtBalInput(this)">
           </div>
           <button class="btn btn-primary btn-sm" onclick="runMortSim()">Calculate</button>
           ${simAmt > 0 ? '<button class="btn btn-ghost btn-sm" onclick="clearMortSim()">Clear</button>' : ''}
@@ -6036,8 +6080,8 @@ function renderMortgages() {
 }
 
 function saveMortBalance(id) {
-  const val = parseFloat(document.getElementById('mort-bal-input')?.value);
-  if (isNaN(val) || val <= 0) { alert('Please enter a valid balance.'); return; }
+  const val = readBalInput('mort-bal-input');
+  if (!val || val <= 0) { alert('Please enter a valid balance.'); return; }
   const today = new Date().toISOString().slice(0, 10);
   mortBalances[id] = { balance: val, asOf: today };
   localStorage.setItem('l3_mort_balances', JSON.stringify(mortBalances));
@@ -6052,7 +6096,7 @@ function selectMort(id) {
 }
 
 function runMortSim() {
-  const val = parseFloat(document.getElementById('mort-sim-amount')?.value) || 0;
+  const val = readBalInput('mort-sim-amount');
   mortSimAmt = val;
   renderMortgages();
 }
