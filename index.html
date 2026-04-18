@@ -1891,17 +1891,19 @@ function goNav(name) {
   const mainEl    = document.querySelector('.main');
   const mobilePills  = document.getElementById('mobile-month-pills');
   const desktopPills = document.getElementById('month-pills');
-  if (name === 'dashboard') {
+  const showPills = ['dashboard', 'transactions', 'income', 'savings'].includes(name);
+  if (showPills) {
     if (periodBar)    periodBar.style.display = 'flex';
     if (desktopPills) desktopPills.style.display = '';
+    if (mobilePills)  mobilePills.style.display = '';
     if (mainEl)       mainEl.classList.add('dash-bar-visible');
-    renderDashboard();
   } else {
     if (periodBar)    periodBar.style.display = 'none';
     if (mobilePills)  mobilePills.style.display = 'none';
     if (desktopPills) desktopPills.style.display = 'none';
     if (mainEl)       mainEl.classList.remove('dash-bar-visible');
   }
+  if (name === 'dashboard') renderDashboard();
   if (name === 'transactions') {
     if (selMonth) txnMonthFilter = new Set([selMonth]);
     renderTxns();
@@ -5776,6 +5778,56 @@ function saveMortData() { localStorage.setItem('l3_mort_data', JSON.stringify(mo
 
 let selectedMortId = 'primary';
 
+// ── MORTGAGE HOLIDAY HELPERS ──
+function _mortEaster(year) {
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m2 = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m2 + 114) / 31);
+  const day = ((h + l - 7 * m2 + 114) % 31) + 1;
+  return new Date(year, month - 1, day, 12, 0, 0);
+}
+const _mortHolidayCache = {};
+function _mortBankHolidays(year) {
+  if (_mortHolidayCache[year]) return _mortHolidayCache[year];
+  const s = new Set();
+  const ds = (y, mo, d) => new Date(y, mo, d, 12).toISOString().slice(0, 10);
+  // New Year's Day
+  s.add(ds(year, 0, 1));
+  // Good Friday
+  const easter = _mortEaster(year);
+  s.add(new Date(easter.getFullYear(), easter.getMonth(), easter.getDate() - 2, 12).toISOString().slice(0, 10));
+  // Victoria Day: last Monday on or before May 25
+  const may25dow = new Date(year, 4, 25).getDay();
+  s.add(ds(year, 4, 25 - (may25dow === 0 ? 6 : may25dow - 1)));
+  // Canada Day: July 1
+  s.add(ds(year, 6, 1));
+  // Labour Day: first Monday of September
+  const sep1dow = new Date(year, 8, 1).getDay();
+  s.add(ds(year, 8, 1 + (sep1dow <= 1 ? 1 - sep1dow : 8 - sep1dow)));
+  // Thanksgiving: second Monday of October
+  const oct1dow = new Date(year, 9, 1).getDay();
+  const firstMonOct = 1 + (oct1dow <= 1 ? 1 - oct1dow : 8 - oct1dow);
+  s.add(ds(year, 9, firstMonOct + 7));
+  // Christmas Day
+  s.add(ds(year, 11, 25));
+  // Boxing Day
+  s.add(ds(year, 11, 26));
+  _mortHolidayCache[year] = s;
+  return s;
+}
+function mortNextBizDay(date) {
+  let d = new Date(date);
+  while (true) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6 && !_mortBankHolidays(d.getFullYear()).has(d.toISOString().slice(0, 10))) break;
+    d.setDate(d.getDate() + 1);
+  }
+  return d;
+}
+
 function calcMort(balance, annualRate, paymentAmt, frequency, nextDateStr) {
   const ppy = frequency === 'biweekly' ? 26 : 12;
   // Canadian mortgage: semi-annual compounding
@@ -5791,12 +5843,13 @@ function calcMort(balance, annualRate, paymentAmt, frequency, nextDateStr) {
     if (principal < 0.001) break;
     bal = Math.max(bal - principal, 0);
     totalInterest += interest;
-    const pmtDate = new Date(base);
+    const rawDate = new Date(base);
     if (frequency === 'biweekly') {
-      pmtDate.setDate(base.getDate() + p * 14);
+      rawDate.setDate(base.getDate() + p * 14);
     } else {
-      pmtDate.setMonth(base.getMonth() + p);
+      rawDate.setMonth(base.getMonth() + p);
     }
+    const pmtDate = mortNextBizDay(rawDate);
     p++;
     schedule.push({ p, date: pmtDate, pmt: principal + interest, principal, interest, balance: bal });
   }
@@ -5815,12 +5868,13 @@ function calcMortWithExtras(balance, annualRate, paymentAmt, frequency, firstDat
   let p = 0;
   const base = new Date(firstDateStr + 'T12:00:00');
   while (bal > 0.005 && p < 3000) {
-    const pmtDate = new Date(base);
+    const rawDate = new Date(base);
     if (frequency === 'biweekly') {
-      pmtDate.setDate(base.getDate() + p * 14);
+      rawDate.setDate(base.getDate() + p * 14);
     } else {
-      pmtDate.setMonth(base.getMonth() + p);
+      rawDate.setMonth(base.getMonth() + p);
     }
+    const pmtDate = mortNextBizDay(rawDate);
     const dateStr = pmtDate.toISOString().slice(0, 10);
     const interest = bal * r;
     const principal = Math.min(paymentAmt - interest, bal);
@@ -6160,8 +6214,8 @@ function renderMortgages() {
                 <tr class="mort-yr-row${yg.isPast ? ' mort-past-yr' : yg.isCurrent ? ' mort-curr-yr' : ''}" onclick="toggleMortYear(${yi})">
                   <td><strong>${yg.year}</strong></td>
                   <td style="font-size:12px;color:var(--muted);">${fmtMortDate(yg.startDate)} &ndash; ${fmtMortDate(yg.endDate)}</td>
-                  <td style="text-align:right;">${fmt(yg.payments)}</td>
-                  <td style="text-align:right;">${fmt(yg.principal)}</td>
+                  <td style="text-align:right;">${fmt(yg.payments + yg.extra)}</td>
+                  <td style="text-align:right;">${fmt(yg.principal + yg.extra)}</td>
                   <td style="text-align:right;color:var(--muted);">${fmt(yg.interest)}</td>
                   <td style="text-align:right;font-weight:600;">${fmt(yg.closing)}</td>
                   <td style="text-align:right;color:#16a34a;">${yg.extra > 0 ? fmt(yg.extra) : ''}</td>
