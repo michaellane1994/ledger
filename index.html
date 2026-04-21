@@ -1489,7 +1489,21 @@ function doGet(e) {
         </div>
       </div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;">
+
+    <!-- Import preview + totals -->
+    <div id="import-preview" style="margin-top:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);padding:14px 16px;display:none;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:8px;">Preview</div>
+      <div style="overflow:auto;max-height:220px;background:var(--surface);border:1px solid var(--border);border-radius:6px;">
+        <table id="import-preview-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:var(--bg);"><th style="padding:6px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Date</th><th style="padding:6px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Merchant</th><th style="padding:6px 10px;text-align:right;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Amount</th><th style="padding:6px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Category</th></tr></thead>
+          <tbody id="import-preview-body"></tbody>
+        </table>
+      </div>
+      <div id="import-preview-footer" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;font-size:12px;"></div>
+      <div id="import-preview-verify" style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span>✓</span><span>Does this match your statement? If not, adjust column mapping or statement type above.</span></div>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
       <button class="btn btn-ghost" onclick="closeMap()">Cancel</button>
       <button class="btn btn-primary" onclick="doImport()">Import →</button>
     </div>
@@ -1560,6 +1574,7 @@ function doGet(e) {
         </table>
       </div>
       <div id="pdf-totals" style="display:flex;gap:20px;justify-content:flex-end;margin-top:10px;padding:10px 14px;background:var(--bg);border-radius:var(--radius-sm);font-size:12.5px;"></div>
+      <div style="margin-top:8px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span>✓</span><span>Does this match your statement? If not, click Back and try re-extracting, or export a CSV from your bank instead.</span></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
         <button class="btn btn-ghost" onclick="document.getElementById('pdf-step-1').style.display='block';document.getElementById('pdf-step-2').style.display='none';">← Back</button>
         <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
@@ -3787,6 +3802,7 @@ function openMapper(file) {
     const cardGuess = fn.includes('cibc') ? 'CIBC' : fn.includes('chequing') ? 'RBC Chequing' : fn.includes('saving') ? 'RBC Savings' : fn.includes('amex') ? 'Amex' : fn.includes('scotia') ? 'Scotiabank' : '';
     document.getElementById('col-cardname').value = cardGuess;
     document.getElementById('map-modal').classList.add('open');
+    updateImportPreview();
   };
   reader.readAsText(file);
 }
@@ -3795,6 +3811,87 @@ function guess(id, hints) {
   if (idx >= 0) document.getElementById(id).value = idx;
 }
 function closeMap() { document.getElementById('map-modal').classList.remove('open'); }
+
+function parseImportRows() {
+  const di = parseInt(document.getElementById('col-date').value);
+  const mi = parseInt(document.getElementById('col-merchant').value);
+  const ai = parseInt(document.getElementById('col-amount').value);
+  const ciVal = document.getElementById('col-credit').value;
+  const ci = ciVal !== '' ? parseInt(ciVal) : -1;
+  const stmtInput = document.querySelector('input[name="stmt-type"]:checked');
+  const isBank = stmtInput && stmtInput.value === 'bank';
+  const invalid = [];
+  const valid = [];
+  if (isNaN(di) || isNaN(mi) || isNaN(ai)) return { valid, invalid, mappingIncomplete: true };
+  (pRows || []).forEach((cols, idx) => {
+    const dateStr = cols[di] || '';
+    let merchant = (cols[mi] || 'Unknown').trim();
+    merchant = merchant.replace(/\s{2,}.*$/, '').trim().replace(/\*[A-Z0-9]+$/, '').trim();
+    if (!merchant) merchant = 'Unknown';
+    let amt = parseFloat((cols[ai] || '').replace(/[$, "]/g, ''));
+    if (/payment received|payment thank/i.test(merchant)) return;
+    let refund = false;
+    if (isBank) {
+      if (!isFinite(amt) || amt === 0) { invalid.push({ idx, reason: 'Zero or unreadable amount', dateStr, merchant }); return; }
+      if (amt > 0) refund = true;
+      amt = refund ? -Math.abs(amt) : Math.abs(amt);
+    } else if (ci >= 0) {
+      const cred = parseFloat((cols[ci] || '').replace(/[$, "]/g, ''));
+      if (isFinite(cred) && cred > 0) { amt = -cred; refund = true; }
+      else if (!isFinite(amt) || amt === 0) { invalid.push({ idx, reason: 'Zero or unreadable amount', dateStr, merchant }); return; }
+      else amt = Math.abs(amt);
+    } else {
+      if (!isFinite(amt) || amt === 0) { invalid.push({ idx, reason: 'Zero or unreadable amount', dateStr, merchant }); return; }
+      refund = amt < 0;
+    }
+    if (Math.abs(amt) > 50000) { invalid.push({ idx, reason: 'Unreasonably large amount', dateStr, merchant, amount: amt }); return; }
+    const date = normDate(dateStr);
+    if (!date) { invalid.push({ idx, reason: 'Date unreadable', dateStr, merchant, amount: amt }); return; }
+    valid.push({ date, merchant, amount: amt, refund, category: autoCat(merchant) });
+  });
+  return { valid, invalid, mappingIncomplete: false };
+}
+
+function updateImportPreview() {
+  const panel = document.getElementById('import-preview');
+  if (!panel) return;
+  const { valid, invalid, mappingIncomplete } = parseImportRows();
+  if (mappingIncomplete) {
+    panel.style.display = 'block';
+    document.getElementById('import-preview-body').innerHTML =
+      '<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--faint);font-size:12px;">Map Date, Merchant, and Amount columns above to see a preview.</td></tr>';
+    document.getElementById('import-preview-footer').innerHTML = '';
+    return;
+  }
+  panel.style.display = 'block';
+  const body = document.getElementById('import-preview-body');
+  if (!valid.length && !invalid.length) {
+    body.innerHTML = '<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--faint);font-size:12px;">No rows detected. Check your file has data below the header.</td></tr>';
+    document.getElementById('import-preview-footer').innerHTML = '';
+    return;
+  }
+  const previewRows = valid.slice(0, 8);
+  body.innerHTML = previewRows.map(t => {
+    const catLabel = (CAT[t.category] && CAT[t.category].label) || t.category || '—';
+    const amtStr = (t.refund ? '-' : '') + fmt(Math.abs(t.amount));
+    return `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:6px 10px;font-size:11.5px;color:var(--faint);white-space:nowrap;">${esc(t.date)}</td>
+      <td style="padding:6px 10px;font-size:12px;">${esc(t.merchant)}</td>
+      <td style="padding:6px 10px;font-size:12px;text-align:right;font-weight:600;${t.refund?'color:#16a34a;':''}">${amtStr}</td>
+      <td style="padding:6px 10px;font-size:11.5px;color:var(--muted);">${esc(catLabel)}</td>
+    </tr>`;
+  }).join('') + (valid.length > 8 ? `<tr><td colspan="4" style="padding:6px 10px;font-size:11px;color:var(--faint);text-align:center;">+ ${valid.length - 8} more</td></tr>` : '');
+  const expenseTotal = valid.filter(t => !t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const refundTotal = valid.filter(t => t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const net = expenseTotal - refundTotal;
+  const footer = document.getElementById('import-preview-footer');
+  footer.innerHTML = `
+    <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Expenses</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(expenseTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${valid.filter(t=>!t.refund).length} transaction${valid.filter(t=>!t.refund).length===1?'':'s'}</div></div>
+    ${refundTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Refunds / Credits</div><div style="font-size:14px;font-weight:600;color:#16a34a;">-${fmt(refundTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${valid.filter(t=>t.refund).length} transaction${valid.filter(t=>t.refund).length===1?'':'s'}</div></div>` : ''}
+    <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Net</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(net)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${valid.length} valid row${valid.length===1?'':'s'}</div></div>
+    ${invalid.length ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:#c15c1e;font-weight:600;margin-bottom:3px;">Skipped</div><div style="font-size:14px;font-weight:600;color:#c15c1e;">${invalid.length}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;" title="${esc(invalid.slice(0,5).map(r=>r.reason).join(' · '))}">${esc(invalid[0].reason)}${invalid.length>1?' + others':''}</div></div>` : ''}
+  `;
+}
 
 async function doImport() {
   const di = parseInt(document.getElementById('col-date').value);
@@ -6458,6 +6555,10 @@ trash = trash.filter(t => new Date(t.deletedAt) > trashCutoff);
 (function() { const b = document.getElementById('trash-count'); if (b && trash.length) { b.textContent = trash.length; b.style.display = 'inline'; } })();
 updateSyncDot(sheetsUrl ? 'ok' : 'off');
 setSyncLabel(sheetsUrl ? 'Connected' : 'Not connected');
+['col-date','col-merchant','col-amount','col-credit'].forEach(id => {
+  const el = document.getElementById(id); if (el) el.addEventListener('change', updateImportPreview);
+});
+document.querySelectorAll('input[name="stmt-type"]').forEach(r => r.addEventListener('change', updateImportPreview));
 applyJointSetting();
 const _validPages = ['dashboard','transactions','income','savings','upload','trash','rental','mortgages','settings'];
 const _savedPage = localStorage.getItem('l3_last_page');
