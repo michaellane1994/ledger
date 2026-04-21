@@ -109,6 +109,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-s
 /* ── MAIN ── */
 .main{margin-left:228px;flex:1;display:flex;flex-direction:column;min-width:0;max-width:calc(100vw - 228px);padding-top:58px;}
 .topbar{background:var(--surface);border-bottom:1px solid var(--border);height:58px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:228px;right:0;z-index:50;}
+.help-btn{width:30px;height:30px;padding:0;background:transparent;border:1px solid var(--border);border-radius:50%;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s, color .15s, border-color .15s;flex-shrink:0;}
+.help-btn:hover{background:var(--bg);color:var(--ink);border-color:var(--muted);}
+.help-btn svg{width:16px;height:16px;}
 .dark-toggle{width:36px;height:20px;background:var(--border);border:none;border-radius:100px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;padding:0;}
 .dark-toggle.on{background:var(--accent);}
 .dark-toggle-knob{position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;pointer-events:none;}
@@ -297,6 +300,61 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .modal-overlay{position:fixed;inset:0;background:rgba(24,24,27,.45);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--surface);border-radius:16px;padding:30px;width:480px;max-width:90vw;box-shadow:var(--shadow-lg);animation:slideUp .22s ease;}
+
+/* ── DUPLICATES ── */
+.dupes-group{border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;}
+.dupes-group-head{padding:10px 14px;background:var(--bg);font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.dupes-group-head strong{color:var(--ink);font-weight:600;}
+.dupes-row{display:grid;grid-template-columns:24px 90px 1fr 90px 110px;gap:10px;padding:9px 14px;align-items:center;font-size:13px;border-top:1px solid var(--border);}
+.dupes-row:first-of-type{border-top:none;}
+.dupes-row input[type="checkbox"]{width:15px;height:15px;cursor:pointer;}
+.dupes-row .dupes-merch{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dupes-row .dupes-date{color:var(--muted);font-size:12.5px;}
+.dupes-row .dupes-amount{text-align:right;font-weight:600;color:var(--ink);}
+.dupes-row .dupes-meta{font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dupes-empty{padding:32px 14px;text-align:center;color:var(--muted);font-size:13.5px;}
+.dupes-empty strong{display:block;color:var(--ink);font-size:15px;margin-bottom:4px;}
+@media (max-width: 600px){
+  .dupes-row{grid-template-columns:22px 1fr 90px;}
+  .dupes-row .dupes-date{grid-column:2;font-size:11.5px;}
+  .dupes-row .dupes-merch{grid-column:2;}
+  .dupes-row .dupes-meta{display:none;}
+  .dupes-row .dupes-amount{grid-column:3;}
+}
+
+/* ── HELP MODAL ── */
+.help-modal{width:720px;max-width:94vw;padding:0;display:flex;flex-direction:column;max-height:86vh;overflow:hidden;}
+.help-head{padding:22px 28px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.help-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);line-height:1.2;}
+.help-sub{font-size:13px;color:var(--muted);margin-top:3px;}
+.help-close{background:transparent;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;padding:4px 8px;border-radius:6px;transition:background .15s, color .15s;}
+.help-close:hover{background:var(--bg);color:var(--ink);}
+.help-body{padding:20px 28px 28px;overflow-y:auto;flex:1;}
+.help-nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.help-nav a{font-size:12px;color:var(--muted);padding:5px 11px;border-radius:100px;background:var(--bg);text-decoration:none;transition:background .15s, color .15s;cursor:pointer;}
+.help-nav a:hover{background:var(--border);color:var(--ink);}
+.help-body section{margin-bottom:26px;scroll-margin-top:12px;}
+.help-body h3{font-family:'Playfair Display',serif;font-size:17px;color:var(--ink);margin-bottom:10px;}
+.help-body p{font-size:13.5px;color:var(--ink);line-height:1.65;margin-bottom:10px;}
+.help-body .help-note{font-size:12.5px;color:var(--muted);}
+.help-steps{list-style:none;padding:0;counter-reset:step;display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+.help-steps li{position:relative;padding-left:30px;font-size:13.5px;color:var(--ink);line-height:1.6;counter-increment:step;}
+.help-steps li::before{content:counter(step);position:absolute;left:0;top:0;width:22px;height:22px;background:var(--bg);border:1px solid var(--border);border-radius:50%;font-size:11px;font-weight:600;color:var(--muted);display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;}
+.help-feat{list-style:none;padding:0;display:flex;flex-direction:column;gap:8px;}
+.help-feat li{font-size:13px;color:var(--ink);line-height:1.55;padding-left:16px;position:relative;}
+.help-feat li::before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;background:var(--accent);}
+.help-q{border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--bg);overflow:hidden;}
+.help-q summary{padding:11px 14px;cursor:pointer;font-size:13px;color:var(--ink);font-weight:500;list-style:none;position:relative;padding-right:32px;}
+.help-q summary::-webkit-details-marker{display:none;}
+.help-q summary::after{content:"＋";position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;transition:transform .2s;}
+.help-q[open] summary::after{content:"－";}
+.help-q[open] summary{border-bottom:1px solid var(--border);}
+.help-q p{padding:10px 14px 12px;margin:0;font-size:13px;color:var(--muted);line-height:1.6;}
+@media (max-width: 720px){
+  .help-modal{width:100%;max-height:100vh;border-radius:0;}
+  .help-head{padding:18px 18px 14px;}
+  .help-body{padding:16px 18px 22px;}
+}
 @keyframes slideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 .modal-title{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:4px;}
 .modal-sub{color:var(--muted);font-size:12.5px;margin-bottom:20px;}
@@ -577,6 +635,9 @@ tbody tr:hover .row-menu-btn{opacity:1;}
         </button>
         <span class="dark-label" style="font-size:11.5px;color:var(--muted);">Dark</span>
       </div>
+      <button class="help-btn" onclick="openHelpModal()" title="Help &amp; FAQ" aria-label="Help">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.9.5c0 1.5-2.4 2-2.4 3.5"/><circle cx="12" cy="17" r="0.6" fill="currentColor"/></svg>
+      </button>
       <button class="btn btn-ghost btn-sm hide-mobile" onclick="exportCSV()">↓ Export</button>
       <button class="btn btn-primary btn-sm" onclick="goNav('upload')">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m-8-8l8-8 8 8"/></svg>
@@ -792,7 +853,11 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 
     <!-- TRANSACTIONS -->
     <div class="view" id="view-transactions">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;">
+        <button class="btn btn-ghost btn-sm" onclick="openDuplicatesModal()" title="Scan for duplicate transactions">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>
+          Find duplicates
+        </button>
         <button class="btn btn-primary btn-sm" onclick="openAddModal()">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path d="M12 4v16m-8-8h16"/></svg>
           Add Transaction
@@ -1437,6 +1502,140 @@ function doGet(e) {
 <!-- CAT DROPDOWN -->
 <div class="cat-dropdown" id="cat-dd"></div>
 
+<!-- DUPLICATES MODAL -->
+<div class="modal-overlay" id="dupes-modal">
+  <div class="modal help-modal">
+    <div class="help-head">
+      <div>
+        <div class="help-title">Find duplicate transactions</div>
+        <div class="help-sub" id="dupes-sub">Scans for entries with similar merchant, same amount, and close dates.</div>
+      </div>
+      <button onclick="closeDuplicatesModal()" class="help-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="help-body" id="dupes-body">
+      <div id="dupes-controls" style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);">
+          Date window:
+          <select id="dupes-window" onchange="renderDuplicates()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:13px;font-family:'Inter',sans-serif;">
+            <option value="0">Same day only</option>
+            <option value="2" selected>Within 2 days</option>
+            <option value="5">Within 5 days</option>
+            <option value="14">Within 14 days</option>
+          </select>
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);">
+          <input type="checkbox" id="dupes-strict-merchant" checked onchange="renderDuplicates()">
+          Require near-identical merchant name
+        </label>
+      </div>
+      <div id="dupes-list"></div>
+      <div id="dupes-actions" style="display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div style="font-size:12.5px;color:var(--muted);" id="dupes-selected-count">0 selected</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="closeDuplicatesModal()">Cancel</button>
+          <button class="btn btn-primary btn-sm" id="dupes-delete-btn" onclick="deleteSelectedDuplicates()" disabled>Delete selected</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div class="modal-overlay" id="help-modal">
+  <div class="modal help-modal">
+    <div class="help-head">
+      <div>
+        <div class="help-title">Help &amp; FAQ</div>
+        <div class="help-sub">Everything you need to get Ledger running.</div>
+      </div>
+      <button onclick="closeHelpModal()" class="help-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="help-body">
+      <nav class="help-nav">
+        <a href="#help-start">Quick start</a>
+        <a href="#help-features">Features</a>
+        <a href="#help-sync">Google Sheets sync</a>
+        <a href="#help-faq">FAQ</a>
+        <a href="#help-contact">Still stuck?</a>
+      </nav>
+
+      <section id="help-start">
+        <h3>Quick start</h3>
+        <ol class="help-steps">
+          <li><strong>Add your first transaction.</strong> Click the <em>＋ Add</em> button on Transactions, or hit <em>Upload Data</em> to bring in a CSV or PDF statement.</li>
+          <li><strong>Review the preview.</strong> If you upload a statement, Ledger shows the parsed rows and a total so you can confirm it matches before importing.</li>
+          <li><strong>Categorise.</strong> Ledger auto-categorises using keyword rules. You can edit categories inline — it learns from your corrections.</li>
+          <li><strong>Sync</strong> (optional). Connect a Google Sheet to back up and sync across devices.</li>
+        </ol>
+      </section>
+
+      <section id="help-features">
+        <h3>Features at a glance</h3>
+        <ul class="help-feat">
+          <li><strong>Dashboard</strong> — monthly, 3-month, year-to-date and full-year views with category tiles, spending pace, and trend arrows.</li>
+          <li><strong>Transactions</strong> — searchable, filterable, bulk-edit. Multi-select to re-categorise or delete in one go.</li>
+          <li><strong>Income</strong> — log salary, transfers from friends, or any offset against a category.</li>
+          <li><strong>Savings</strong> — track multiple accounts. Balances are always derived from your contribution log (never edited directly).</li>
+          <li><strong>Mortgages</strong> — amortisation schedule, voluntary payments, balance history.</li>
+          <li><strong>Budget targets</strong> — set a monthly target per category; tiles show a progress bar.</li>
+          <li><strong>Recurring detection</strong> — Monthly Commitments card auto-surfaces subscriptions and regulars.</li>
+          <li><strong>Duplicate checker</strong> — scans for suspiciously similar transactions before they clutter your history.</li>
+          <li><strong>Dark mode</strong> — toggle in the topbar. Works everywhere.</li>
+        </ul>
+      </section>
+
+      <section id="help-sync">
+        <h3>Google Sheets sync</h3>
+        <p>Ledger does not store your transactions. If you want data to survive browser clears or sync across devices, connect your own Google Sheet.</p>
+        <p>The full step-by-step (with the Apps Script code to paste) lives in <strong>Settings → Google Sheets Setup Guide</strong>.</p>
+        <p class="help-note" style="margin-top:10px;padding:10px 12px;background:var(--bg);border-left:3px solid var(--accent);border-radius:4px;"><strong>Important — who can access your data:</strong> Even though the Apps Script deployment is set to <em>Anyone</em> (required for the app to call it), that only means the URL doesn't require Google login. The real access control is <strong>who has the URL</strong> and <strong>who you've shared the Google Sheet with</strong>. Only share the deployment URL and the sheet itself with people you actually want to have your data — your partner, for example. Treat the URL like a password.</p>
+        <button class="btn btn-primary btn-sm" onclick="closeHelpModal();goNav('settings');setTimeout(()=>{const s=document.getElementById('sec-setup');if(s){s.scrollIntoView({behavior:'smooth',block:'start'});}},150);">Open setup guide →</button>
+      </section>
+
+      <section id="help-faq">
+        <h3>FAQ</h3>
+        <details class="help-q">
+          <summary>Where is my data stored?</summary>
+          <p>Everything lives in your browser's localStorage. If you connect a Google Sheet, a copy also lives there (in your Drive).</p>
+        </details>
+        <details class="help-q">
+          <summary>What happens if I clear my browser or switch devices?</summary>
+          <p>If you haven't connected Google Sheets, data is lost. With Sheets connected, pull from the sheet on the new device and everything is restored.</p>
+        </details>
+        <details class="help-q">
+          <summary>My CSV or PDF import looks wrong — what do I do?</summary>
+          <p>Use the preview in the import modal to spot bad rows before committing. The total at the bottom should match your statement. If it doesn't, try remapping the columns (for CSV) or switching between bank/credit statement type (for PDF).</p>
+        </details>
+        <details class="help-q">
+          <summary>Can I edit a category after the fact?</summary>
+          <p>Yes. Click the category badge on any transaction row to change it. Ledger learns from repeated corrections of the same merchant.</p>
+        </details>
+        <details class="help-q">
+          <summary>Why can't I edit a savings balance directly?</summary>
+          <p>Balances are always derived from your contribution log. This prevents drift. Add a contribution (positive or negative) if you need to adjust.</p>
+        </details>
+        <details class="help-q">
+          <summary>How do I handle shared expenses with a partner?</summary>
+          <p>Log the transaction once, then log an offsetting income entry under <em>Income → Transfer</em> with the partner as the person and the original category as the offset. The net effect: you only see your share.</p>
+        </details>
+        <details class="help-q">
+          <summary>Can I export my data?</summary>
+          <p>Yes. The <em>↓ Export</em> button in the topbar dumps everything as CSV. Google Sheets is also a permanent export by design.</p>
+        </details>
+        <details class="help-q">
+          <summary>Does Ledger work offline?</summary>
+          <p>Yes for all local features. Google Sheets sync requires a connection.</p>
+        </details>
+      </section>
+
+      <section id="help-contact">
+        <h3>Still stuck?</h3>
+        <p>If something looks off, check <strong>Settings → Google Sheets Setup Guide</strong> or re-read the quick start above. Most issues are resolved by remapping CSV columns or re-deploying the Apps Script.</p>
+      </section>
+    </div>
+  </div>
+</div>
+
 <!-- COLUMN MAPPER MODAL -->
 <div class="modal-overlay" id="map-modal">
   <div class="modal">
@@ -1492,15 +1691,24 @@ function doGet(e) {
 
     <!-- Import preview + totals -->
     <div id="import-preview" style="margin-top:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);padding:14px 16px;display:none;">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:8px;">Preview</div>
-      <div style="overflow:auto;max-height:220px;background:var(--surface);border:1px solid var(--border);border-radius:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;">Preview &amp; edit</div>
+        <button class="btn btn-ghost btn-sm" onclick="resetImportEdits()" id="reset-edits-btn" style="display:none;font-size:11px;padding:3px 9px;">Reset edits</button>
+      </div>
+      <div style="overflow:auto;max-height:320px;background:var(--surface);border:1px solid var(--border);border-radius:6px;">
         <table id="import-preview-table" style="width:100%;border-collapse:collapse;font-size:12px;">
-          <thead><tr style="background:var(--bg);"><th style="padding:6px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Date</th><th style="padding:6px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Merchant</th><th style="padding:6px 10px;text-align:right;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Amount</th><th style="padding:6px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Category</th></tr></thead>
+          <thead><tr style="background:var(--bg);position:sticky;top:0;z-index:1;">
+            <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Date</th>
+            <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Merchant</th>
+            <th style="padding:7px 10px;text-align:right;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Amount</th>
+            <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Category</th>
+            <th style="padding:7px 6px;text-align:center;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);width:36px;"></th>
+          </tr></thead>
           <tbody id="import-preview-body"></tbody>
         </table>
       </div>
       <div id="import-preview-footer" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;font-size:12px;"></div>
-      <div id="import-preview-verify" style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span>✓</span><span>Does this match your statement? If not, adjust column mapping or statement type above.</span></div>
+      <div id="import-preview-verify" style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span>✓</span><span>Click any cell to edit. Totals update as you change rows. Use × to drop bad rows.</span></div>
     </div>
 
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
@@ -3810,7 +4018,12 @@ function guess(id, hints) {
   const idx = pHeaders.findIndex(h => hints.some(hint => h.toLowerCase().includes(hint)));
   if (idx >= 0) document.getElementById(id).value = idx;
 }
-function closeMap() { document.getElementById('map-modal').classList.remove('open'); }
+function closeMap() {
+  document.getElementById('map-modal').classList.remove('open');
+  _pendingImportRows = null;
+  _pendingImportInvalid = [];
+  _pendingImportEdited = false;
+}
 
 function parseImportRows() {
   const di = parseInt(document.getElementById('col-date').value);
@@ -3852,6 +4065,9 @@ function parseImportRows() {
   return { valid, invalid, mappingIncomplete: false };
 }
 
+let _pendingImportRows = null;
+let _pendingImportInvalid = [];
+let _pendingImportEdited = false;
 function updateImportPreview() {
   const panel = document.getElementById('import-preview');
   if (!panel) return;
@@ -3859,38 +4075,88 @@ function updateImportPreview() {
   if (mappingIncomplete) {
     panel.style.display = 'block';
     document.getElementById('import-preview-body').innerHTML =
-      '<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--faint);font-size:12px;">Map Date, Merchant, and Amount columns above to see a preview.</td></tr>';
+      '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--faint);font-size:12px;">Map Date, Merchant, and Amount columns above to see a preview.</td></tr>';
     document.getElementById('import-preview-footer').innerHTML = '';
+    _pendingImportRows = null;
     return;
   }
+  _pendingImportRows = valid.map(r => ({ ...r }));
+  _pendingImportInvalid = invalid;
+  _pendingImportEdited = false;
+  renderImportPreview();
+}
+function renderImportPreview() {
+  const panel = document.getElementById('import-preview');
   panel.style.display = 'block';
   const body = document.getElementById('import-preview-body');
-  if (!valid.length && !invalid.length) {
-    body.innerHTML = '<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--faint);font-size:12px;">No rows detected. Check your file has data below the header.</td></tr>';
+  const rows = _pendingImportRows || [];
+  const invalid = _pendingImportInvalid || [];
+  if (!rows.length && !invalid.length) {
+    body.innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--faint);font-size:12px;">No rows detected. Check your file has data below the header.</td></tr>';
     document.getElementById('import-preview-footer').innerHTML = '';
     return;
   }
-  const previewRows = valid.slice(0, 8);
-  body.innerHTML = previewRows.map(t => {
+  body.innerHTML = rows.map((t, i) => {
     const catLabel = (CAT[t.category] && CAT[t.category].label) || t.category || '—';
-    const amtStr = (t.refund ? '-' : '') + fmt(Math.abs(t.amount));
-    return `<tr style="border-bottom:1px solid var(--border);">
-      <td style="padding:6px 10px;font-size:11.5px;color:var(--faint);white-space:nowrap;">${esc(t.date)}</td>
-      <td style="padding:6px 10px;font-size:12px;">${esc(t.merchant)}</td>
-      <td style="padding:6px 10px;font-size:12px;text-align:right;font-weight:600;${t.refund?'color:#16a34a;':''}">${amtStr}</td>
-      <td style="padding:6px 10px;font-size:11.5px;color:var(--muted);">${esc(catLabel)}</td>
+    const amtAbs = Math.abs(t.amount);
+    const amtColor = t.refund ? 'color:#16a34a;' : '';
+    const sign = t.refund ? '-' : '';
+    return `<tr data-row-idx="${i}" style="border-bottom:1px solid var(--border);">
+      <td style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editImportRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td style="padding:3px 6px;font-size:11.5px;color:var(--muted);">${esc(catLabel)}</td>
+      <td style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#c15c1e';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
-  }).join('') + (valid.length > 8 ? `<tr><td colspan="4" style="padding:6px 10px;font-size:11px;color:var(--faint);text-align:center;">+ ${valid.length - 8} more</td></tr>` : '');
-  const expenseTotal = valid.filter(t => !t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
-  const refundTotal = valid.filter(t => t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
+  }).join('');
+  renderImportPreviewFooter();
+  const resetBtn = document.getElementById('reset-edits-btn');
+  if (resetBtn) resetBtn.style.display = _pendingImportEdited ? '' : 'none';
+}
+function renderImportPreviewFooter() {
+  const rows = _pendingImportRows || [];
+  const invalid = _pendingImportInvalid || [];
+  const expenseTotal = rows.filter(t => !t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const refundTotal = rows.filter(t => t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
   const net = expenseTotal - refundTotal;
   const footer = document.getElementById('import-preview-footer');
   footer.innerHTML = `
-    <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Expenses</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(expenseTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${valid.filter(t=>!t.refund).length} transaction${valid.filter(t=>!t.refund).length===1?'':'s'}</div></div>
-    ${refundTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Refunds / Credits</div><div style="font-size:14px;font-weight:600;color:#16a34a;">-${fmt(refundTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${valid.filter(t=>t.refund).length} transaction${valid.filter(t=>t.refund).length===1?'':'s'}</div></div>` : ''}
-    <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Net</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(net)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${valid.length} valid row${valid.length===1?'':'s'}</div></div>
+    <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Expenses</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(expenseTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${rows.filter(t=>!t.refund).length} transaction${rows.filter(t=>!t.refund).length===1?'':'s'}</div></div>
+    ${refundTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Refunds / Credits</div><div style="font-size:14px;font-weight:600;color:#16a34a;">-${fmt(refundTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${rows.filter(t=>t.refund).length} transaction${rows.filter(t=>t.refund).length===1?'':'s'}</div></div>` : ''}
+    <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Net</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(net)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${rows.length} row${rows.length===1?'':'s'} to import</div></div>
     ${invalid.length ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:#c15c1e;font-weight:600;margin-bottom:3px;">Skipped</div><div style="font-size:14px;font-weight:600;color:#c15c1e;">${invalid.length}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;" title="${esc(invalid.slice(0,5).map(r=>r.reason).join(' · '))}">${esc(invalid[0].reason)}${invalid.length>1?' + others':''}</div></div>` : ''}
   `;
+}
+function editImportRow(idx, field, value) {
+  if (!_pendingImportRows || !_pendingImportRows[idx]) return;
+  const row = _pendingImportRows[idx];
+  if (field === 'amount') {
+    const n = parseFloat(value);
+    if (!isFinite(n)) return;
+    row.amount = row.refund ? -Math.abs(n) : Math.abs(n);
+  } else if (field === 'merchant') {
+    row.merchant = value;
+    row.category = autoCat(value);
+  } else if (field === 'date') {
+    row.date = value;
+  }
+  _pendingImportEdited = true;
+  renderImportPreviewFooter();
+  const resetBtn = document.getElementById('reset-edits-btn');
+  if (resetBtn) resetBtn.style.display = '';
+}
+function deleteImportRow(idx) {
+  if (!_pendingImportRows) return;
+  _pendingImportRows.splice(idx, 1);
+  _pendingImportEdited = true;
+  renderImportPreview();
+}
+function resetImportEdits() {
+  const { valid, invalid } = parseImportRows();
+  _pendingImportRows = valid.map(r => ({ ...r }));
+  _pendingImportInvalid = invalid;
+  _pendingImportEdited = false;
+  renderImportPreview();
 }
 
 async function doImport() {
@@ -3908,45 +4174,57 @@ async function doImport() {
 
   setStep(1, 'run'); setProg(25, 'Parsing rows...');
   await sleep(500);
-  const parsed = [];
-  pRows.forEach(cols => {
-    const dateStr  = cols[di] || '';
-    let merchant = (cols[mi] || 'Unknown').trim();
-    merchant = merchant.replace(/\s{2,}.*$/, '').trim();
-    merchant = merchant.replace(/\*[A-Z0-9]+$/, '').trim();
-    if (!merchant) merchant = 'Unknown';
-    let amt = parseFloat((cols[ai] || '0').replace(/[$, "]/g, '')) || 0;
-    // Skip payment rows entirely
-    if (/payment received|payment thank/i.test(merchant)) return;
+  let parsed;
+  if (_pendingImportRows && _pendingImportRows.length) {
+    // Use edited preview rows as the source of truth
+    parsed = _pendingImportRows.map(r => ({
+      id: uid(),
+      date: r.date,
+      merchant: r.merchant,
+      amount: r.amount,
+      category: r.category || null,
+      person,
+      card: cardName,
+      note: '',
+      refund: !!r.refund
+    }));
+  } else {
+    parsed = [];
+    pRows.forEach(cols => {
+      const dateStr  = cols[di] || '';
+      let merchant = (cols[mi] || 'Unknown').trim();
+      merchant = merchant.replace(/\s{2,}.*$/, '').trim();
+      merchant = merchant.replace(/\*[A-Z0-9]+$/, '').trim();
+      if (!merchant) merchant = 'Unknown';
+      let amt = parseFloat((cols[ai] || '0').replace(/[$, "]/g, '')) || 0;
+      if (/payment received|payment thank/i.test(merchant)) return;
 
-    let refund = false;
-    if (isBank) {
-      // Bank account: negative = expense, positive = income/refund
-      if (amt === 0) return;
-      if (amt > 0) { refund = true; } // positive = money coming in = refund/credit
-      amt = Math.abs(amt); // store as positive, refund flag handles display
-      if (refund) amt = -amt; // keep negative so refund logic works downstream
-    } else if (ci >= 0) {
-      // Credit card with separate credit column
-      const cred = parseFloat((cols[ci] || '0').replace(/[$, "]/g, '')) || 0;
-      if (cred > 0) { amt = -cred; refund = true; }
-      else if (amt === 0) return;
-      else amt = Math.abs(amt);
-    } else {
-      // Standard credit card: positive = spend, negative = refund
-      if (amt === 0) return;
-      refund = amt < 0;
-    }
+      let refund = false;
+      if (isBank) {
+        if (amt === 0) return;
+        if (amt > 0) { refund = true; }
+        amt = Math.abs(amt);
+        if (refund) amt = -amt;
+      } else if (ci >= 0) {
+        const cred = parseFloat((cols[ci] || '0').replace(/[$, "]/g, '')) || 0;
+        if (cred > 0) { amt = -cred; refund = true; }
+        else if (amt === 0) return;
+        else amt = Math.abs(amt);
+      } else {
+        if (amt === 0) return;
+        refund = amt < 0;
+      }
 
-    if (Math.abs(amt) > 50000) return;
-    const date = normDate(dateStr);
-    if (!date) return;
-    parsed.push({ id: uid(), date, merchant, amount: amt, category: null, person, card: cardName, note: '', refund });
-  });
+      if (Math.abs(amt) > 50000) return;
+      const date = normDate(dateStr);
+      if (!date) return;
+      parsed.push({ id: uid(), date, merchant, amount: amt, category: null, person, card: cardName, note: '', refund });
+    });
+  }
 
   setStep(1, 'done'); setStep(2, 'run'); setProg(55, 'Categorizing ' + parsed.length + ' transactions...');
   await sleep(800);
-  parsed.forEach(t => t.category = autoCat(t.merchant));
+  parsed.forEach(t => { if (!t.category) t.category = autoCat(t.merchant); });
 
   setStep(2, 'done'); setStep(3, 'run'); setProg(80, 'Processing...');
   await sleep(500);
@@ -5844,6 +6122,124 @@ function toggleDark() {
   if (t && t.dark) applyTheme(localStorage.getItem('l3_lastLight') || 'light');
   else             setTheme(localStorage.getItem('l3_lastDark')  || 'dark-warm');
 }
+function openHelpModal() {
+  const m = document.getElementById('help-modal');
+  if (m) m.classList.add('open');
+}
+function closeHelpModal() {
+  const m = document.getElementById('help-modal');
+  if (m) m.classList.remove('open');
+}
+
+// ── DUPLICATE TRANSACTION CHECKER ──
+function _normMerchant(m) {
+  return (m || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function _merchantKey(m, strict) {
+  const n = _normMerchant(m);
+  if (strict) {
+    return n.split(' ').filter(w => w.length >= 3).slice(0, 2).join(' ') || n.slice(0, 6);
+  }
+  return n.slice(0, 5);
+}
+function findDuplicateGroups() {
+  const win = parseInt(document.getElementById('dupes-window').value);
+  const strict = document.getElementById('dupes-strict-merchant').checked;
+  const buckets = new Map();
+  txns.forEach(t => {
+    if (!t.date || typeof t.amount !== 'number') return;
+    const key = _merchantKey(t.merchant, strict) + '|' + Math.round(t.amount * 100);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(t);
+  });
+  const groups = [];
+  buckets.forEach(list => {
+    if (list.length < 2) return;
+    list.sort((a, b) => a.date.localeCompare(b.date));
+    let cluster = [list[0]];
+    for (let i = 1; i < list.length; i++) {
+      const prev = new Date(cluster[cluster.length - 1].date);
+      const cur = new Date(list[i].date);
+      const diffDays = Math.abs((cur - prev) / 86400000);
+      if (diffDays <= win) {
+        cluster.push(list[i]);
+      } else {
+        if (cluster.length >= 2) groups.push(cluster);
+        cluster = [list[i]];
+      }
+    }
+    if (cluster.length >= 2) groups.push(cluster);
+  });
+  groups.sort((a, b) => b[0].date.localeCompare(a[0].date));
+  return groups;
+}
+function openDuplicatesModal() {
+  const m = document.getElementById('dupes-modal');
+  if (!m) return;
+  m.classList.add('open');
+  renderDuplicates();
+}
+function closeDuplicatesModal() {
+  const m = document.getElementById('dupes-modal');
+  if (m) m.classList.remove('open');
+}
+function renderDuplicates() {
+  const list = document.getElementById('dupes-list');
+  const actions = document.getElementById('dupes-actions');
+  const sub = document.getElementById('dupes-sub');
+  if (!list) return;
+  const groups = findDuplicateGroups();
+  if (groups.length === 0) {
+    list.innerHTML = '<div class="dupes-empty"><strong>No duplicates found</strong>Nothing suspicious with the current settings. Try loosening the date window if you expected matches.</div>';
+    actions.style.display = 'none';
+    sub.textContent = 'No duplicate candidates with the current settings.';
+    return;
+  }
+  const totalCandidates = groups.reduce((s, g) => s + g.length, 0);
+  sub.textContent = `${groups.length} potential duplicate group${groups.length === 1 ? '' : 's'} found across ${totalCandidates} transactions.`;
+  list.innerHTML = groups.map((g, gi) => {
+    const head = `<div class="dupes-group-head"><span><strong>${esc(g[0].merchant || '(no merchant)')}</strong> · ${fmt(g[0].amount)}</span><span>${g.length} matches</span></div>`;
+    const rows = g.map((t, i) => {
+      const isFirst = i === 0;
+      const metaBits = [t.category || '', t.person || '', t.card || ''].filter(Boolean).join(' · ');
+      return `<label class="dupes-row">
+        <input type="checkbox" class="dupes-cb" data-tid="${esc(t.id || '')}" ${isFirst ? '' : 'checked'} onchange="updateDupesSelectionCount()">
+        <span class="dupes-date">${esc(t.date || '')}</span>
+        <span class="dupes-merch">${esc(t.merchant || '')}${isFirst ? ' <span style="color:var(--faint);font-size:11px;">· kept</span>' : ''}</span>
+        <span class="dupes-meta">${esc(metaBits)}</span>
+        <span class="dupes-amount">${fmt(t.amount)}</span>
+      </label>`;
+    }).join('');
+    return `<div class="dupes-group">${head}${rows}</div>`;
+  }).join('');
+  actions.style.display = 'flex';
+  updateDupesSelectionCount();
+}
+function updateDupesSelectionCount() {
+  const boxes = document.querySelectorAll('.dupes-cb');
+  const selected = Array.from(boxes).filter(b => b.checked).length;
+  const counter = document.getElementById('dupes-selected-count');
+  const btn = document.getElementById('dupes-delete-btn');
+  if (counter) counter.textContent = `${selected} selected for deletion`;
+  if (btn) btn.disabled = selected === 0;
+}
+function deleteSelectedDuplicates() {
+  const boxes = document.querySelectorAll('.dupes-cb:checked');
+  const ids = Array.from(boxes).map(b => b.getAttribute('data-tid')).filter(Boolean);
+  if (ids.length === 0) return;
+  if (!confirm(`Delete ${ids.length} transaction${ids.length === 1 ? '' : 's'}? This moves them to Trash (kept 30 days).`)) return;
+  const toDelete = txns.filter(t => ids.includes(t.id));
+  trash.push(...toDelete.map(t => ({ ...t, deletedAt: Date.now() })));
+  txns = txns.filter(t => !ids.includes(t.id));
+  persist();
+  renderTxns();
+  renderDashboard();
+  renderIncome();
+  if (typeof autoPush === 'function') autoPush();
+  showToast ? showToast(`${ids.length} duplicate${ids.length === 1 ? '' : 's'} deleted`) : null;
+  renderDuplicates();
+}
+
 function renderAppearance() {
   const el = document.getElementById('sec-appearance');
   if (!el) return;
