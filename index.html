@@ -6488,13 +6488,30 @@ function renderMortgages() {
       } else break;
     }
 
-    // Manual correction overrides computed balance
+    // Manual correction overrides computed balance, then advance forward
+    // through scheduled payments up to today so the displayed outstanding
+    // balance reflects actual amortization, not the stale correction value.
     const saved = mortBalances[m.id];
-    if (saved) liveBalance = saved.balance;
+    if (saved) {
+      liveBalance = saved.balance;
+      const corrDate = new Date(saved.asOf + 'T12:00:00');
+      const firstAfterCorr = getNextMortPaymentAfter(m, corrDate);
+      const forwardStartStr = firstAfterCorr.toISOString().slice(0, 10);
+      const forwardExtras = extras.filter(e => e.date >= forwardStartStr);
+      const forwardRes = calcMortWithExtras(liveBalance, m.annualRate, m.payment, m.frequency, forwardStartStr, forwardExtras);
+      for (const pmt of forwardRes.schedule) {
+        if (pmt.date <= today) {
+          liveBalance = pmt.balance;
+          lastPmtDate = pmt.date;
+          interestPaid += pmt.interest;
+          principalPaid += pmt.principal + (pmt.extra || 0);
+          pmtCount++;
+        } else break;
+      }
+    }
 
-    // Future projection from live balance
-    const futureAnchor = saved ? new Date(saved.asOf + 'T12:00:00') : today;
-    const nextFuturePmt = getNextMortPaymentAfter(m, futureAnchor);
+    // Future projection from the now-current live balance, anchored to today
+    const nextFuturePmt = getNextMortPaymentAfter(m, lastPmtDate || today);
     const futureStartStr = nextFuturePmt.toISOString().slice(0, 10);
     const futureExtras = extras.filter(e => e.date >= futureStartStr);
     const futureRes = calcMortWithExtras(liveBalance, m.annualRate, m.payment, m.frequency, futureStartStr, futureExtras);
