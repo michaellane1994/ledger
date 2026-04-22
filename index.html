@@ -1212,17 +1212,10 @@ tbody tr:hover .row-menu-btn{opacity:1;}
             <button class="btn btn-ghost" onclick="syncFromSheets()">↓ Pull from Google Sheets</button>
             <button class="btn btn-ghost btn-danger" onclick="clearLocalData()">✕ Clear local data</button>
           </div>
-          <div style="margin-top:10px;">
-            <button class="btn btn-ghost btn-sm btn-warning" onclick="repairIncomeEntries()">
-              ⚙ Repair missing income entries
-            </button>
-            <div id="repair-status" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
-          </div>
           <p style="font-size:12px;color:var(--faint);margin-top:10px;line-height:1.6;">
             <strong>Push</strong> sends all local data to the sheet — always do this after making changes.<br>
             <strong>Pull</strong> replaces all local data with what is in the sheet — use when switching devices.<br>
-            <strong>Clear local data</strong> wipes this device only — your sheet data is unaffected.<br>
-            <strong>Repair</strong> scans transactions flagged as income and creates any missing Income tab entries.
+            <strong>Clear local data</strong> wipes this device only — your sheet data is unaffected.
           </p>
         </div>
       </div>
