@@ -1,0 +1,347 @@
+# Ledger SaaS — Roadmap
+
+Everything I need to go from demo template to a paying product.
+Budget: **~20 hrs of focused work, ~$10 to start.**
+
+---
+
+## TL;DR
+
+| | |
+|---|---|
+| **Product** | Privacy-first expense tracker. Data stays in user's own Google Sheet. |
+| **Price** | $5/mo or $49/yr. 14-day free trial. No card to start. |
+| **Moat** | "We literally never see your data." |
+| **Stack** | Cloudflare Pages + Supabase + Stripe + Resend |
+| **Backend code** | ~50 lines in a Cloudflare Worker |
+| **Day-1 cost** | ~$10 (domain). Rest is free tier. |
+| **At 100 paying users** | ~$471/mo profit after Stripe fees |
+
+---
+
+## Services I need
+
+| Service | For | Cost |
+|---|---|---|
+| Cloudflare Pages | Host the HTML | Free |
+| Cloudflare Registrar | Domain | ~$10/yr |
+| Supabase | Login + store (email, trial expiry, sub status) | Free |
+| Stripe | Subscriptions, trials, card updates | 2.9% + 30¢/txn |
+| Resend | Welcome + trial-ending emails | Free (3k/mo) |
+| Sentry *(optional)* | Catch JS errors | Free |
+| Plausible *(optional)* | Analytics, no cookies | $9/mo |
+
+**I never store transaction data.** Supabase only holds: email, `trial_ends_at`, `stripe_customer_id`, `subscription_status`. That's it.
+
+### Services — what each does + when you start paying
+
+**Cloudflare Pages + Workers** — Hosts the static HTML and runs ~50 lines of serverless backend (Stripe checkout, webhooks, customer portal). GitHub Pages is static-only, so Workers is where all dynamic/paid logic lives.
+- Free tier: unlimited bandwidth, 100k Worker requests/day, 500 builds/month.
+- You pay: $5/mo only when you exceed 100k Worker requests/day (≈3M/mo). At that volume you're at ~30k daily active users — years away.
+
+**Google Cloud (Drive API + OAuth)** — OAuth consent + Drive API for the `ledger-data.json` each user owns in their own Drive. Zero-cost storage that reinforces the privacy pitch.
+- Free tier: 1B API queries/day. Verification is free for `drive.file` scope (non-sensitive).
+- You pay: **never**, as long as billing stays disabled on the Cloud project. Hard ceiling is 100 test users during unverified testing — submit for verification (free, ~1 week) before crossing that.
+
+**Supabase** — Auth (email / Google / magic links) + tiny Postgres table for user records (email, `trial_ends_at`, `stripe_customer_id`, `subscription_status`). Never stores transactions.
+- Free tier: 50,000 Monthly Active Users, 500 MB database, 5 GB bandwidth.
+- You pay: $25/mo when you cross 50k MAU. At that scale you're doing ~$250k MRR, so it's noise. Gotcha: free projects with 7 days of zero activity auto-pause — one-click restore, and stops mattering after launch.
+
+**Stripe** — Subscription billing, 14-day trials, card updates via Customer Portal. No monthly fee.
+- You pay: per transaction — 2.9% + 30¢ (Canada). A $5/mo subscription nets ~$4.56; a $49/yr nets ~$47.28.
+
+**Resend** — Transactional email (welcome, trial-ending-3d, payment-failed). Clean API, good deliverability.
+- Free tier: 3,000 emails/month, 100/day.
+- You pay: $20/mo when you exceed 3k/mo. At ~5 emails per user lifecycle that's ~600 signups/month → ~$3k MRR. Comfortable headroom.
+- Blocker: requires a **verified custom domain** (DNS records). Cannot send until you own a domain.
+
+**Sentry** *(optional)* — JavaScript error monitoring. Errors only, never user data in payloads (privacy rule).
+- Free tier: 5k errors/month.
+- You pay: $26/mo for 50k errors. Free tier covers you for a long time.
+
+**Plausible** *(optional)* — Privacy-friendly analytics, no cookies.
+- No free tier.
+- You pay: $9/mo for 10k pageviews, $19/mo for 100k. Skip until post-launch.
+
+**Running total:**
+- Pre-launch: **~$10 (domain only)**
+- Launch day: **still ~$10 + Stripe fees per txn**
+- First 1,000 paying users: **$10/yr domain + Stripe fees only** — everything else fits in free tiers
+- Post-50k MAU: **+$25/mo Supabase Pro** (you'll be doing $250k MRR by then)
+
+---
+
+## Build order
+
+### ✅ Phase 1 — Demo polish (mostly done)
+
+- [x] Demo top strip + CTAs
+- [x] Demo hero card with sample data button
+- [x] Sync controls greyed out in demo
+- [x] Pricing modal (monthly/yearly)
+- [x] Reset demo / Clear demo buttons
+- [x] Import preview with statement-total check
+- [x] Remove "Repair missing income" button (both files)
+- [x] Banner refers users to the `?` help button
+- [ ] FAQ modal
+- [ ] Footer (Privacy · Terms · Contact)
+- [ ] Final brand name decision
+
+### Phase 1.5 — Sync architecture: migrate SaaS template to Google Drive API
+
+**Decision:** replace the Apps Script sync with Google Drive API (`drive.file` scope). Personal site stays on Apps Script — it already works, not worth migrating.
+
+**Why:** Apps Script onboarding is ~8 steps including an "unverified app" warning that kills ~30% of signups. Drive API is one click → standard OAuth consent screen → done.
+
+**Privacy pitch preserved:** user's data lives in a JSON file in their own Drive. OAuth token never leaves the browser. We never see the data or the token.
+
+**Architecture decisions locked in:**
+- ✓ Visible file in user's Drive (named `ledger-data.json`) — transparency
+- ✓ Single file per user, no multi-vault
+- ✓ Last-write-wins on conflicts (same as current Apps Script behavior)
+- ✓ `drive.file` scope only — non-sensitive, no expensive security assessment
+- ✓ Testing mode → 100 users free, then free verification (~1 week turnaround)
+
+**Costs:** $0. Don't enable billing on the Cloud project — Drive API + OAuth are free-forever products outside the $300 credit program.
+
+#### Google Cloud Console setup (user does once)
+
+1. console.cloud.google.com → create project "Ledger"
+2. APIs & Services → Library → **Google Drive API** → Enable
+3. OAuth consent screen:
+   - User type: External
+   - App name: Ledger
+   - Support email: yours
+   - Scopes: `.../auth/drive.file` ONLY
+   - Test users: add your own gmail
+4. Credentials → Create OAuth Client ID:
+   - Type: Web application
+   - Authorized JavaScript origins:
+     - `https://michaellane1994.github.io` (covers both /ledger and /ledger-saas)
+     - `http://localhost` (local testing)
+   - Authorized redirect URIs: empty (using implicit flow)
+5. Copy the Client ID → send to Claude
+
+#### Code changes (template only)
+
+- Strip: `<pre id="apps-script-code">`, Setup Guide card, Web app URL field, all Apps Script references
+- Add: Google Identity Services + gapi Drive client (2 CDN tags)
+- New functions: `gdConnect()`, `gdDisconnect()`, `gdPush(data)`, `gdPull()`, `gdFindOrCreateFile()`
+- Rewire: Push/Pull buttons to call Drive API
+- Replace: "Google Sheets" → "Cloud Sync" section in Settings with single "Connect Google Drive" button
+- Update all copy: "Google Sheet" → "Google Drive"
+- Help modal: strip the Apps Script short-version, replace with "Click Connect Google Drive, you're done"
+
+#### Migration path to 100+ users (later)
+
+Submit for Google OAuth verification when approaching 100 users. Requirements:
+- Privacy Policy URL (deferred to Phase 7)
+- App homepage URL
+- YouTube demo video (30–60 sec of the consent flow)
+- ~1 week turnaround, free
+
+#### Deferred (not doing now)
+
+- Setup video (Loom walkthrough) — no longer needed since Drive API onboarding is one click
+- Apps Script template sheet (`/copy` URL approach) — abandoned in favor of Drive API
+
+### Phase 2 — Deploy *(1 hr)*
+
+**Hosting model:** GitHub is the source of truth, Cloudflare Pages is the host. Every `git push` to `main` auto-deploys in ~30s. No manual uploads.
+
+**Steps:**
+
+1. [ ] **Create new GitHub repo** `ledger-saas` (separate from the `expensetracker` self-host repo so SaaS + family versions never mix)
+2. [ ] Push `General Template/index.html` → `index.html` at repo root
+3. [ ] **Sign up at [dash.cloudflare.com](https://dash.cloudflare.com)** (free, no card)
+4. [ ] **Workers & Pages → Create → Pages → Connect to Git** → authorize GitHub app → grant access to `ledger-saas` only
+5. [ ] **Configure build:**
+   - Production branch: `main`
+   - Framework preset: **None**
+   - Build command: *(blank)*
+   - Build output directory: `/`
+   - Root directory: *(blank)*
+6. [ ] **Save and Deploy** → live at `ledger-saas-xxx.pages.dev` in ~60s
+7. [ ] Test live demo on mobile + desktop
+8. [ ] *(Later, once brand picked)* Buy domain on Cloudflare Registrar → attach via **Custom domains** tab → Cloudflare handles DNS automatically
+
+**After first deploy:** every push to `main` auto-deploys. Deploy history + commit SHAs in the Pages dashboard. Purge Cache button there if you need users to see a fix immediately.
+
+### Phase 3 — Auth *(4–6 hrs)*
+
+- [ ] Create Supabase project
+- [ ] Enable Email + Google OAuth
+- [ ] Create `users` table (see below)
+- [ ] Add Supabase JS via CDN
+- [ ] Build login / signup modal
+- [ ] Wire `_isDemo` flag to session state
+- [ ] Signup → set `trial_ends_at = now + 14d`
+- [ ] Trial expired / cancelled → fallback to demo mode
+
+```sql
+users:
+  id              uuid (from auth)
+  email           text
+  created_at      timestamp
+  trial_ends_at   timestamp
+  stripe_customer_id  text
+  subscription_status text  -- 'trialing' | 'active' | 'cancelled' | 'past_due'
+```
+
+### Phase 4 — Billing *(4–6 hrs)*
+
+- [ ] Stripe account
+- [ ] Two products: "Monthly" $5, "Yearly" $49, both with 14d trial
+- [ ] Enable Stripe Customer Portal (users self-serve cancel/card update)
+- [ ] Deploy Cloudflare Worker with 3 endpoints:
+  - `POST /create-checkout-session`
+  - `POST /create-portal-session`
+  - `POST /webhook` (Stripe → Supabase updates)
+- [ ] Wire `startTrialFlow()` → worker → Stripe checkout
+- [ ] Add "Manage subscription" in Settings
+
+### Phase 5 — Email *(2 hrs)*
+
+- [ ] Resend account, verify domain DNS
+- [ ] 3 templates: welcome, trial-ending-3d, payment-failed
+- [ ] Triggered from Supabase hooks or Worker
+
+### Phase 6 — Monitoring *(1 hr, optional)*
+
+- [ ] Sentry SDK (errors only, never payloads)
+- [ ] Plausible (pageviews, no cookies)
+- [ ] Set up `hello@domain.com` support inbox
+
+### Phase 7 — Launch prep *(2–3 hrs)*
+
+- [ ] Privacy Policy (key line: "we don't see your data")
+- [ ] Terms of Service
+- [ ] Test full loop: signup → trial → auto-convert → cancel → resubscribe
+- [ ] Canadian sales tax: register for GST/HST if I expect >$30k/yr
+
+---
+
+## Minimum code additions
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://js.stripe.com/v3/"></script>
+```
+
+```js
+async function checkAuth() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) { _isDemo = true; return; }
+  const { data: u } = await supabase.from('users').select('*').eq('id', session.user.id).single();
+  const active = u.subscription_status === 'active'
+    || (u.subscription_status === 'trialing' && new Date(u.trial_ends_at) > new Date());
+  _isDemo = !active;
+}
+```
+
+New functions: `login`, `signup`, `logout`, `startCheckout(plan)`, `openCustomerPortal`, `checkAuth` (on page load).
+
+Everything else already works. The only paywalled action is Google Sheets sync.
+
+---
+
+## Support playbook
+
+I cannot see user data. So:
+
+- **Import broken?** Preview + totals panel already lets them diagnose. They can screenshot and email.
+- **Sync error?** Show the message inline. No black boxes.
+- **Support email:** `hello@domain.com` → my inbox. No live chat at launch.
+- **Refunds:** one click in Stripe. Be generous with forgotten trials.
+- **FAQ must answer:** where's my data, what happens if I cancel, can I export, does it work on mobile.
+
+---
+
+## Launch checklist (the day)
+
+Post once, in three places:
+- r/personalfinance or r/PersonalFinanceCanada ("Show HN"-style, no hype)
+- Indie Hackers launch post
+- Product Hunt (Tue–Thu morning)
+
+Message: **"Your data stays in your Google Drive. $5/mo, no feature gates, no ads."**
+
+Reach out personally to the first 20 signups. Ask what's missing.
+
+---
+
+## Don't do these
+
+- iOS/Android app (web works on mobile)
+- Plaid/bank APIs (CSV+PDF is fine, Plaid is too expensive for $5/mo)
+- Multi-tenant households with separate logins (households share one sheet)
+- Chat widget
+- Session replay tools (Hotjar/FullStory) — kills the privacy pitch
+- Google Ads at launch (too expensive at $5 LTV)
+- Fake social proof
+- Feature gates on the paid tier
+
+---
+
+## Red flags to watch for
+
+| Signal | Means |
+|---|---|
+| <5% trial → paid | Activation broken or price too high for perceived value |
+| >10%/mo churn | Not sticky — onboarding fix needed |
+| "Import didn't work" dominates tickets | Invest in more bank/card presets |
+| Endless feature requests | Attracting wrong audience |
+
+---
+
+## Economics at scale
+
+| Users | MRR | Stripe fee | Infra | Net |
+|---|---|---|---|---|
+| 10 | $50 | $3 | $0 | $47 |
+| 100 | $500 | $29 | $0 | $471 |
+| 1,000 | $5,000 | $290 | ~$25 | ~$4,685 |
+| 10,000 | $50,000 | $2,900 | ~$200 | ~$46,900 |
+
+Supabase free tier covers 50k MAU. Cloudflare Pages is unlimited. This scales without a new architecture.
+
+---
+
+## The rule I can't break
+
+**Never store transactions.** Not in Supabase, not in Sentry, not in logs, not anywhere I control. The privacy pitch is the entire moat. Protect it.
+
+---
+
+## Lock-in map — what's reversible vs not
+
+A reference for thinking about which decisions to lean into vs which to defer.
+
+### Effectively irreversible (think hard now)
+
+- **The privacy promise.** Once "we never see your data" is the public pitch, breaking it is brand-ending. No future product idea (AI features, server-side analytics, etc.) can require seeing user data without massive trust damage.
+- **Brand name + domain.** Cheap to change pre-launch. After launch, switching costs SEO, social presence, marketing materials, user memory. Decide before any landing page or domain purchase.
+
+### Hard to change (avoid if possible)
+
+- **Stripe pricing for existing subscribers.** Once N users subscribe at $9/mo, they're grandfathered there forever — Stripe doesn't auto-update existing subs. New customers can pay a new price; existing ones stay unless they explicitly opt in (Canadian consumer law requires consent). Means: lower-than-needed launch price is hard to fix later. Sleep on $9 vs $12 before launch.
+- **Drive file schema (`ledger-data.json` structure).** Breaking changes to field names/structure invalidate every existing user's file. Mitigated by `version: 1` field added 2026-04-24 — future migrations can branch on version. Add migration logic, don't break the schema in place.
+- **Google OAuth scope.** Currently `drive.file` (non-sensitive, free verification, ~1 week). If a feature ever needs `drive.full` or another sensitive scope, expect a $15k–$75k third-party security audit and weeks of review. Stay on `drive.file` indefinitely.
+
+### Easy to change (don't agonize)
+
+- **Hosting (Cloudflare).** Worker code uses Web standard APIs (fetch, crypto.subtle). Portable to Vercel Edge / Deno Deploy / AWS Lambda in a day.
+- **Supabase.** Postgres data is exportable anytime. Auth password hashes can move via Supabase's bulk export — users don't notice the migration.
+- **Stripe products / prices** (for new customers). Archive old, create new, anytime. Existing customers grandfathered (see above).
+- **Trial length.** Each new signup gets the value at signup time. No retroactive enforcement.
+- **Database schema.** Postgres is forgiving. Add columns and indexes anytime; drop with care.
+- **Features.** Add, remove, rebuild. Nothing in the stack locks the product surface.
+- **localStorage prefixes / Drive file names.** Renamable with a one-time migration script. Don't optimise for these now.
+
+### Decisions to lock in before launch
+
+- [ ] Final brand name
+- [ ] Final domain (Cloudflare Registrar)
+- [ ] Final monthly + yearly Stripe price
+- [ ] Privacy policy text — must explicitly state "we cannot read your data"
+- [ ] Drive file `version: 1` shipped — ✓ (2026-04-24)
