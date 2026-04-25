@@ -190,15 +190,56 @@ users:
 
 ### Phase 4 — Billing *(4–6 hrs)*
 
-- [ ] Stripe account
-- [ ] Two products: "Monthly" $5, "Yearly" $49, both with 14d trial
-- [ ] Enable Stripe Customer Portal (users self-serve cancel/card update)
-- [ ] Deploy Cloudflare Worker with 3 endpoints:
-  - `POST /create-checkout-session`
-  - `POST /create-portal-session`
-  - `POST /webhook` (Stripe → Supabase updates)
-- [ ] Wire `startTrialFlow()` → worker → Stripe checkout
-- [ ] Add "Manage subscription" in Settings
+**Status as of 2026-04-25:** Worker code shipped, client wiring shipped, products created. Three dashboard tasks left to complete the loop.
+
+#### Already done
+- [x] Stripe account created (Test/Sandbox mode)
+- [x] Two products created: Monthly $9 (`price_1TPzDqBo3t6OY2ICaaC1KtDK`), Yearly $89 (`price_1TPzEIBo3t6OY2ICBOBW8cYb`)
+- [x] Stripe Customer Portal activated
+- [x] Cloudflare Worker deployed with 3 endpoints (`/api/create-checkout-session`, `/api/create-portal-session`, `/api/webhook`) — see `ledger-saas/src/worker.js`
+- [x] Client wiring: `startCheckout(plan)`, `openCustomerPortal()`, Subscribe button in trial-expired strip, Manage subscription link in signed-in strip, `?subscribed=1` return URL handler
+
+#### Still to do (user, in dashboards)
+
+**Task 1 — Add 5 secrets to Cloudflare Worker** (~5 min)
+
+dash.cloudflare.com → Workers & Pages → ledger-saas → Settings → Variables and Secrets → Add variable (Type: Secret) for each:
+
+| Name | Source |
+|---|---|
+| `STRIPE_SECRET_KEY` | Stripe → Developers → API keys → reveal Secret key (`sk_test_...`) |
+| `SUPABASE_URL` | `https://eiekaxvlmspqpwqsikhg.supabase.co` |
+| `SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_mx6vAI1hbZvC-0kQy_Hqnw_46cvMNH8` |
+| `SUPABASE_SERVICE_ROLE` | Supabase → Project Settings → API Keys → reveal service_role (long `eyJ...`) |
+| `STRIPE_WEBHOOK_SECRET` | Filled after Task 2 — leave blank or set placeholder for now |
+
+Click **Deploy** at the bottom — Cloudflare requires a redeploy for new secrets to take effect.
+
+**Task 2 — Create the Stripe webhook** (~3 min)
+
+Stripe → Developers → Webhooks → Add endpoint:
+- Endpoint URL: `https://ledger.michael-lane867.workers.dev/api/webhook`
+- Events to listen for (5 only):
+  - `checkout.session.completed`
+  - `customer.subscription.created`
+  - `customer.subscription.updated`
+  - `customer.subscription.deleted`
+  - `invoice.payment_failed`
+- Click Add endpoint → on the next page click "Reveal signing secret" → copy `whsec_...`
+
+Back to Cloudflare → update `STRIPE_WEBHOOK_SECRET` with the `whsec_...` value → Deploy.
+
+**Task 3 — End-to-end test** (~5 min)
+
+1. Hard-reload `https://ledger.michael-lane867.workers.dev`
+2. Sign in (green top strip)
+3. Click Subscribe → Stripe Checkout
+4. Test card: `4242 4242 4242 4242` / any future expiry / any CVC / any postal
+5. Return to app → strip flips to "Active" + Manage subscription button
+6. Supabase → Table Editor → users → row should show `subscription_status: active` + `stripe_customer_id: cus_...`
+7. Click Manage subscription → Stripe portal → cancel → return → strip flips back
+
+Most likely failure points: missing/typo'd secret, wrong webhook URL, or webhook not yet wired (status won't update until webhook is set up).
 
 ### Phase 5 — Email *(2 hrs)*
 
