@@ -2241,7 +2241,7 @@ let timeChart;
 let cashflowChart;
 let fvIncomePlugin = null;
 let chartHiddenCats  = new Set();
-let chartViewMode    = 'category'; // 'category' | 'fixed-variable'
+let chartViewMode    = 'fixed-variable'; // 'category' | 'fixed-variable' — default to Needs vs Wants
 let cfBonusVisible   = true;
 let cfStartBalance   = parseFloat(localStorage.getItem('l3_cf_start') || '0');
 const _commitExclRaw = localStorage.getItem('l3_commit_excl');
@@ -2265,7 +2265,7 @@ let editingIncomeId = null;
 
 function resetChartFilters() {
   chartHiddenCats.clear();
-  chartViewMode = 'category';
+  chartViewMode = 'fixed-variable';
   const allExpenses = txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId));
   const allMonths = [...new Set(allExpenses.map(t => t.date.substring(0,7)))].sort();
   const fromSel = document.getElementById('chart-from');
