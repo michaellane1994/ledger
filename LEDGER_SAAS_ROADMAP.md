@@ -210,7 +210,7 @@ dash.cloudflare.com → Workers & Pages → ledger-saas → Settings → Variabl
 | `STRIPE_SECRET_KEY` | Stripe → Developers → API keys → reveal Secret key (`sk_test_...`) |
 | `SUPABASE_URL` | `https://eiekaxvlmspqpwqsikhg.supabase.co` |
 | `SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_mx6vAI1hbZvC-0kQy_Hqnw_46cvMNH8` |
-| `SUPABASE_SERVICE_ROLE` | Supabase → Project Settings → API Keys → reveal service_role (long `eyJ...`) |
+| `SUPABASE_SECRET_KEY` | Supabase → Project Settings → API Keys → reveal Secret key (`sb_secret_...`). Replaces the legacy `service_role` JWT. |
 | `STRIPE_WEBHOOK_SECRET` | Filled after Task 2 — leave blank or set placeholder for now |
 
 Click **Deploy** at the bottom — Cloudflare requires a redeploy for new secrets to take effect.
