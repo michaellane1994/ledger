@@ -87,7 +87,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .logo{padding:26px 22px 18px;border-bottom:1px solid rgba(255,255,255,.07);}
 .logo h1{font-family:'Playfair Display',serif;font-size:20px;color:#fff;}
 .logo span{font-size:11px;color:rgba(255,255,255,.3);letter-spacing:.6px;text-transform:uppercase;margin-top:2px;display:block;}
-.nav{padding:14px 10px;flex:1;}
+.nav{padding:14px 10px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;}
 .nav-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.25);padding:8px 12px 5px;font-weight:600;}
 .nav-item{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;color:rgba(255,255,255,.55);transition:all .15s ease;font-size:13.5px;margin-bottom:2px;user-select:none;font-weight:450;}
 .nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.92);}
@@ -820,17 +820,17 @@ tbody tr:hover .row-menu-btn{opacity:1;}
               <div class="o-val" id="dash-savings">$0</div>
               <div class="o-sub" id="dash-savings-sub">across accounts</div>
             </div>
-            <div class="o-stat">
+            <div class="o-stat" onclick="filterTxnsByKind('needs')" title="View needs transactions">
               <div class="o-label">Needs</div>
               <div class="o-val" id="hero-fixed">—</div>
               <div class="o-sub" id="hero-fixed-sub">committed</div>
             </div>
-            <div class="o-stat">
+            <div class="o-stat" onclick="filterTxnsByKind('wants')" title="View wants transactions">
               <div class="o-label">Wants</div>
               <div class="o-val" id="hero-disc">—</div>
               <div class="o-sub" id="hero-disc-sub">flexible</div>
             </div>
-            <div class="o-stat">
+            <div class="o-stat" onclick="showSavingsRateInfo()" title="See savings rate breakdown">
               <div class="o-label">Savings rate</div>
               <div class="o-val" id="hero-savings-rate">—</div>
               <div class="o-sub">of income</div>
@@ -2502,11 +2502,11 @@ function renderChartSection() {
   let datasets;
   if (chartViewMode === 'fixed-variable') {
     const fixedData = filteredMonths.map(m =>
-      allExpenses.filter(t => t.date.startsWith(m) && isNeeds(t))
+      allExpenses.filter(t => t.date.startsWith(m) && isNeeds(t) && !chartHiddenCats.has(t.category))
                  .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
     );
     const varData = filteredMonths.map(m =>
-      allExpenses.filter(t => t.date.startsWith(m) && !isNeeds(t))
+      allExpenses.filter(t => t.date.startsWith(m) && !isNeeds(t) && !chartHiddenCats.has(t.category))
                  .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
     );
     const incomeData = filteredMonths.map(m =>
@@ -3489,6 +3489,29 @@ function goToCatFilter(catKey) {
   const s = document.getElementById('f-search'); if (s) s.value = '';
   const p = document.getElementById('f-person'); if (p) p.value = '';
   goNav('transactions');
+}
+function filterTxnsByKind(kind) {
+  // kind: 'needs' filters to fixed/committed cats, 'wants' to flexible cats
+  const wantNeeds = (kind === 'needs');
+  txnTypeFilter  = '';
+  txnCatFilter   = new Set(CATS.filter(c => !!c.fixed === wantNeeds).map(c => c.key));
+  txnCardFilter  = new Set();
+  txnMonthFilter = selMonth ? new Set([selMonth]) : new Set();
+  const s = document.getElementById('f-search'); if (s) s.value = '';
+  const p = document.getElementById('f-person'); if (p) p.value = '';
+  goNav('transactions');
+}
+function showSavingsRateInfo() {
+  const rate     = document.getElementById('hero-savings-rate')?.textContent || '—';
+  const income   = document.getElementById('dash-income')?.textContent || '$0';
+  const net      = document.getElementById('dash-net')?.textContent || '$0';
+  const periodEl = document.getElementById('hero-sub');
+  const period   = periodEl?.textContent || 'this period';
+  if (typeof showToast === 'function') {
+    showToast(`${period}: saved ${net} of ${income} income — savings rate ${rate}.`);
+  } else {
+    alert(`${period}\n\nIncome: ${income}\nNet (saved): ${net}\nSavings rate: ${rate}`);
+  }
 }
 function setTxnTypePill(type) {
   txnTypeFilter = txnTypeFilter === type ? '' : type;
