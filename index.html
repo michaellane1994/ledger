@@ -310,9 +310,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .heat-table .heat-chev{font-size:9.5px;color:var(--muted);margin-left:4px;display:inline-block;transition:transform .15s;}
 .heat-table .heat-kind-row.is-expanded .heat-chev{transform:rotate(180deg);}
 .heat-table .heat-child-row{background:var(--bg-2);}
-.heat-table .heat-child-row .heat-cat-cell{background:var(--bg-2);padding-left:26px;font-weight:400;color:var(--ink-2);}
+.heat-table .heat-child-row td{font-size:.92em;font-style:italic;font-weight:400;color:var(--ink-2);}
+.heat-table .heat-child-row .heat-cat-cell{background:var(--bg-2);padding-left:26px;font-weight:400;color:var(--ink-2);font-style:italic;}
 [data-theme="dark"] .heat-table .heat-child-row{background:var(--surface-2);}
 [data-theme="dark"] .heat-table .heat-child-row .heat-cat-cell{background:var(--surface-2);}
+/* Show more / Show less toggle row in By Category mode */
+.heat-table .heat-show-more td{text-align:center;cursor:pointer;color:var(--accent);font-weight:500;padding:9px 10px;background:var(--surface);border-bottom:1px solid var(--border);user-select:none;}
+.heat-table .heat-show-more td:hover{background:var(--row-hover);}
 @media (max-width:600px){
   .heat-table{font-size:11px;}
   .heat-table th,.heat-table td{padding:9px 9px;line-height:1.2;border-bottom-color:var(--border);}
@@ -2846,10 +2850,16 @@ function _heatGotoMonthKind(month, kind) {
   goNav('transactions');
 }
 let _heatExpandedKinds = new Set(); // 'needs' and/or 'wants' — rows expanded inline
+let _heatShowAllCats = false;       // By Category mode: default to top 5, expand to show all
 function _heatToggleKindExpand(kind, ev) {
   if (ev) ev.stopPropagation();
   if (_heatExpandedKinds.has(kind)) _heatExpandedKinds.delete(kind);
   else _heatExpandedKinds.add(kind);
+  renderChartSection();
+}
+function _heatToggleShowAll(ev) {
+  if (ev) ev.stopPropagation();
+  _heatShowAllCats = !_heatShowAllCats;
   renderChartSection();
 }
 function renderHeatmapTable(filteredMonths, allExpenses) {
@@ -2943,9 +2953,14 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
       const total = monthVals.reduce((s, v) => s + v, 0);
       return { c, monthVals, total };
     }).filter(r => r.total !== 0);
-    rows.sort((a, b) => b.total - a.total);
+    rows.sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
 
-    bodyHtml = rows.map(r => {
+    // Default to top 5; "Show more" reveals the rest. Skip slicing if user opted in.
+    const TOP_N = 5;
+    const visibleRows = (_heatShowAllCats || rows.length <= TOP_N) ? rows : rows.slice(0, TOP_N);
+    const hiddenCount = rows.length - visibleRows.length;
+
+    bodyHtml = visibleRows.map(r => {
       const budLine = r.c.budget ? `<div class="heat-bud">/ ${cf(r.c.budget)}</div>` : '';
       const cells = r.monthVals.map((v, i) => {
         const cls = _heatBudgetClass(v, r.c.budget);
@@ -2962,10 +2977,21 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
       </tr>`;
     }).join('');
 
-    const monthTotals = filteredMonths.map((m, i) => rows.reduce((s, r) => s + r.monthVals[i], 0));
-    const grand = rows.reduce((s, r) => s + r.total, 0);
+    // Show-more / Show-less toggle row
+    if (rows.length > TOP_N) {
+      const colspan = filteredMonths.length + 2;
+      const label = _heatShowAllCats
+        ? `Show top ${TOP_N} ▴`
+        : `Show ${hiddenCount} more categor${hiddenCount === 1 ? 'y' : 'ies'} ▾`;
+      bodyHtml += `<tr class="heat-show-more"><td colspan="${colspan}" onclick="_heatToggleShowAll(event)">${label}</td></tr>`;
+    }
+
+    // Total row sums VISIBLE rows so the row totals add up to what's shown.
+    const monthTotals = filteredMonths.map((m, i) => visibleRows.reduce((s, r) => s + r.monthVals[i], 0));
+    const grand = visibleRows.reduce((s, r) => s + r.total, 0);
+    const totalLabel = _heatShowAllCats || rows.length <= TOP_N ? 'Total' : `Top ${visibleRows.length}`;
     totalRow = `<tr class="heat-total-row">
-      <td class="heat-cat-cell">Total</td>
+      <td class="heat-cat-cell">${totalLabel}</td>
       ${monthTotals.map(v => `<td>${cf(v)}</td>`).join('')}
       <td>${cf(grand)}</td>
     </tr>`;
