@@ -276,6 +276,31 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .ct-budget-sub{font-size:9.5px;color:var(--muted);}
 /* Fixed badge on tiles */
 .ct-fixed-badge{position:absolute;top:5px;right:6px;font-size:8px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
+/* Heatmap table for the time-by-category section */
+.heat-wrap{overflow:auto;max-width:100%;height:100%;}
+.heat-table{border-collapse:separate;border-spacing:0;font-size:12px;width:100%;min-width:fit-content;}
+.heat-table th,.heat-table td{padding:6px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border-2);}
+.heat-table thead th{position:sticky;top:0;background:var(--surface);font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.3px;text-transform:uppercase;border-bottom:1px solid var(--border);z-index:2;}
+.heat-table .heat-cat-cell{position:sticky;left:0;background:var(--surface);text-align:left;font-weight:500;color:var(--ink);font-size:12.5px;display:flex;align-items:center;gap:8px;min-width:160px;z-index:1;}
+.heat-table thead th:first-child{z-index:3;left:0;}
+.heat-table .heat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.heat-table tbody tr:hover .heat-cat-cell{background:var(--row-hover);}
+.heat-table .heat-cell{cursor:pointer;color:var(--ink);font-variant-numeric:tabular-nums;transition:filter .12s,outline-color .12s;outline:1px solid transparent;}
+.heat-table .heat-cell:hover{filter:brightness(0.96);outline:1px solid var(--accent);}
+.heat-table .heat-cell.empty{color:var(--faint);cursor:default;}
+.heat-table .heat-cell.empty:hover{filter:none;outline:1px solid transparent;}
+.heat-table .heat-total-row td{font-weight:600;border-top:1px solid var(--border);background:var(--bg-2);}
+.heat-table .heat-total-row .heat-cat-cell{background:var(--bg-2);}
+/* Budget-overage shading: light amber → red → dark red */
+.heat-cell.bud-warn  {background:rgba(245,158,11,.18);color:#9a6500;}
+.heat-cell.bud-over  {background:rgba(220,38,38,.20);color:#b91c1c;font-weight:600;}
+.heat-cell.bud-far   {background:rgba(153,27,27,.45);color:#fff;font-weight:600;}
+[data-theme="dark"] .heat-cell.bud-warn{background:rgba(245,158,11,.22);color:#fbbf24;}
+[data-theme="dark"] .heat-cell.bud-over{background:rgba(220,38,38,.30);color:#fca5a5;}
+[data-theme="dark"] .heat-cell.bud-far {background:rgba(153,27,27,.65);color:#fff;}
+/* Chart/Table view toggle (matches existing inline pill group style) */
+.heat-view-toggle{display:flex;gap:2px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px;}
+.heat-view-toggle .btn-sm.active{background:var(--surface);box-shadow:var(--shadow-xs);color:var(--ink);}
 /* Trend badge on tiles */
 .ct-trend{font-size:10px;font-weight:600;margin:1px 0;}
 /* On-track badge */
@@ -933,6 +958,10 @@ tbody tr:hover .row-menu-btn{opacity:1;}
                 <button id="chart-view-fv"  class="btn btn-sm" onclick="setChartView('fixed-variable')" style="padding:2px 9px;font-size:11.5px;">Needs vs Wants</button>
                 <button id="chart-view-cat" class="btn btn-sm" onclick="setChartView('category')" style="padding:2px 9px;font-size:11.5px;">By Category</button>
               </div>
+              <div class="heat-view-toggle">
+                <button id="chart-display-graph" class="btn btn-sm" onclick="setChartDisplay('chart')" style="padding:2px 9px;font-size:11.5px;">Graph</button>
+                <button id="chart-display-table" class="btn btn-sm" onclick="setChartDisplay('table')" style="padding:2px 9px;font-size:11.5px;">Table</button>
+              </div>
               <div style="position:relative;" id="chart-cat-wrap">
                 <button class="dash-pill" onclick="toggleChartCatDropdown(event)"><span id="chart-cat-label">All Categories</span> ▾</button>
                 <div id="chart-cat-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.15);">
@@ -958,7 +987,10 @@ tbody tr:hover .row-menu-btn{opacity:1;}
               <select id="chart-to" onchange="renderChartSection()"></select>
             </div>
           </div>
-          <div class="card-body" style="padding-bottom:16px;"><canvas id="timeChart"></canvas></div>
+          <div class="card-body" style="padding-bottom:16px;">
+            <canvas id="timeChart"></canvas>
+            <div id="timeTable" class="heat-wrap" style="display:none;"></div>
+          </div>
         </div>
       </section>
 
@@ -2371,6 +2403,7 @@ let cashflowChart;
 let fvIncomePlugin = null;
 let chartHiddenCats  = new Set();
 let chartViewMode    = 'fixed-variable'; // 'category' | 'fixed-variable' — default to Needs vs Wants
+let chartDisplayMode = localStorage.getItem('l3_chartDisplayMode') || 'chart'; // 'chart' | 'table'
 let cfBonusVisible   = true;
 let cfStartBalance   = parseFloat(localStorage.getItem('l3_cf_start') || '0');
 const _commitExclRaw = localStorage.getItem('l3_commit_excl');
@@ -2442,6 +2475,13 @@ function setChartView(mode) {
   document.getElementById('chart-view-fv')?.classList.toggle('active', mode === 'fixed-variable');
   renderChartSection();
 }
+function setChartDisplay(mode) {
+  chartDisplayMode = mode === 'table' ? 'table' : 'chart';
+  localStorage.setItem('l3_chartDisplayMode', chartDisplayMode);
+  document.getElementById('chart-display-graph')?.classList.toggle('active', chartDisplayMode === 'chart');
+  document.getElementById('chart-display-table')?.classList.toggle('active', chartDisplayMode === 'table');
+  renderChartSection();
+}
 
 function renderChartSection() {
   const allExpenses  = txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId));
@@ -2470,6 +2510,44 @@ function renderChartSection() {
   let filteredMonths = allAvailMonths;
   if (from) filteredMonths = filteredMonths.filter(m => m >= from);
   if (to)   filteredMonths = filteredMonths.filter(m => m <= to);
+
+  // Sync Graph/Table toggle button active state
+  document.getElementById('chart-display-graph')?.classList.toggle('active', chartDisplayMode === 'chart');
+  document.getElementById('chart-display-table')?.classList.toggle('active', chartDisplayMode === 'table');
+
+  // If table view selected, build the heatmap table and bail (don't render Chart.js)
+  const canvasEl = document.getElementById('timeChart');
+  const tableEl  = document.getElementById('timeTable');
+  if (chartDisplayMode === 'table') {
+    if (timeChart) { timeChart.destroy(); timeChart = null; }
+    if (canvasEl) canvasEl.style.display = 'none';
+    if (tableEl)  tableEl.style.display  = '';
+    // Sync data-mode toggle button states (renderChartSection normally does this further down)
+    document.getElementById('chart-view-cat')?.classList.toggle('active', chartViewMode === 'category');
+    document.getElementById('chart-view-fv')?.classList.toggle('active', chartViewMode === 'fixed-variable');
+    const catWrap = document.getElementById('chart-cat-wrap');
+    if (catWrap) catWrap.style.display = chartViewMode === 'category' ? '' : 'none';
+    // Refresh cat dropdown items so toggling cats also works in table mode
+    const numChartHidden = chartHiddenCats.size;
+    const chartCatLabelEl = document.getElementById('chart-cat-label');
+    if (chartCatLabelEl) chartCatLabelEl.textContent = numChartHidden === 0 ? 'All Categories' : numChartHidden === CATS.length ? 'No Categories' : `${CATS.length - numChartHidden} of ${CATS.length} shown`;
+    const chartItemsEl = document.getElementById('chart-cat-items');
+    if (chartItemsEl) {
+      chartItemsEl.innerHTML = CATS.map(c => {
+        const checked = !chartHiddenCats.has(c.key);
+        return `<label style="display:flex;align-items:center;gap:8px;padding:5px 12px;cursor:pointer;font-size:12.5px;color:var(--ink);">
+          <input type="checkbox" ${checked ? 'checked' : ''} onchange="onChartCatCheckChange('${c.key}',this.checked)"
+            style="accent-color:${c.color};width:13px;height:13px;cursor:pointer;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${c.color};flex-shrink:0;"></span>
+          ${c.label}
+        </label>`;
+      }).join('');
+    }
+    renderHeatmapTable(filteredMonths, allExpenses);
+    return;
+  }
+  if (canvasEl) canvasEl.style.display = '';
+  if (tableEl)  tableEl.style.display  = 'none';
 
   // Update chart category dropdown label and items
   const numChartHidden = chartHiddenCats.size;
@@ -2672,6 +2750,121 @@ function renderChartSection() {
       }
     });
   } else if (timeChart) { timeChart.destroy(); timeChart = null; }
+}
+
+// ── HEATMAP TABLE (alt view of the same data) ──
+function _heatBudgetClass(spend, budget) {
+  if (!budget || budget <= 0 || !spend || spend <= 0) return '';
+  const pct = spend / budget;
+  if (pct >= 1.5)  return 'bud-far';
+  if (pct >= 1.0)  return 'bud-over';
+  if (pct >= 0.75) return 'bud-warn';
+  return '';
+}
+function _heatMonthLabel(m) {
+  const [y, mo] = m.split('-');
+  return new Date(+y, mo - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
+}
+function _heatGotoMonthCat(month, catKey) {
+  const s = document.getElementById('f-search'); if (s) s.value = '';
+  const p = document.getElementById('f-person'); if (p) p.value = '';
+  txnCatFilter   = new Set([catKey]);
+  txnCardFilter  = new Set();
+  txnMonthFilter = new Set([month]);
+  txnTypeFilter  = 'expenses';
+  txnNeedsFilter = '';
+  goNav('transactions');
+}
+function _heatGotoMonthKind(month, kind) {
+  const s = document.getElementById('f-search'); if (s) s.value = '';
+  const p = document.getElementById('f-person'); if (p) p.value = '';
+  txnCatFilter   = new Set();
+  txnCardFilter  = new Set();
+  txnMonthFilter = new Set([month]);
+  txnTypeFilter  = 'expenses';
+  txnNeedsFilter = kind; // 'needs' | 'wants'
+  goNav('transactions');
+}
+function renderHeatmapTable(filteredMonths, allExpenses) {
+  const tableEl = document.getElementById('timeTable');
+  if (!tableEl) return;
+  if (!filteredMonths.length) { tableEl.innerHTML = '<div style="padding:24px;color:var(--muted);font-size:13px;text-align:center;">No data in the selected range.</div>'; return; }
+
+  const headerHtml = `<th class="heat-cat-cell">Category</th>` + filteredMonths.map(m => `<th>${_heatMonthLabel(m)}</th>`).join('') + `<th>Total</th>`;
+
+  let bodyHtml = '';
+  let totalRow = '';
+
+  if (chartViewMode === 'fixed-variable') {
+    // Two rows: Needs and Wants. Budget for each = sum of category budgets in that group.
+    const needsBudget = CATS.filter(c => c.fixed && !chartHiddenCats.has(c.key)).reduce((s, c) => s + (c.budget || 0), 0);
+    const wantsBudget = CATS.filter(c => !c.fixed && !chartHiddenCats.has(c.key)).reduce((s, c) => s + (c.budget || 0), 0);
+    const buildKindRow = (kind, label, color, budget) => {
+      const cells = filteredMonths.map(m => {
+        const v = allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !chartHiddenCats.has(t.category) && !t.incomeType && !t.savingsAccountId)
+                             .reduce((s, t) => s + t.amount, 0);
+        const cls = _heatBudgetClass(v, budget);
+        return v > 0
+          ? `<td class="heat-cell ${cls}" onclick="_heatGotoMonthKind('${m}','${kind}')" title="${label} · ${_heatMonthLabel(m)}: ${fmt(v)}${budget ? ' / ' + fmt(budget) : ''}">${fmt(v)}</td>`
+          : `<td class="heat-cell empty">·</td>`;
+      });
+      const total = filteredMonths.reduce((s, m) => s + allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !chartHiddenCats.has(t.category) && !t.incomeType && !t.savingsAccountId).reduce((ss, t) => ss + t.amount, 0), 0);
+      return `<tr>
+        <td class="heat-cat-cell"><span class="heat-dot" style="background:${color};"></span>${label}</td>
+        ${cells.join('')}
+        <td><strong>${fmt(total)}</strong></td>
+      </tr>`;
+    };
+    bodyHtml += buildKindRow('needs', 'Needs', '#b85416', needsBudget);
+    bodyHtml += buildKindRow('wants', 'Wants', '#1d4e89', wantsBudget);
+    // Month-total footer row
+    const monthTotals = filteredMonths.map(m => allExpenses.filter(t => t.date.startsWith(m) && !chartHiddenCats.has(t.category) && !t.incomeType && !t.savingsAccountId).reduce((s, t) => s + t.amount, 0));
+    const grand = monthTotals.reduce((s, v) => s + v, 0);
+    totalRow = `<tr class="heat-total-row">
+      <td class="heat-cat-cell">Total</td>
+      ${monthTotals.map(v => `<td>${fmt(v)}</td>`).join('')}
+      <td>${fmt(grand)}</td>
+    </tr>`;
+  } else {
+    // By category — one row per visible category, sorted by total spend desc.
+    const visibleCats = CATS.filter(c => !chartHiddenCats.has(c.key));
+    const rows = visibleCats.map(c => {
+      const monthVals = filteredMonths.map(m => {
+        const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key)
+                                 .reduce((s, t) => s + t.amount, 0);
+        const transferred = incomes.filter(i => i.category === c.key && i.fromTxnId && i.date.startsWith(m))
+                                   .reduce((s, i) => s + i.amount, 0);
+        return gross - transferred;
+      });
+      const total = monthVals.reduce((s, v) => s + v, 0);
+      return { c, monthVals, total };
+    }).filter(r => r.total !== 0);
+    rows.sort((a, b) => b.total - a.total);
+
+    bodyHtml = rows.map(r => {
+      const cells = r.monthVals.map((v, i) => {
+        const cls = _heatBudgetClass(v, r.c.budget);
+        return v > 0
+          ? `<td class="heat-cell ${cls}" onclick="_heatGotoMonthCat('${filteredMonths[i]}','${r.c.key}')" title="${r.c.label} · ${_heatMonthLabel(filteredMonths[i])}: ${fmt(v)}${r.c.budget ? ' / ' + fmt(r.c.budget) : ''}">${fmt(v)}</td>`
+          : `<td class="heat-cell empty">·</td>`;
+      });
+      return `<tr>
+        <td class="heat-cat-cell"><span class="heat-dot" style="background:${r.c.color};"></span>${r.c.label}</td>
+        ${cells.join('')}
+        <td><strong>${fmt(r.total)}</strong></td>
+      </tr>`;
+    }).join('');
+
+    const monthTotals = filteredMonths.map((m, i) => rows.reduce((s, r) => s + r.monthVals[i], 0));
+    const grand = rows.reduce((s, r) => s + r.total, 0);
+    totalRow = `<tr class="heat-total-row">
+      <td class="heat-cat-cell">Total</td>
+      ${monthTotals.map(v => `<td>${fmt(v)}</td>`).join('')}
+      <td>${fmt(grand)}</td>
+    </tr>`;
+  }
+
+  tableEl.innerHTML = `<table class="heat-table"><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}${totalRow}</tbody></table>`;
 }
 
 function setCfStart(val) {
