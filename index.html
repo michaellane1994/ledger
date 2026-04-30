@@ -291,13 +291,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .heat-table .heat-cell.empty:hover{filter:none;outline:1px solid transparent;}
 .heat-table .heat-total-row td{font-weight:600;border-top:1px solid var(--border);background:var(--bg-2);}
 .heat-table .heat-total-row .heat-cat-cell{background:var(--bg-2);}
-/* Budget-overage shading: green → amber → red → dark red */
+/* Budget shading: at-or-under = green, over = red, far over = dark red */
 .heat-cell.bud-good  {background:rgba(34,197,94,.15);color:#15803d;}
-.heat-cell.bud-warn  {background:rgba(245,158,11,.18);color:#9a6500;}
 .heat-cell.bud-over  {background:rgba(220,38,38,.20);color:#b91c1c;font-weight:600;}
 .heat-cell.bud-far   {background:rgba(153,27,27,.45);color:#fff;font-weight:600;}
 [data-theme="dark"] .heat-cell.bud-good{background:rgba(34,197,94,.18);color:#86efac;}
-[data-theme="dark"] .heat-cell.bud-warn{background:rgba(245,158,11,.22);color:#fbbf24;}
 [data-theme="dark"] .heat-cell.bud-over{background:rgba(220,38,38,.30);color:#fca5a5;}
 [data-theme="dark"] .heat-cell.bud-far {background:rgba(153,27,27,.65);color:#fff;}
 .heat-bud{font-size:9.5px;color:var(--muted);font-weight:400;margin-top:1px;line-height:1.1;opacity:.85;}
@@ -2473,6 +2471,9 @@ function toggleChartCatDropdown(e) {
 
 function setChartView(mode) {
   chartViewMode = mode;
+  // Toggling between data modes resets any category-hide filtering — otherwise an
+  // expand-into-Needs/Wants leaves the wrong cats hidden when the user clicks back.
+  chartHiddenCats = new Set();
   const catWrap = document.getElementById('chart-cat-wrap');
   if (catWrap) catWrap.style.display = mode === 'category' ? '' : 'none';
   document.getElementById('chart-view-cat')?.classList.toggle('active', mode === 'category');
@@ -2761,10 +2762,9 @@ function _heatBudgetClass(spend, budget) {
   if (!budget || budget <= 0) return '';   // No budget → neutral
   if (!spend  || spend  <= 0) return '';   // No spend → neutral (don't paint green for empty)
   const pct = spend / budget;
-  if (pct >= 1.5)  return 'bud-far';
-  if (pct >= 1.0)  return 'bud-over';
-  if (pct >= 0.75) return 'bud-warn';
-  return 'bud-good';
+  if (pct >= 1.5) return 'bud-far';
+  if (pct > 1.0)  return 'bud-over';
+  return 'bud-good';                       // <= 100% (at-or-under budget) is green
 }
 function _heatMonthLabel(m) {
   const [y, mo] = m.split('-');
