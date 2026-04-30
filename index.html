@@ -303,6 +303,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 [data-theme="dark"] .heat-cell.bud-far {background:rgba(153,27,27,.65);color:#fff;}
 .heat-bud{font-size:9px;color:var(--muted);font-weight:400;margin-top:0;line-height:1;opacity:.8;}
 .heat-cell.bud-far .heat-bud{color:rgba(255,255,255,.85);}
+/* Negative values (refunds, credits, transfers) read as credits, not over-budget. */
+.heat-cell.heat-neg{background:transparent;color:#16a34a;}
+[data-theme="dark"] .heat-cell.heat-neg{color:#5dbd85;}
 /* Inline expand: chevron + nested category rows under Needs/Wants */
 .heat-table .heat-chev{font-size:9.5px;color:var(--muted);margin-left:4px;display:inline-block;transition:transform .15s;}
 .heat-table .heat-kind-row.is-expanded .heat-chev{transform:rotate(180deg);}
@@ -2798,13 +2801,16 @@ function renderChartSection() {
 // ── HEATMAP TABLE (alt view of the same data) ──
 function _heatFmt(n, compact) {
   n = n || 0;
-  if (!compact) return fmt(n);
+  const neg = n < 0;
   const a = Math.abs(n);
-  if (a >= 1000) {
-    const k = n / 1000;
-    return '$' + (Math.abs(k) >= 10 ? k.toFixed(0) : k.toFixed(1)) + 'k';
+  if (!compact) {
+    return (neg ? '-' : '') + '$' + a.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
-  return '$' + Math.round(n).toLocaleString();
+  if (a >= 1000) {
+    const k = a / 1000;
+    return (neg ? '-' : '') + '$' + (k >= 10 ? k.toFixed(0) : k.toFixed(1)) + 'k';
+  }
+  return (neg ? '-' : '') + '$' + Math.round(a).toLocaleString();
 }
 function _heatIsMobile() { return !!(window.matchMedia && window.matchMedia('(max-width:600px)').matches); }
 function _heatBudgetClass(spend, budget) {
@@ -2870,8 +2876,8 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
                              .reduce((s, t) => s + t.amount, 0);
         const cls = _heatBudgetClass(v, budget);
         const budLine = budget ? `<div class="heat-bud">/ ${cf(budget)}</div>` : '';
-        return v > 0
-          ? `<td class="heat-cell ${cls}" onclick="_heatToggleKindExpand('${kind}', event)" title="${label} · ${_heatMonthLabel(m)}: ${fmt(v)}${budget ? ' / ' + fmt(budget) : ''} — click for category breakdown">${cf(v)}${budLine}</td>`
+        return v !== 0
+          ? `<td class="heat-cell ${cls}${v < 0 ? ' heat-neg' : ''}" onclick="_heatToggleKindExpand('${kind}', event)" title="${label} · ${_heatMonthLabel(m)}: ${fmt(v)}${budget ? ' / ' + fmt(budget) : ''} — click for category breakdown">${cf(v)}${budLine}</td>`
           : `<td class="heat-cell empty" onclick="_heatToggleKindExpand('${kind}', event)" style="cursor:pointer;">·</td>`;
       });
       const total = filteredMonths.reduce((s, m) => s + allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !chartHiddenCats.has(t.category) && !t.incomeType && !t.savingsAccountId).reduce((ss, t) => ss + t.amount, 0), 0);
@@ -2898,8 +2904,8 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
           const childCells = d.monthVals.map((v, i) => {
             const cls = _heatBudgetClass(v, d.c.budget);
             const childBudLine = d.c.budget ? `<div class="heat-bud">/ ${cf(d.c.budget)}</div>` : '';
-            return v > 0
-              ? `<td class="heat-cell ${cls}" onclick="_heatGotoMonthCat('${filteredMonths[i]}','${d.c.key}')" title="${d.c.label} · ${_heatMonthLabel(filteredMonths[i])}: ${fmt(v)}${d.c.budget ? ' / ' + fmt(d.c.budget) : ''}">${cf(v)}${childBudLine}</td>`
+            return v !== 0
+              ? `<td class="heat-cell ${cls}${v < 0 ? ' heat-neg' : ''}" onclick="_heatGotoMonthCat('${filteredMonths[i]}','${d.c.key}')" title="${d.c.label} · ${_heatMonthLabel(filteredMonths[i])}: ${fmt(v)}${d.c.budget ? ' / ' + fmt(d.c.budget) : ''}">${cf(v)}${childBudLine}</td>`
               : `<td class="heat-cell empty">·</td>`;
           });
           const catTotalBudget = d.c.budget ? d.c.budget * filteredMonths.length : 0;
@@ -2943,8 +2949,8 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
       const budLine = r.c.budget ? `<div class="heat-bud">/ ${cf(r.c.budget)}</div>` : '';
       const cells = r.monthVals.map((v, i) => {
         const cls = _heatBudgetClass(v, r.c.budget);
-        return v > 0
-          ? `<td class="heat-cell ${cls}" onclick="_heatGotoMonthCat('${filteredMonths[i]}','${r.c.key}')" title="${r.c.label} · ${_heatMonthLabel(filteredMonths[i])}: ${fmt(v)}${r.c.budget ? ' / ' + fmt(r.c.budget) : ''}">${cf(v)}${budLine}</td>`
+        return v !== 0
+          ? `<td class="heat-cell ${cls}${v < 0 ? ' heat-neg' : ''}" onclick="_heatGotoMonthCat('${filteredMonths[i]}','${r.c.key}')" title="${r.c.label} · ${_heatMonthLabel(filteredMonths[i])}: ${fmt(v)}${r.c.budget ? ' / ' + fmt(r.c.budget) : ''}">${cf(v)}${budLine}</td>`
           : `<td class="heat-cell empty">·</td>`;
       });
       const totalBudget = r.c.budget ? r.c.budget * filteredMonths.length : 0;
