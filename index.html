@@ -282,6 +282,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .heat-table{border-collapse:separate;border-spacing:0;font-size:10.5px;width:max-content;min-width:100%;}
 .heat-table th,.heat-table td{padding:2px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border-2);line-height:1.25;}
 .heat-table thead th{position:sticky;top:0;background:var(--surface);font-weight:500;color:var(--muted);font-size:10px;letter-spacing:.3px;text-transform:uppercase;border-bottom:1px solid var(--border);z-index:2;}
+.heat-table tbody td{font-weight:500;}
+.heat-table .heat-row-total{font-weight:600;}
 .heat-table .heat-cat-cell{position:sticky;left:0;background:var(--surface);text-align:left;font-weight:500;color:var(--ink);min-width:160px;z-index:1;vertical-align:middle;}
 .heat-table thead th.heat-cat-cell,.heat-table thead th:first-child{position:sticky;left:0;background:var(--surface);z-index:3;}
 .heat-table .heat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:middle;flex-shrink:0;}
@@ -294,8 +296,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .heat-table .heat-total-row .heat-cat-cell{background:var(--bg-2);}
 /* Budget shading: at-or-under = green, over = red, far over = dark red */
 .heat-cell.bud-good  {background:rgba(34,197,94,.15);color:#15803d;}
-.heat-cell.bud-over  {background:rgba(220,38,38,.20);color:#b91c1c;font-weight:600;}
-.heat-cell.bud-far   {background:rgba(153,27,27,.45);color:#fff;font-weight:600;}
+.heat-cell.bud-over  {background:rgba(220,38,38,.20);color:#b91c1c;}
+.heat-cell.bud-far   {background:rgba(153,27,27,.45);color:#fff;}
 [data-theme="dark"] .heat-cell.bud-good{background:rgba(34,197,94,.18);color:#86efac;}
 [data-theme="dark"] .heat-cell.bud-over{background:rgba(220,38,38,.30);color:#fca5a5;}
 [data-theme="dark"] .heat-cell.bud-far {background:rgba(153,27,27,.65);color:#fff;}
@@ -2878,7 +2880,7 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
       let row = `<tr class="heat-kind-row${expanded ? ' is-expanded' : ''}">
         <td class="heat-cat-cell" onclick="_heatToggleKindExpand('${kind}', event)" style="cursor:pointer;" title="${label} breakdown by category"><span class="heat-dot" style="background:${color};"></span>${label} <span class="heat-chev">${chevron}</span></td>
         ${cells.join('')}
-        <td onclick="_heatToggleKindExpand('${kind}', event)" style="cursor:pointer;"><strong>${cf(total)}</strong>${totalBudLine}</td>
+        <td class="heat-row-total" onclick="_heatToggleKindExpand('${kind}', event)" style="cursor:pointer;">${cf(total)}${totalBudLine}</td>
       </tr>`;
       if (expanded) {
         const wantNeeds = (kind === 'needs');
@@ -2905,7 +2907,7 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
           return `<tr class="heat-child-row">
             <td class="heat-cat-cell heat-child-cat"><span class="heat-dot" style="background:${d.c.color};"></span>${d.c.label}</td>
             ${childCells.join('')}
-            <td><strong>${cf(d.t)}</strong>${catTotalBudLine}</td>
+            <td class="heat-row-total">${cf(d.t)}${catTotalBudLine}</td>
           </tr>`;
         }).join('');
       }
@@ -2950,7 +2952,7 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
       return `<tr>
         <td class="heat-cat-cell"><span class="heat-dot" style="background:${r.c.color};"></span>${r.c.label}</td>
         ${cells.join('')}
-        <td><strong>${cf(r.total)}</strong>${totalBudLine}</td>
+        <td class="heat-row-total">${cf(r.total)}${totalBudLine}</td>
       </tr>`;
     }).join('');
 
