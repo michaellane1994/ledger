@@ -277,10 +277,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 /* Fixed badge on tiles */
 .ct-fixed-badge{position:absolute;top:5px;right:6px;font-size:8px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
 /* Heatmap table for the time-by-category section */
-.card-body.cb-table{height:auto!important;max-height:60dvh!important;min-height:240px;overflow:hidden;}
-.heat-wrap{overflow:auto;max-width:100%;height:100%;-webkit-overflow-scrolling:touch;}
+.card-body.cb-table{height:auto!important;max-height:none!important;min-height:240px;overflow:visible;}
+.heat-wrap{overflow-x:auto;overflow-y:visible;max-width:100%;height:auto;-webkit-overflow-scrolling:touch;}
 .heat-table{border-collapse:separate;border-spacing:0;font-size:12px;width:100%;min-width:fit-content;}
-.heat-table th,.heat-table td{padding:6px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border-2);}
+.heat-table th,.heat-table td{padding:4px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border-2);}
 .heat-table thead th{position:sticky;top:0;background:var(--surface);font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.3px;text-transform:uppercase;border-bottom:1px solid var(--border);z-index:2;}
 .heat-table .heat-cat-cell{position:sticky;left:0;background:var(--surface);text-align:left;font-weight:500;color:var(--ink);font-size:12.5px;display:flex;align-items:center;gap:8px;min-width:160px;z-index:1;}
 .heat-table thead th:first-child{z-index:3;left:0;}
@@ -302,11 +302,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .heat-bud{font-size:9.5px;color:var(--muted);font-weight:400;margin-top:1px;line-height:1.1;opacity:.85;}
 .heat-cell.bud-far .heat-bud{color:rgba(255,255,255,.85);}
 @media (max-width:600px){
-  .card-body.cb-table{max-height:72dvh!important;}
   .heat-table{font-size:11px;}
-  .heat-table th,.heat-table td{padding:7px 6px;}
+  .heat-table th,.heat-table td{padding:5px 6px;}
   .heat-table thead th{font-size:9.5px;letter-spacing:.2px;padding:6px 6px;}
-  .heat-table .heat-cat-cell{min-width:120px;font-size:11.5px;gap:6px;padding-left:8px;}
+  .heat-table .heat-cat-cell{min-width:118px;font-size:11.5px;gap:6px;padding-left:8px;}
   .heat-table .heat-dot{width:7px;height:7px;}
   .heat-cell{min-width:54px;}
   .heat-bud{font-size:9px;}
@@ -1005,6 +1004,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
             <canvas id="timeChart"></canvas>
             <div id="timeTable" class="heat-wrap" style="display:none;"></div>
           </div>
+          <div id="heat-kind-popover" style="display:none;position:fixed;z-index:300;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.18);min-width:240px;max-width:340px;font-family:'Inter',sans-serif;"></div>
         </div>
       </section>
 
@@ -2807,6 +2807,8 @@ function _heatGotoMonthKind(month, kind) {
 }
 function _heatExpandKind(kind) {
   // Switch the heatmap to By Category view filtered to just this kind's categories.
+  const pop = document.getElementById('heat-kind-popover');
+  if (pop) pop.style.display = 'none';
   const wantNeeds = (kind === 'needs');
   chartViewMode = 'category';
   chartHiddenCats = new Set(CATS.filter(c => !!c.fixed !== wantNeeds).map(c => c.key));
@@ -2816,9 +2818,88 @@ function _heatExpandKind(kind) {
   if (catWrap) catWrap.style.display = '';
   renderChartSection();
 }
+let _heatVisibleMonths = [];
+function _heatOpenKindMenu(kind, ev) {
+  if (ev) ev.stopPropagation();
+  const pop = document.getElementById('heat-kind-popover');
+  if (!pop) return;
+  const wantNeeds = (kind === 'needs');
+  const cats = CATS.filter(c => !!c.fixed === wantNeeds && !chartHiddenCats.has(c.key));
+  const months = _heatVisibleMonths;
+  const allExpenses = txns.filter(t => t.amount > 0 && !t.incomeType && !t.savingsAccountId);
+  const items = cats.map(c => {
+    const total = months.reduce((s, m) => {
+      const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key).reduce((ss, t) => ss + t.amount, 0);
+      const transferred = incomes.filter(i => i.category === c.key && i.fromTxnId && i.date.startsWith(m)).reduce((ss, i) => ss + i.amount, 0);
+      return s + (gross - transferred);
+    }, 0);
+    const budget = (c.budget || 0) * months.length;
+    return { c, total, budget };
+  }).filter(it => it.total > 0).sort((a, b) => b.total - a.total);
+  const grand = items.reduce((s, it) => s + it.total, 0);
+  const label = kind === 'needs' ? 'Needs' : 'Wants';
+  const range = months.length ? `${_heatMonthLabel(months[0])} – ${_heatMonthLabel(months[months.length - 1])}` : '';
+  pop.innerHTML = `
+    <div style="padding:10px 14px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink);">${label}</div>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:2px;">${range}</div>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;">${fmt(grand)}</div>
+    </div>
+    <div style="max-height:46dvh;overflow-y:auto;padding:4px 0;">
+      ${items.length ? items.map(it => {
+        const cls = _heatBudgetClass(it.total, it.budget);
+        const budTxt = it.budget ? `<span style="font-size:10px;color:var(--muted);margin-left:6px;">/ ${fmt(it.budget)}</span>` : '';
+        return `<div onclick="_heatPopoverGoCat('${it.c.key}')" class="heat-pop-item ${cls}" style="display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;font-size:12.5px;border-left:3px solid ${it.c.color};">
+          <span style="flex:1;color:var(--ink);">${it.c.label}</span>
+          <span style="font-variant-numeric:tabular-nums;">${fmt(it.total)}${budTxt}</span>
+        </div>`;
+      }).join('') : '<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px;">No spend in this group.</div>'}
+    </div>
+    <div style="border-top:1px solid var(--border);padding:4px 0;">
+      <button onclick="_heatExpandKind('${kind}')" style="width:100%;background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-family:inherit;padding:8px 14px;text-align:center;">View as table →</button>
+    </div>
+  `;
+  // Position popover near the click target
+  pop.style.display = 'block';
+  pop.style.visibility = 'hidden';
+  const anchor = ev?.currentTarget;
+  const rect   = anchor ? anchor.getBoundingClientRect() : { left: 12, right: 12, top: 80, bottom: 80 };
+  const popRect = pop.getBoundingClientRect();
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = rect.left;
+  let top  = rect.bottom + 6;
+  if (left + popRect.width  > vw - 8) left = vw - popRect.width  - 8;
+  if (left < 8) left = 8;
+  if (top  + popRect.height > vh - 8) top = Math.max(8, rect.top - popRect.height - 6);
+  pop.style.left = left + 'px';
+  pop.style.top  = top  + 'px';
+  pop.style.visibility = 'visible';
+  // Click-outside to close (next-tick so this opening click doesn't immediately close it)
+  setTimeout(() => {
+    const close = e => {
+      if (!pop.contains(e.target)) { pop.style.display = 'none'; document.removeEventListener('click', close); }
+    };
+    document.addEventListener('click', close);
+  }, 0);
+}
+function _heatPopoverGoCat(catKey) {
+  const pop = document.getElementById('heat-kind-popover');
+  if (pop) pop.style.display = 'none';
+  const s = document.getElementById('f-search'); if (s) s.value = '';
+  const p = document.getElementById('f-person'); if (p) p.value = '';
+  txnCatFilter   = new Set([catKey]);
+  txnCardFilter  = new Set();
+  txnMonthFilter = new Set(_heatVisibleMonths);
+  txnTypeFilter  = 'expenses';
+  txnNeedsFilter = '';
+  goNav('transactions');
+}
 function renderHeatmapTable(filteredMonths, allExpenses) {
   const tableEl = document.getElementById('timeTable');
   if (!tableEl) return;
+  _heatVisibleMonths = filteredMonths.slice();
   if (!filteredMonths.length) { tableEl.innerHTML = '<div style="padding:24px;color:var(--muted);font-size:13px;text-align:center;">No data in the selected range.</div>'; return; }
 
   const headerHtml = `<th class="heat-cat-cell">Category</th>` + filteredMonths.map(m => `<th>${_heatMonthLabel(m)}</th>`).join('') + `<th>Total</th>`;
@@ -2837,14 +2918,14 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
         const cls = _heatBudgetClass(v, budget);
         const budLine = budget ? `<div class="heat-bud">/ ${fmt(budget)}</div>` : '';
         return v > 0
-          ? `<td class="heat-cell ${cls}" onclick="_heatExpandKind('${kind}')" title="${label} · ${_heatMonthLabel(m)}: ${fmt(v)}${budget ? ' / ' + fmt(budget) : ''} — click to break down by category">${fmt(v)}${budLine}</td>`
+          ? `<td class="heat-cell ${cls}" onclick="_heatOpenKindMenu('${kind}', event)" title="${label} · ${_heatMonthLabel(m)}: ${fmt(v)}${budget ? ' / ' + fmt(budget) : ''} — click for category breakdown">${fmt(v)}${budLine}</td>`
           : `<td class="heat-cell empty">·</td>`;
       });
       const total = filteredMonths.reduce((s, m) => s + allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !chartHiddenCats.has(t.category) && !t.incomeType && !t.savingsAccountId).reduce((ss, t) => ss + t.amount, 0), 0);
       const totalBudget = budget ? budget * filteredMonths.length : 0;
       const totalBudLine = totalBudget ? `<div class="heat-bud">/ ${fmt(totalBudget)}</div>` : '';
       return `<tr>
-        <td class="heat-cat-cell" onclick="_heatExpandKind('${kind}')" style="cursor:pointer;" title="Break down ${label} by category"><span class="heat-dot" style="background:${color};"></span>${label}</td>
+        <td class="heat-cat-cell" onclick="_heatOpenKindMenu('${kind}', event)" style="cursor:pointer;" title="${label} breakdown by category"><span class="heat-dot" style="background:${color};"></span>${label} <span style="font-size:10px;color:var(--muted);margin-left:4px;">▾</span></td>
         ${cells.join('')}
         <td><strong>${fmt(total)}</strong>${totalBudLine}</td>
       </tr>`;
