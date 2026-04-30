@@ -277,7 +277,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 /* Fixed badge on tiles */
 .ct-fixed-badge{position:absolute;top:5px;right:6px;font-size:8px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
 /* Heatmap table for the time-by-category section */
-.heat-wrap{overflow:auto;max-width:100%;height:100%;}
+.card-body.cb-table{height:auto!important;max-height:60dvh!important;min-height:240px;overflow:hidden;}
+.heat-wrap{overflow:auto;max-width:100%;height:100%;-webkit-overflow-scrolling:touch;}
 .heat-table{border-collapse:separate;border-spacing:0;font-size:12px;width:100%;min-width:fit-content;}
 .heat-table th,.heat-table td{padding:6px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border-2);}
 .heat-table thead th{position:sticky;top:0;background:var(--surface);font-weight:500;color:var(--muted);font-size:11px;letter-spacing:.3px;text-transform:uppercase;border-bottom:1px solid var(--border);z-index:2;}
@@ -300,6 +301,16 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 [data-theme="dark"] .heat-cell.bud-far {background:rgba(153,27,27,.65);color:#fff;}
 .heat-bud{font-size:9.5px;color:var(--muted);font-weight:400;margin-top:1px;line-height:1.1;opacity:.85;}
 .heat-cell.bud-far .heat-bud{color:rgba(255,255,255,.85);}
+@media (max-width:600px){
+  .card-body.cb-table{max-height:72dvh!important;}
+  .heat-table{font-size:11px;}
+  .heat-table th,.heat-table td{padding:7px 6px;}
+  .heat-table thead th{font-size:9.5px;letter-spacing:.2px;padding:6px 6px;}
+  .heat-table .heat-cat-cell{min-width:120px;font-size:11.5px;gap:6px;padding-left:8px;}
+  .heat-table .heat-dot{width:7px;height:7px;}
+  .heat-cell{min-width:54px;}
+  .heat-bud{font-size:9px;}
+}
 /* Chart/Table view toggle (matches existing inline pill group style) */
 .heat-view-toggle{display:flex;gap:2px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px;}
 .heat-view-toggle .btn-sm.active{background:var(--surface);box-shadow:var(--shadow-xs);color:var(--ink);}
@@ -557,6 +568,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .bottom-nav{display:none;}
 
 @media(max-width:768px){
+  .card-head{flex-wrap:wrap;gap:10px;}
   .sidebar{transform:translateX(-100%);transition:transform .25s ease;z-index:100;}
   .sidebar.open{transform:translateX(0);}
   .sidebar-overlay.open{display:block;}
@@ -2523,10 +2535,12 @@ function renderChartSection() {
   // If table view selected, build the heatmap table and bail (don't render Chart.js)
   const canvasEl = document.getElementById('timeChart');
   const tableEl  = document.getElementById('timeTable');
+  const chartCardBody = canvasEl?.parentElement;
   if (chartDisplayMode === 'table') {
     if (timeChart) { timeChart.destroy(); timeChart = null; }
     if (canvasEl) canvasEl.style.display = 'none';
     if (tableEl)  tableEl.style.display  = '';
+    chartCardBody?.classList.add('cb-table');
     // Sync data-mode toggle button states (renderChartSection normally does this further down)
     document.getElementById('chart-view-cat')?.classList.toggle('active', chartViewMode === 'category');
     document.getElementById('chart-view-fv')?.classList.toggle('active', chartViewMode === 'fixed-variable');
@@ -2553,6 +2567,7 @@ function renderChartSection() {
   }
   if (canvasEl) canvasEl.style.display = '';
   if (tableEl)  tableEl.style.display  = 'none';
+  chartCardBody?.classList.remove('cb-table');
 
   // Update chart category dropdown label and items
   const numChartHidden = chartHiddenCats.size;
