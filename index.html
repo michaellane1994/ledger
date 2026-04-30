@@ -291,13 +291,17 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .heat-table .heat-cell.empty:hover{filter:none;outline:1px solid transparent;}
 .heat-table .heat-total-row td{font-weight:600;border-top:1px solid var(--border);background:var(--bg-2);}
 .heat-table .heat-total-row .heat-cat-cell{background:var(--bg-2);}
-/* Budget-overage shading: light amber → red → dark red */
+/* Budget-overage shading: green → amber → red → dark red */
+.heat-cell.bud-good  {background:rgba(34,197,94,.15);color:#15803d;}
 .heat-cell.bud-warn  {background:rgba(245,158,11,.18);color:#9a6500;}
 .heat-cell.bud-over  {background:rgba(220,38,38,.20);color:#b91c1c;font-weight:600;}
 .heat-cell.bud-far   {background:rgba(153,27,27,.45);color:#fff;font-weight:600;}
+[data-theme="dark"] .heat-cell.bud-good{background:rgba(34,197,94,.18);color:#86efac;}
 [data-theme="dark"] .heat-cell.bud-warn{background:rgba(245,158,11,.22);color:#fbbf24;}
 [data-theme="dark"] .heat-cell.bud-over{background:rgba(220,38,38,.30);color:#fca5a5;}
 [data-theme="dark"] .heat-cell.bud-far {background:rgba(153,27,27,.65);color:#fff;}
+.heat-bud{font-size:9.5px;color:var(--muted);font-weight:400;margin-top:1px;line-height:1.1;opacity:.85;}
+.heat-cell.bud-far .heat-bud{color:rgba(255,255,255,.85);}
 /* Chart/Table view toggle (matches existing inline pill group style) */
 .heat-view-toggle{display:flex;gap:2px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px;}
 .heat-view-toggle .btn-sm.active{background:var(--surface);box-shadow:var(--shadow-xs);color:var(--ink);}
@@ -2754,12 +2758,13 @@ function renderChartSection() {
 
 // ── HEATMAP TABLE (alt view of the same data) ──
 function _heatBudgetClass(spend, budget) {
-  if (!budget || budget <= 0 || !spend || spend <= 0) return '';
+  if (!budget || budget <= 0) return '';   // No budget → neutral
+  if (!spend  || spend  <= 0) return '';   // No spend → neutral (don't paint green for empty)
   const pct = spend / budget;
   if (pct >= 1.5)  return 'bud-far';
   if (pct >= 1.0)  return 'bud-over';
   if (pct >= 0.75) return 'bud-warn';
-  return '';
+  return 'bud-good';
 }
 function _heatMonthLabel(m) {
   const [y, mo] = m.split('-');
@@ -2785,6 +2790,17 @@ function _heatGotoMonthKind(month, kind) {
   txnNeedsFilter = kind; // 'needs' | 'wants'
   goNav('transactions');
 }
+function _heatExpandKind(kind) {
+  // Switch the heatmap to By Category view filtered to just this kind's categories.
+  const wantNeeds = (kind === 'needs');
+  chartViewMode = 'category';
+  chartHiddenCats = new Set(CATS.filter(c => !!c.fixed !== wantNeeds).map(c => c.key));
+  document.getElementById('chart-view-cat')?.classList.toggle('active', true);
+  document.getElementById('chart-view-fv')?.classList.toggle('active', false);
+  const catWrap = document.getElementById('chart-cat-wrap');
+  if (catWrap) catWrap.style.display = '';
+  renderChartSection();
+}
 function renderHeatmapTable(filteredMonths, allExpenses) {
   const tableEl = document.getElementById('timeTable');
   if (!tableEl) return;
@@ -2804,15 +2820,18 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
         const v = allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !chartHiddenCats.has(t.category) && !t.incomeType && !t.savingsAccountId)
                              .reduce((s, t) => s + t.amount, 0);
         const cls = _heatBudgetClass(v, budget);
+        const budLine = budget ? `<div class="heat-bud">/ ${fmt(budget)}</div>` : '';
         return v > 0
-          ? `<td class="heat-cell ${cls}" onclick="_heatGotoMonthKind('${m}','${kind}')" title="${label} · ${_heatMonthLabel(m)}: ${fmt(v)}${budget ? ' / ' + fmt(budget) : ''}">${fmt(v)}</td>`
+          ? `<td class="heat-cell ${cls}" onclick="_heatExpandKind('${kind}')" title="${label} · ${_heatMonthLabel(m)}: ${fmt(v)}${budget ? ' / ' + fmt(budget) : ''} — click to break down by category">${fmt(v)}${budLine}</td>`
           : `<td class="heat-cell empty">·</td>`;
       });
       const total = filteredMonths.reduce((s, m) => s + allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !chartHiddenCats.has(t.category) && !t.incomeType && !t.savingsAccountId).reduce((ss, t) => ss + t.amount, 0), 0);
+      const totalBudget = budget ? budget * filteredMonths.length : 0;
+      const totalBudLine = totalBudget ? `<div class="heat-bud">/ ${fmt(totalBudget)}</div>` : '';
       return `<tr>
-        <td class="heat-cat-cell"><span class="heat-dot" style="background:${color};"></span>${label}</td>
+        <td class="heat-cat-cell" onclick="_heatExpandKind('${kind}')" style="cursor:pointer;" title="Break down ${label} by category"><span class="heat-dot" style="background:${color};"></span>${label}</td>
         ${cells.join('')}
-        <td><strong>${fmt(total)}</strong></td>
+        <td><strong>${fmt(total)}</strong>${totalBudLine}</td>
       </tr>`;
     };
     bodyHtml += buildKindRow('needs', 'Needs', '#b85416', needsBudget);
@@ -2842,16 +2861,19 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
     rows.sort((a, b) => b.total - a.total);
 
     bodyHtml = rows.map(r => {
+      const budLine = r.c.budget ? `<div class="heat-bud">/ ${fmt(r.c.budget)}</div>` : '';
       const cells = r.monthVals.map((v, i) => {
         const cls = _heatBudgetClass(v, r.c.budget);
         return v > 0
-          ? `<td class="heat-cell ${cls}" onclick="_heatGotoMonthCat('${filteredMonths[i]}','${r.c.key}')" title="${r.c.label} · ${_heatMonthLabel(filteredMonths[i])}: ${fmt(v)}${r.c.budget ? ' / ' + fmt(r.c.budget) : ''}">${fmt(v)}</td>`
+          ? `<td class="heat-cell ${cls}" onclick="_heatGotoMonthCat('${filteredMonths[i]}','${r.c.key}')" title="${r.c.label} · ${_heatMonthLabel(filteredMonths[i])}: ${fmt(v)}${r.c.budget ? ' / ' + fmt(r.c.budget) : ''}">${fmt(v)}${budLine}</td>`
           : `<td class="heat-cell empty">·</td>`;
       });
+      const totalBudget = r.c.budget ? r.c.budget * filteredMonths.length : 0;
+      const totalBudLine = totalBudget ? `<div class="heat-bud">/ ${fmt(totalBudget)}</div>` : '';
       return `<tr>
         <td class="heat-cat-cell"><span class="heat-dot" style="background:${r.c.color};"></span>${r.c.label}</td>
         ${cells.join('')}
-        <td><strong>${fmt(r.total)}</strong></td>
+        <td><strong>${fmt(r.total)}</strong>${totalBudLine}</td>
       </tr>`;
     }).join('');
 
