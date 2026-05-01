@@ -836,7 +836,11 @@ tbody tr:hover .row-menu-btn{opacity:1;}
     <button class="dash-pill" id="dp-latest" onclick="setDashPeriod('latest')">Latest Month</button>
     <button class="dash-pill" id="dp-3m"     onclick="setDashPeriod('3m')">Last 3 Months</button>
     <button class="dash-pill" id="dp-ytd"    onclick="setDashPeriod('ytd')">Year to Date</button>
-    <button id="dash-push-btn" onclick="manualPush()" style="margin-left:auto;flex-shrink:0;display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap;">
+    <div style="position:relative;margin-left:auto;flex-shrink:0;" id="dash-currency-wrap">
+      <button class="dash-pill" id="dash-currency-btn" onclick="toggleCurrencyDropdown(event)" title="Display currency"><span id="dash-currency-label">CAD</span> ▾</button>
+      <div id="dash-currency-menu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;min-width:200px;max-height:300px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);"></div>
+    </div>
+    <button id="dash-push-btn" onclick="manualPush()" style="flex-shrink:0;display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
       <span class="push-label">Push to Sheets</span>
     </button>
@@ -1472,8 +1476,8 @@ function doPost(e) {
         Object.entries(data.learned||{}).map(([m,c]) => [m,c]));
       writeSheet(ss, INCOME_SHEET, ['id','date','amount','type','person','desc','note','fromTxnId','category'],
         (data.incomes||[]).map(i => [i.id,i.date,i.amount,i.type,i.person||'',i.desc||'',i.note||'',i.fromTxnId||'',i.category||'']));
-      writeSheet(ss, SAVINGS_SHEET, ['id','name','type','person','balance','baseBalance','goal'],
-        (data.savAccts||[]).map(a => [a.id,a.name,a.type,a.person||'',a.balance||0,a.baseBalance||0,a.goal||'']));
+      writeSheet(ss, SAVINGS_SHEET, ['id','name','type','person','balance','baseBalance','goal','currency','balanceEquiv'],
+        (data.savAccts||[]).map(a => [a.id,a.name,a.type,a.person||'',a.balance||0,a.baseBalance||0,a.goal||'',a.currency||'',a.balanceEquiv||'']));
       writeSheet(ss, CONTRIB_SHEET, ['id','date','amount','accountId','type','person','note','fromTxnId'],
         (data.contribs||[]).map(c => [c.id,c.date,c.amount,c.accountId,c.type,c.person||'',c.note||'',c.fromTxnId||'']));
       writeSheet(ss, RENTAL_SHEET, ['id','date','amount','cat','person','card','desc','note'],
@@ -1488,7 +1492,7 @@ function doPost(e) {
       const txns     = readSheet(ss, SHEET_NAME,   r => ({id:r.id,date:r.date,merchant:r.merchant,amount:parseFloat(r.amount)||0,category:r.category,person:r.person,card:r.card||'',note:r.note,refund:r.refund==='true',manual:r.manual==='true',incomeType:r.incomeType||undefined,savingsAccountId:r.savingsAccountId||undefined,incomeCategory:r.incomeCategory||undefined,needs:r.needs==='true'?true:r.needs==='false'?false:undefined}));
       const learned  = {}; readSheet(ss, LEARNED_SHEET, r => r).forEach(r => { if(r.merchant) learned[r.merchant]=r.category; });
       const incomes  = readSheet(ss, INCOME_SHEET,  r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,type:r.type,person:r.person,desc:r.desc,note:r.note,fromTxnId:r.fromTxnId||undefined,category:r.category||undefined}));
-      const savAccts = readSheet(ss, SAVINGS_SHEET, r => ({id:r.id,name:r.name,type:r.type,person:r.person,balance:parseFloat(r.balance)||0,baseBalance:parseFloat(r.baseBalance)||0,goal:r.goal?parseFloat(r.goal):null}));
+      const savAccts = readSheet(ss, SAVINGS_SHEET, r => ({id:r.id,name:r.name,type:r.type,person:r.person,balance:parseFloat(r.balance)||0,baseBalance:parseFloat(r.baseBalance)||0,goal:r.goal?parseFloat(r.goal):null,currency:r.currency||'',balanceEquiv:r.balanceEquiv?parseFloat(r.balanceEquiv):null}));
       const contribs = readSheet(ss, CONTRIB_SHEET, r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,accountId:r.accountId,type:r.type,person:r.person,note:r.note,fromTxnId:r.fromTxnId||undefined}));
       const rentalExpenses = readSheet(ss, RENTAL_SHEET, r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,cat:r.cat,person:r.person,card:r.card||'',desc:r.desc,note:r.note}));
       const catsRaw = readSheet(ss, CATS_SHEET, r => { try { return {key:r.key,label:r.label,color:r.color,fixed:r.fixed==='true',budget:parseFloat(r.budget)||0,kw:JSON.parse(r.keywords||'[]')}; } catch(e) { return {key:r.key,label:r.label,color:r.color,fixed:r.fixed==='true',budget:parseFloat(r.budget)||0,kw:[]}; } });
@@ -1640,11 +1644,19 @@ function doGet(e) {
         </select>
       </div>
       <div class="add-field">
-        <label>Current Balance ($)</label>
-        <input type="number" id="as-balance" placeholder="0.00" min="0" step="0.01">
+        <label>Currency</label>
+        <select id="as-currency" onchange="onAcctCurrencyChange()"></select>
       </div>
       <div class="add-field">
-        <label>Savings Goal ($) (optional)</label>
+        <label><span id="as-balance-label">Current Balance</span></label>
+        <input type="number" id="as-balance" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="add-field" id="as-equiv-field" style="display:none;">
+        <label><span id="as-equiv-label">Equivalent in primary</span> (optional)</label>
+        <input type="number" id="as-balance-equiv" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="add-field">
+        <label><span id="as-goal-label">Savings Goal</span> (optional)</label>
         <input type="number" id="as-goal" placeholder="0.00" min="0" step="0.01">
       </div>
     </div>
@@ -2638,7 +2650,11 @@ function renderChartSection() {
   // Update chart category dropdown label and items
   const numChartHidden = chartHiddenCats.size;
   const chartCatLabelEl = document.getElementById('chart-cat-label');
-  if (chartCatLabelEl) chartCatLabelEl.textContent = numChartHidden === 0 ? 'All Categories' : numChartHidden === CATS.length ? 'No Categories' : `${CATS.length - numChartHidden} of ${CATS.length} shown`;
+  if (chartCatLabelEl) {
+    if (chartCatMode === 'all')       chartCatLabelEl.textContent = 'All Categories';
+    else if (chartCatMode === 'top5') chartCatLabelEl.textContent = 'Top 5';
+    else chartCatLabelEl.textContent = `Custom (${CATS.length - numChartHidden} of ${CATS.length})`;
+  }
   const chartItemsEl = document.getElementById('chart-cat-items');
   if (chartItemsEl) {
     chartItemsEl.innerHTML = CATS.map(c => {
@@ -2668,12 +2684,14 @@ function renderChartSection() {
 
   let datasets;
   if (chartViewMode === 'fixed-variable') {
+    // Needs vs Wants always sums all categories, regardless of the All/Top 5/Custom picker
+    // (which is intended to scope the By Category breakdown only).
     const fixedData = filteredMonths.map(m =>
-      allExpenses.filter(t => t.date.startsWith(m) && isNeeds(t) && !chartHiddenCats.has(t.category))
+      allExpenses.filter(t => t.date.startsWith(m) && isNeeds(t))
                  .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
     );
     const varData = filteredMonths.map(m =>
-      allExpenses.filter(t => t.date.startsWith(m) && !isNeeds(t) && !chartHiddenCats.has(t.category))
+      allExpenses.filter(t => t.date.startsWith(m) && !isNeeds(t))
                  .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
     );
     const incomeData = filteredMonths.map(m =>
@@ -2843,14 +2861,14 @@ function _heatFmt(n, compact) {
   n = n || 0;
   const neg = n < 0;
   const a = Math.abs(n);
-  if (!compact) {
-    return (neg ? '-' : '') + '$' + a.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
+  const cfg = CURRENCIES[globalCurrency] || CURRENCIES.CAD;
+  const sym = cfg.short;
+  if (!compact) return (neg ? '-' : '') + sym + a.toLocaleString('en-CA', { minimumFractionDigits: cfg.decimals, maximumFractionDigits: cfg.decimals });
   if (a >= 1000) {
     const k = a / 1000;
-    return (neg ? '-' : '') + '$' + (k >= 10 ? k.toFixed(0) : k.toFixed(1)) + 'k';
+    return (neg ? '-' : '') + sym + (k >= 10 ? k.toFixed(0) : k.toFixed(1)) + 'k';
   }
-  return (neg ? '-' : '') + '$' + Math.round(a).toLocaleString();
+  return (neg ? '-' : '') + sym + Math.round(a).toLocaleString();
 }
 function _heatIsMobile() { return !!(window.matchMedia && window.matchMedia('(max-width:600px)').matches); }
 function _heatBudgetClass(spend, budget) {
@@ -2905,14 +2923,15 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
   let totalRow = '';
 
   if (chartViewMode === 'fixed-variable') {
-    // Two rows: Needs and Wants. Budget for each = sum of category budgets in that group.
-    const needsBudget = CATS.filter(c => c.fixed && !chartHiddenCats.has(c.key)).reduce((s, c) => s + (c.budget || 0), 0);
-    const wantsBudget = CATS.filter(c => !c.fixed && !chartHiddenCats.has(c.key)).reduce((s, c) => s + (c.budget || 0), 0);
+    // Needs vs Wants always uses ALL categories — the All/Top 5/Custom picker only scopes
+    // the By Category breakdown, not this view.
+    const needsBudget = CATS.filter(c => c.fixed).reduce((s, c) => s + (c.budget || 0), 0);
+    const wantsBudget = CATS.filter(c => !c.fixed).reduce((s, c) => s + (c.budget || 0), 0);
     const buildKindRow = (kind, label, color, budget) => {
       const expanded = _heatExpandedKinds.has(kind);
       const chevron = expanded ? '▴' : '▾';
       const cells = filteredMonths.map(m => {
-        const v = allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !chartHiddenCats.has(t.category) && !t.incomeType && !t.savingsAccountId)
+        const v = allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !t.incomeType && !t.savingsAccountId)
                              .reduce((s, t) => s + t.amount, 0);
         const cls = _heatBudgetClass(v, budget);
         const budLine = budget ? `<div class="heat-bud">/ ${cf(budget)}</div>` : '';
@@ -2920,7 +2939,7 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
           ? `<td class="heat-cell ${cls}${v < 0 ? ' heat-neg' : ''}" onclick="_heatToggleKindExpand('${kind}', event)" title="${label} · ${_heatMonthLabel(m)}: ${fmt(v)}${budget ? ' / ' + fmt(budget) : ''} — click for category breakdown">${cf(v)}${budLine}</td>`
           : `<td class="heat-cell empty" onclick="_heatToggleKindExpand('${kind}', event)" style="cursor:pointer;">·</td>`;
       });
-      const total = filteredMonths.reduce((s, m) => s + allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !chartHiddenCats.has(t.category) && !t.incomeType && !t.savingsAccountId).reduce((ss, t) => ss + t.amount, 0), 0);
+      const total = filteredMonths.reduce((s, m) => s + allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !t.incomeType && !t.savingsAccountId).reduce((ss, t) => ss + t.amount, 0), 0);
       const totalBudget = budget ? budget * filteredMonths.length : 0;
       const totalBudLine = totalBudget ? `<div class="heat-bud">/ ${cf(totalBudget)}</div>` : '';
       let row = `<tr class="heat-kind-row${expanded ? ' is-expanded' : ''}">
@@ -2930,7 +2949,8 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
       </tr>`;
       if (expanded) {
         const wantNeeds = (kind === 'needs');
-        const childCats = CATS.filter(c => !!c.fixed === wantNeeds && !chartHiddenCats.has(c.key));
+        // Show all categories in the breakdown — independent of the All/Top 5/Custom picker.
+        const childCats = CATS.filter(c => !!c.fixed === wantNeeds);
         const childData = childCats.map(c => {
           const monthVals = filteredMonths.map(m => {
             const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key).reduce((s, t) => s + t.amount, 0);
@@ -2961,8 +2981,8 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
     };
     bodyHtml += buildKindRow('needs', 'Needs', '#b85416', needsBudget);
     bodyHtml += buildKindRow('wants', 'Wants', '#1d4e89', wantsBudget);
-    // Month-total footer row
-    const monthTotals = filteredMonths.map(m => allExpenses.filter(t => t.date.startsWith(m) && !chartHiddenCats.has(t.category) && !t.incomeType && !t.savingsAccountId).reduce((s, t) => s + t.amount, 0));
+    // Month-total footer row — total of ALL category spend
+    const monthTotals = filteredMonths.map(m => allExpenses.filter(t => t.date.startsWith(m) && !t.incomeType && !t.savingsAccountId).reduce((s, t) => s + t.amount, 0));
     const grand = monthTotals.reduce((s, v) => s + v, 0);
     totalRow = `<tr class="heat-total-row">
       <td class="heat-cat-cell">Total</td>
@@ -3399,6 +3419,7 @@ function filtered() {
 
 function renderDashboard() {
   renderPills();
+  if (typeof renderCurrencyDropdown === 'function') renderCurrencyDropdown();
   const ts    = filtered();
   const expenses = ts.filter(t => t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId));
   const effectiveAmt = t => t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount;
@@ -3637,7 +3658,13 @@ function renderDashboard() {
   if (discSubEl)  discSubEl.textContent  = totalIncome > 0 ? (discTotal  / totalIncome * 100).toFixed(0) + '% of income' : 'flexible';
   const totalExpenses = total;
   const net = totalIncome - totalExpenses;
-  const totalSavings = savAccts.reduce((s, a) => s + (a.balance || 0), 0);
+  // For dashboard, use balanceEquiv (manually entered) when account currency differs from global,
+  // otherwise the raw balance. No FX conversion happens automatically.
+  const totalSavings = savAccts.reduce((s, a) => {
+    const ccy = a.currency && CURRENCIES[a.currency] ? a.currency : globalCurrency;
+    const v = (ccy !== globalCurrency && typeof a.balanceEquiv === 'number') ? a.balanceEquiv : (a.balance || 0);
+    return s + v;
+  }, 0);
   const bonusIncome   = monthIncomes.filter(i => i.type === 'bonus').reduce((s, i) => s + i.amount, 0);
   const regularIncome = totalIncome - bonusIncome;
   document.getElementById('dash-income').textContent     = fmt(totalIncome);
@@ -5239,20 +5266,25 @@ function renderSavings() {
       const col  = ACCT_COLORS[a.type] || '#71717a';
       const bg   = ACCT_BGS[a.type]    || '#f4f4f5';
       const pct  = a.goal ? Math.min(a.balance/a.goal*100,100).toFixed(1) : null;
+      const ccy  = a.currency && CURRENCIES[a.currency] ? a.currency : globalCurrency;
+      const ccyBadge = ccy !== globalCurrency ? `<span class="person-tag" style="background:#fef3e8;color:#9a6500;border-color:#f5c07a;">${ccy}</span>` : '';
+      const equivLine = (ccy !== globalCurrency && a.balanceEquiv) ? `<div style="font-size:10.5px;color:var(--faint);margin-top:2px;">≈ ${fmt(a.balanceEquiv, globalCurrency)}</div>` : '';
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
         <div style="flex:1;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
             <span class="cat-badge" style="background:${bg};color:${col};">${ACCT_TYPES[a.type]||a.type}</span>
             <span style="font-weight:500;font-size:13.5px;">${esc(a.name)}</span>
             <span class="person-tag">${a.person}</span>
+            ${ccyBadge}
           </div>
           ${pct !== null ? `<div class="goal-bar-wrap" style="max-width:300px;"><div class="goal-bar" style="width:${pct}%;background:${col};"></div></div>
-          <div class="goal-pct">${pct}% of ${fmt(a.goal)} goal</div>` : ''}
+          <div class="goal-pct">${pct}% of ${fmt(a.goal, ccy)} goal</div>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:12px;">
           <div style="text-align:right;">
-            <div style="font-family:'Playfair Display',serif;font-size:20px;color:${col};">${fmt(a.balance)}</div>
+            <div style="font-family:'Playfair Display',serif;font-size:20px;color:${col};">${fmt(a.balance, ccy)}</div>
             <div style="font-size:11px;color:var(--faint);">current balance</div>
+            ${equivLine}
           </div>
           <button class="btn btn-ghost btn-sm" onclick="editSavings('${a.id}')">Edit</button>
           <button class="del-btn always-on" onclick="deleteSavings('${a.id}')" title="Remove">✕</button>
@@ -5300,13 +5332,36 @@ function toggleCustomAcctType() {
   const isCustom = document.getElementById('as-type').value === '__custom__';
   document.getElementById('as-custom-type-field').style.display = isCustom ? '' : 'none';
 }
+function _populateAcctCurrencyDropdown() {
+  const sel = document.getElementById('as-currency');
+  if (!sel) return;
+  sel.innerHTML = Object.keys(CURRENCIES).map(code =>
+    `<option value="${code}">${code} — ${CURRENCIES[code].label}</option>`
+  ).join('');
+}
+function onAcctCurrencyChange() {
+  const code = document.getElementById('as-currency').value;
+  const cfg = CURRENCIES[code] || CURRENCIES.CAD;
+  const balLabelEl  = document.getElementById('as-balance-label');
+  const goalLabelEl = document.getElementById('as-goal-label');
+  const equivField  = document.getElementById('as-equiv-field');
+  const equivLabel  = document.getElementById('as-equiv-label');
+  if (balLabelEl)  balLabelEl.textContent  = `Current Balance (${code})`;
+  if (goalLabelEl) goalLabelEl.textContent = `Savings Goal (${code})`;
+  if (equivField)  equivField.style.display = code === globalCurrency ? 'none' : '';
+  if (equivLabel)  equivLabel.textContent  = `Equivalent in ${globalCurrency}`;
+}
 function openAddSavings() {
   document.getElementById('as-name').value    = '';
   document.getElementById('as-balance').value = '';
   document.getElementById('as-goal').value    = '';
+  document.getElementById('as-balance-equiv').value = '';
   document.getElementById('as-type-custom').value = '';
   document.getElementById('as-custom-type-field').style.display = 'none';
   document.getElementById('as-type').innerHTML = savingsTypeOptions();
+  _populateAcctCurrencyDropdown();
+  document.getElementById('as-currency').value = globalCurrency;
+  onAcctCurrencyChange();
   document.getElementById('add-savings-modal').dataset.editId = '';
   document.getElementById('savings-modal-title').textContent = 'Add Account';
   document.getElementById('add-savings-modal').classList.add('open');
@@ -5317,6 +5372,7 @@ function editSavings(id) {
   const a = savAccts.find(x => x.id === id);
   if (!a) return;
   document.getElementById('as-type').innerHTML = savingsTypeOptions();
+  _populateAcctCurrencyDropdown();
   document.getElementById('as-type-custom').value = '';
   document.getElementById('as-custom-type-field').style.display = 'none';
   document.getElementById('as-name').value    = a.name;
@@ -5324,6 +5380,9 @@ function editSavings(id) {
   document.getElementById('as-person').value  = a.person;
   document.getElementById('as-balance').value = a.balance;
   document.getElementById('as-goal').value    = a.goal || '';
+  document.getElementById('as-currency').value = a.currency || globalCurrency;
+  document.getElementById('as-balance-equiv').value = a.balanceEquiv || '';
+  onAcctCurrencyChange();
   document.getElementById('add-savings-modal').dataset.editId = id;
   document.getElementById('savings-modal-title').textContent = 'Update Account';
   document.getElementById('add-savings-modal').classList.add('open');
@@ -5337,6 +5396,10 @@ function confirmAddSavings() {
   const person  = document.getElementById('as-person').value;
   const balance = parseFloat(document.getElementById('as-balance').value) || 0;
   const goal    = parseFloat(document.getElementById('as-goal').value)    || null;
+  const currencyRaw = document.getElementById('as-currency')?.value || globalCurrency;
+  const currency    = CURRENCIES[currencyRaw] ? currencyRaw : globalCurrency;
+  const balanceEquivRaw = parseFloat(document.getElementById('as-balance-equiv').value);
+  const balanceEquiv = (currency !== globalCurrency && balanceEquivRaw > 0) ? balanceEquivRaw : null;
   if (!name) { alert('Please enter an account name.'); return; }
   if (type === '__custom__') {
     const customLabel = document.getElementById('as-type-custom').value.trim();
@@ -5353,10 +5416,10 @@ function confirmAddSavings() {
     if (a) {
       const fromContribs = contribs.filter(c => c.accountId === editId)
         .reduce((s, c) => s + (c.type === 'contribution' ? c.amount : -c.amount), 0);
-      Object.assign(a, { name, type, person, balance, baseBalance: balance - fromContribs, goal });
+      Object.assign(a, { name, type, person, balance, baseBalance: balance - fromContribs, goal, currency, balanceEquiv });
     }
   } else {
-    savAccts.push({ id:uid(), name, type, person, balance, baseBalance: balance, goal });
+    savAccts.push({ id:uid(), name, type, person, balance, baseBalance: balance, goal, currency, balanceEquiv });
   }
   persist(); closeAddSavings(); renderSavings(); renderDashboard(); autoPush();
 }
@@ -6663,7 +6726,74 @@ function exportCSV() {
 }
 
 // ── UTILS ────────────────────────────────────────────────
-function fmt(n) { return '$' + (n || 0).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+// Display-only currency support. No FX conversion — each account/value just renders with its currency symbol.
+const CURRENCIES = {
+  CAD: { short: '$',   long: 'C$',   decimals: 2, label: 'Canadian Dollar (CAD)' },
+  USD: { short: '$',   long: 'US$',  decimals: 2, label: 'US Dollar (USD)' },
+  GBP: { short: '£',   long: '£',    decimals: 2, label: 'British Pound (GBP)' },
+  EUR: { short: '€',   long: '€',    decimals: 2, label: 'Euro (EUR)' },
+  AUD: { short: '$',   long: 'A$',   decimals: 2, label: 'Australian Dollar (AUD)' },
+  NZD: { short: '$',   long: 'NZ$',  decimals: 2, label: 'NZ Dollar (NZD)' },
+  CHF: { short: 'Fr ', long: 'CHF ', decimals: 2, label: 'Swiss Franc (CHF)' },
+  JPY: { short: '¥',   long: 'JP¥',  decimals: 0, label: 'Japanese Yen (JPY)' },
+  HKD: { short: '$',   long: 'HK$',  decimals: 2, label: 'Hong Kong Dollar (HKD)' },
+  SGD: { short: '$',   long: 'S$',   decimals: 2, label: 'Singapore Dollar (SGD)' },
+  INR: { short: '₹',   long: '₹',    decimals: 2, label: 'Indian Rupee (INR)' },
+  MXN: { short: '$',   long: 'Mex$', decimals: 2, label: 'Mexican Peso (MXN)' },
+};
+let globalCurrency = localStorage.getItem('l3_currency') || 'CAD';
+if (!CURRENCIES[globalCurrency]) globalCurrency = 'CAD';
+function setGlobalCurrency(code) {
+  if (!CURRENCIES[code]) return;
+  globalCurrency = code;
+  localStorage.setItem('l3_currency', code);
+  renderCurrencyDropdown();
+  const btn = document.getElementById('dash-currency-menu');
+  if (btn) btn.style.display = 'none';
+  if (typeof renderDashboard    === 'function') renderDashboard();
+  if (typeof renderTxns         === 'function') renderTxns();
+  if (typeof renderSavings      === 'function') renderSavings();
+  if (typeof renderIncomes      === 'function') renderIncomes();
+  if (typeof renderMortgageView === 'function') renderMortgageView();
+}
+function toggleCurrencyDropdown(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('dash-currency-menu');
+  if (!menu) return;
+  renderCurrencyDropdown();
+  const opening = menu.style.display === 'none';
+  menu.style.display = opening ? 'block' : 'none';
+  if (opening) {
+    const close = ev => { if (!document.getElementById('dash-currency-wrap').contains(ev.target)) { menu.style.display = 'none'; document.removeEventListener('click', close); } };
+    document.addEventListener('click', close);
+  }
+}
+function renderCurrencyDropdown() {
+  const lbl = document.getElementById('dash-currency-label');
+  if (lbl) lbl.textContent = globalCurrency;
+  const menu = document.getElementById('dash-currency-menu');
+  if (!menu) return;
+  menu.innerHTML = Object.keys(CURRENCIES).map(code => {
+    const c = CURRENCIES[code];
+    const active = code === globalCurrency;
+    return `<div onclick="setGlobalCurrency('${code}')" style="display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;font-size:12.5px;${active ? 'background:var(--row-hover);' : ''}">
+      <span style="display:inline-block;min-width:30px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;">${c.short.trim() || code}</span>
+      <span style="flex:1;color:var(--ink);">${c.label}</span>
+      ${active ? '<span style="color:var(--accent);font-size:13px;">✓</span>' : ''}
+    </div>`;
+  }).join('');
+}
+// fmt(n[, currency]): formats with the given currency code (defaults to globalCurrency).
+// Uses the short symbol when the currency matches the global default, long form otherwise to disambiguate.
+function fmt(n, currency) {
+  currency = currency || globalCurrency;
+  const cfg = CURRENCIES[currency] || CURRENCIES.CAD;
+  const sym = currency === globalCurrency ? cfg.short : cfg.long;
+  const decs = cfg.decimals;
+  const num  = n || 0;
+  const abs  = Math.abs(num).toLocaleString('en-CA', { minimumFractionDigits: decs, maximumFractionDigits: decs });
+  return (num < 0 ? '-' : '') + sym + abs;
+}
 // isNeeds: transaction-level needs flag; falls back to category default
 function isNeeds(t) { return t.needs !== undefined ? t.needs : !!CAT[t.category]?.fixed; }
 function setNeeds(id, val) {
