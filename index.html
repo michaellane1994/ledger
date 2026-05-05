@@ -2927,19 +2927,21 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
     // the By Category breakdown, not this view.
     const needsBudget = CATS.filter(c => c.fixed).reduce((s, c) => s + (c.budget || 0), 0);
     const wantsBudget = CATS.filter(c => !c.fixed).reduce((s, c) => s + (c.budget || 0), 0);
+    // effectiveAmt: same logic the dashboard uses — transfers count as negative spend.
+    const effAmt = t => t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount;
     const buildKindRow = (kind, label, color, budget) => {
       const expanded = _heatExpandedKinds.has(kind);
       const chevron = expanded ? '▴' : '▾';
       const cells = filteredMonths.map(m => {
-        const v = allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !t.incomeType && !t.savingsAccountId)
-                             .reduce((s, t) => s + t.amount, 0);
+        const v = allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !t.savingsAccountId)
+                             .reduce((s, t) => s + effAmt(t), 0);
         const cls = _heatBudgetClass(v, budget);
         const budLine = budget ? `<div class="heat-bud">/ ${cf(budget)}</div>` : '';
         return v !== 0
           ? `<td class="heat-cell ${cls}${v < 0 ? ' heat-neg' : ''}" onclick="_heatToggleKindExpand('${kind}', event)" title="${label} · ${_heatMonthLabel(m)}: ${fmt(v)}${budget ? ' / ' + fmt(budget) : ''} — click for category breakdown">${cf(v)}${budLine}</td>`
           : `<td class="heat-cell empty" onclick="_heatToggleKindExpand('${kind}', event)" style="cursor:pointer;">·</td>`;
       });
-      const total = filteredMonths.reduce((s, m) => s + allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !t.incomeType && !t.savingsAccountId).reduce((ss, t) => ss + t.amount, 0), 0);
+      const total = filteredMonths.reduce((s, m) => s + allExpenses.filter(t => t.date.startsWith(m) && (kind === 'needs' ? isNeeds(t) : !isNeeds(t)) && !t.savingsAccountId).reduce((ss, t) => ss + effAmt(t), 0), 0);
       const totalBudget = budget ? budget * filteredMonths.length : 0;
       const totalBudLine = totalBudget ? `<div class="heat-bud">/ ${cf(totalBudget)}</div>` : '';
       let row = `<tr class="heat-kind-row${expanded ? ' is-expanded' : ''}">
@@ -2981,8 +2983,8 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
     };
     bodyHtml += buildKindRow('needs', 'Needs', '#b85416', needsBudget);
     bodyHtml += buildKindRow('wants', 'Wants', '#1d4e89', wantsBudget);
-    // Month-total footer row — total of ALL category spend
-    const monthTotals = filteredMonths.map(m => allExpenses.filter(t => t.date.startsWith(m) && !t.incomeType && !t.savingsAccountId).reduce((s, t) => s + t.amount, 0));
+    // Month-total footer row — same effectiveAmt math the dashboard uses.
+    const monthTotals = filteredMonths.map(m => allExpenses.filter(t => t.date.startsWith(m) && !t.savingsAccountId).reduce((s, t) => s + effAmt(t), 0));
     const grand = monthTotals.reduce((s, v) => s + v, 0);
     totalRow = `<tr class="heat-total-row">
       <td class="heat-cat-cell">Total</td>
