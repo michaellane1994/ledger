@@ -6,10 +6,12 @@ Ledger is a household expense tracker built as single self-contained HTML files.
 
 ## Two Versions
 
-- `Personal Site/expense-tracker-clean.html` — Michael & Lili's personal version (`l3_` localStorage prefix)
-- `General Template/index.html` — Generic shareable template (`lt_` localStorage prefix)
+- `index.html` (this repo, single source of truth) — Michael & Lili's personal version (`l3_` localStorage prefix). Edit this file directly; commit and push to update GitHub Pages.
+- `General Template/index-selfhost.html` (iCloud symlink) — Generic shareable template (`lt_` localStorage prefix); pushes to the `expensetracker` repo.
 
 Unless explicitly told otherwise, apply changes to **both files**.
+
+> **Note:** The personal site's iCloud master at `~/Library/Mobile Documents/com~apple~CloudDocs/Personal Site/` was retired on 2026-05-05 and archived to `~/ledger-archive/personal-site-2026-05-05/`. The repo's `index.html` is now the only working copy.
 
 ## Code Style
 
@@ -32,6 +34,17 @@ Deploy: `git add . && git commit -m "description" && git push`
 - Always include `fromTxnId` and `category` in Income sheet writes
 - Always call `rebuildCAT()` after modifying `CATS`
 - **If you modify the Apps Script code block** (inside the `<pre id="apps-script-code">` element), always tell the user explicitly: "The Apps Script has changed — you need to copy the updated code from the Setup Guide into your Google Sheets Apps Script editor and redeploy."
+
+## General Template: Sample Data & Reset
+
+The template (`General Template/index.html`) ships with onboarding affordances the personal site does not have. Keep both working when schemas change.
+
+- **`loadSampleData()`** — seeds a demo dataset (~60 txns across 3 months, salary/freelance incomes, 2 savings accounts with contributions, 1 sample mortgage). Wipes existing local data first (with confirm). Used by the welcome-banner "Load sample data" button and Settings → "✨ Load sample data". Update this function whenever you add a new data type or field that should appear in the demo.
+- **`clearLocalData()`** — full local wipe (txns, uploads, incomes, savings, contribs, learned, trash, mortData, mortBalances, mortVoluntaryPmts). Does NOT touch Google Sheets. Keep the wipe list in sync with new state arrays as they're added.
+- **`_wipeAllLocalState()`** — shared helper used by both of the above; always reset new state variables here when introducing them.
+- Any new data type added to the template must be reflected in `loadSampleData` (seed some examples), `_wipeAllLocalState` (reset), and the Sheets push/pull payloads.
+
+These affordances are template-only by design (the personal site has real data and should never ship a "Load sample data" button). Do not port them to `Personal Site/expense-tracker-clean.html`.
 
 ## Claude Code Skills
 
