@@ -4772,6 +4772,11 @@ async function doImport() {
   const cardName = document.getElementById('col-cardname').value.trim() || person;
   const isBank   = document.querySelector('input[name="stmt-type"]:checked').value === 'bank';
   if (isNaN(di) || isNaN(mi) || isNaN(ai)) { alert('Please map Date, Merchant, and Amount columns.'); return; }
+  // Snapshot the user-edited preview rows BEFORE closeMap() — closeMap nulls _pendingImportRows,
+  // which used to make the import fall back to the raw pRows (every original parsed row, ignoring deletions).
+  const previewSnapshot = (_pendingImportRows && _pendingImportRows.length)
+    ? _pendingImportRows.map(r => ({ ...r }))
+    : null;
   closeMap();
   showProc(pFile.name);
   await sleep(400);
@@ -4779,9 +4784,9 @@ async function doImport() {
   setStep(1, 'run'); setProg(25, 'Parsing rows...');
   await sleep(500);
   let parsed;
-  if (_pendingImportRows && _pendingImportRows.length) {
-    // Use edited preview rows as the source of truth
-    parsed = _pendingImportRows.map(r => ({
+  if (previewSnapshot && previewSnapshot.length) {
+    // Use edited preview rows as the source of truth (deletions honored).
+    parsed = previewSnapshot.map(r => ({
       id: uid(),
       date: r.date,
       merchant: r.merchant,
