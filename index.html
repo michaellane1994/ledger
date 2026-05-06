@@ -2013,8 +2013,8 @@ function doGet(e) {
 <!-- ADD TRANSACTION MODAL -->
 <div class="modal-overlay" id="add-modal">
   <div class="modal">
-    <div class="modal-title">Add Transaction</div>
-    <div style="display:flex;gap:0;margin:10px 0 16px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;width:fit-content;">
+    <div class="modal-title" id="add-modal-title">Add Transaction</div>
+    <div id="add-type-row" style="display:flex;gap:0;margin:10px 0 16px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;width:fit-content;">
       <button id="add-type-expense"  onclick="setAddType('expense')"  style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--accent);color:#fff;font-family:'Inter',sans-serif;">Expense</button>
       <button id="add-type-refund"   onclick="setAddType('refund')"   style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--surface);color:var(--muted);font-family:'Inter',sans-serif;">Refund</button>
       <button id="add-type-transfer" onclick="setAddType('transfer')" style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--surface);color:var(--muted);font-family:'Inter',sans-serif;">Transfer / Split</button>
@@ -2052,10 +2052,14 @@ function doGet(e) {
         <label>Note (optional)</label>
         <textarea id="add-note" placeholder="e.g. Expensed through work, John transferred $40 for dinner"></textarea>
       </div>
+      <div class="add-field" id="add-nw-field" style="display:none;">
+        <label>Needs / Wants override</label>
+        <button type="button" id="add-nw-toggle" data-needs="false" onclick="toggleAddNw()" style="padding:6px 12px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#eaf0f9;color:#2563eb;cursor:pointer;font-family:'Inter',sans-serif;">Want</button>
+      </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmAdd()">Add →</button>
+      <button class="btn btn-primary" id="add-modal-confirm-btn" onclick="confirmAdd()">Add →</button>
     </div>
   </div>
 </div>
@@ -4097,6 +4101,7 @@ function renderTxns() {
       <td class="txn-td-amount" style="text-align:right;white-space:nowrap;">
         ${amtDisplay}
         ${(!isIncome && !isSavings && !isRefund) ? `<button onclick="setNeeds('${t.id}',${!isNeeds(t)})" style="font-size:10px;padding:1px 6px;border-radius:4px;border:1px solid var(--border);background:${isNeeds(t)?'#fef3e2':'#eaf0f9'};color:${isNeeds(t)?'#b45309':'#2563eb'};cursor:pointer;font-family:'Inter',sans-serif;margin-top:2px;display:block;margin-left:auto;">${isNeeds(t)?'Need':'Want'}</button>` : ''}
+        <button class="del-btn" onclick="openEditModal('${t.id}')" title="Edit transaction">✎</button>
         <button class="del-btn" onclick="deleteTxn('${t.id}')" title="Remove transaction">✕</button>
       </td>
     </tr>`;
@@ -4927,7 +4932,25 @@ function setAddType(type) {
   if (catLabel) catLabel.textContent = type === 'transfer' ? 'Expense category it offsets' : 'Category';
 }
 
+// ── EDIT TXN STATE ──
+let _editTxnId = null;
+
+function _setAddNwLabel(needs) {
+  const btn = document.getElementById('add-nw-toggle');
+  if (!btn) return;
+  btn.textContent = needs ? 'Need' : 'Want';
+  btn.style.background = needs ? '#fef3e2' : '#eaf0f9';
+  btn.style.color      = needs ? '#b45309' : '#2563eb';
+  btn.dataset.needs    = needs ? 'true' : 'false';
+}
+function toggleAddNw() {
+  const btn = document.getElementById('add-nw-toggle');
+  if (!btn) return;
+  _setAddNwLabel(btn.dataset.needs !== 'true');
+}
+
 function openAddModal() {
+  _editTxnId = null;
   addModalType = 'expense';
   setAddType('expense');
   const sel = document.getElementById('add-cat');
@@ -4937,15 +4960,57 @@ function openAddModal() {
   document.getElementById('add-merchant').value = '';
   document.getElementById('add-card').value     = '';
   document.getElementById('add-note').value     = '';
+  document.getElementById('add-modal-title').textContent = 'Add Transaction';
+  document.getElementById('add-modal-confirm-btn').textContent = 'Add →';
+  document.getElementById('add-type-row').style.display = '';
+  document.getElementById('add-nw-field').style.display = 'none';
+  _setAddNwLabel(false);
   document.getElementById('add-modal').classList.add('open');
   setTimeout(() => document.getElementById('add-merchant').focus(), 100);
 }
 
+function openEditModal(id) {
+  const t = txns.find(x => x.id === id);
+  if (!t) return;
+  _editTxnId = id;
+  const isRefund   = !!t.refund;
+  const isTransfer = t.incomeType === 'transfer';
+  const isIncome   = t.incomeType && t.incomeType !== 'transfer';
+  const isSavings  = !!t.savingsAccountId;
+  const isProtected = isIncome || isSavings;
+  // Type buttons: only meaningful for non-protected txns
+  const type = isTransfer ? 'transfer' : isRefund ? 'refund' : 'expense';
+  setAddType(type);
+  // Category options
+  const sel = document.getElementById('add-cat');
+  sel.innerHTML = CATS.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
+  if (t.category) sel.value = t.category;
+  // Fill fields
+  document.getElementById('add-date').value     = t.date || '';
+  document.getElementById('add-amount').value   = Math.abs(t.amount || 0);
+  document.getElementById('add-merchant').value = t.merchant || '';
+  document.getElementById('add-person').value   = t.person || 'Michael';
+  document.getElementById('add-card').value     = t.card || '';
+  document.getElementById('add-note').value     = t.note || '';
+  // Title and confirm button
+  document.getElementById('add-modal-title').textContent = 'Edit Transaction';
+  document.getElementById('add-modal-confirm-btn').textContent = 'Save →';
+  // Hide the type toggle for protected (income/savings) so user can't accidentally retype them
+  document.getElementById('add-type-row').style.display = isProtected ? 'none' : '';
+  // Needs/Wants override only for plain expenses
+  const showNw = !isRefund && !isTransfer && !isProtected;
+  document.getElementById('add-nw-field').style.display = showNw ? '' : 'none';
+  _setAddNwLabel(isNeeds(t));
+  document.getElementById('add-modal').classList.add('open');
+}
+
 function closeAddModal() {
   document.getElementById('add-modal').classList.remove('open');
+  _editTxnId = null;
 }
 
 function confirmAdd() {
+  if (_editTxnId) { saveEditTxn(); return; }
   const date     = document.getElementById('add-date').value;
   const merchant = document.getElementById('add-merchant').value.trim();
   const amount   = parseFloat(document.getElementById('add-amount').value);
@@ -4973,6 +5038,92 @@ function confirmAdd() {
   renderDashboard();
   txnMonthFilter = new Set([selMonth]);
   renderTxns();
+  autoPush();
+}
+
+function saveEditTxn() {
+  const t = txns.find(x => x.id === _editTxnId);
+  if (!t) { _editTxnId = null; return; }
+  const date     = document.getElementById('add-date').value;
+  const merchant = document.getElementById('add-merchant').value.trim();
+  const amount   = parseFloat(document.getElementById('add-amount').value);
+  const category = document.getElementById('add-cat').value;
+  const person   = document.getElementById('add-person').value;
+  const card     = document.getElementById('add-card').value.trim() || person;
+  const note     = document.getElementById('add-note').value.trim();
+
+  if (!date)              { alert('Please enter a date.'); return; }
+  if (!merchant)          { alert('Please enter a merchant or description.'); return; }
+  if (isNaN(amount) || amount <= 0) { alert('Please enter a valid amount.'); return; }
+
+  const wasIncomeType  = t.incomeType;
+  const wasSavingsAcct = t.savingsAccountId;
+  const isProtected    = (wasIncomeType && wasIncomeType !== 'transfer') || !!wasSavingsAcct;
+
+  // Common fields
+  t.date     = date;
+  t.merchant = merchant;
+  t.category = category;
+  t.person   = person;
+  t.card     = card;
+  t.note     = note;
+
+  if (isProtected) {
+    // Income (salary/etc) or savings transfer — preserve sign and type/linkage
+    const sign = t.amount < 0 ? -1 : 1;
+    t.amount = sign * Math.abs(amount);
+    const mirror = incomes.find(i => i.fromTxnId === t.id);
+    if (mirror) {
+      mirror.date     = date;
+      mirror.amount   = Math.abs(amount);
+      mirror.person   = person;
+      mirror.desc     = merchant;
+      mirror.note     = note;
+      mirror.category = category || null;
+    }
+    if (wasSavingsAcct) recalcAccountBalance(wasSavingsAcct);
+  } else {
+    // Plain expense / refund / transfer — type may have changed via the modal
+    const newType = addModalType;
+    if (newType === 'refund') {
+      t.refund      = true;
+      t.incomeType  = undefined;
+      t.amount      = -Math.abs(amount);
+      const idx = incomes.findIndex(i => i.fromTxnId === t.id);
+      if (idx >= 0) incomes.splice(idx, 1);
+    } else if (newType === 'transfer') {
+      t.refund      = false;
+      t.incomeType  = 'transfer';
+      t.amount      = -Math.abs(amount);
+      const mirror = incomes.find(i => i.fromTxnId === t.id);
+      if (mirror) {
+        mirror.date     = date;
+        mirror.amount   = Math.abs(amount);
+        mirror.person   = person;
+        mirror.desc     = merchant;
+        mirror.note     = note;
+        mirror.category = category || null;
+        mirror.type     = 'transfer';
+      } else {
+        incomes.push({ id: uid(), date, amount: Math.abs(amount), type: 'transfer', person, desc: merchant, note, category: category || null, fromTxnId: t.id });
+      }
+    } else {
+      // expense
+      t.refund     = false;
+      t.incomeType = undefined;
+      t.amount     = Math.abs(amount);
+      const idx = incomes.findIndex(i => i.fromTxnId === t.id);
+      if (idx >= 0) incomes.splice(idx, 1);
+      const nwBtn = document.getElementById('add-nw-toggle');
+      if (nwBtn) t.needs = nwBtn.dataset.needs === 'true';
+    }
+  }
+
+  _editTxnId = null;
+  persist();
+  closeAddModal();
+  renderTxns();
+  renderDashboard();
   autoPush();
 }
 
