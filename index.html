@@ -6447,7 +6447,7 @@ function renderPdfPreview() {
   const summary = document.getElementById('pdf-parse-summary');
   if (summary) summary.textContent = `${pdfParsedTxns.length} transaction${pdfParsedTxns.length !== 1 ? 's' : ''} ready to import. Review below.`;
   if (!pdfParsedTxns.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--faint);">No transactions found. The PDF format may not be supported — try downloading a CSV instead.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--faint);line-height:1.6;">No transactions found in this PDF.<br><br><strong style="color:var(--ink);">Most banks let you export a CSV from web banking</strong> — that path is far more reliable than PDF parsing. Look for "Download" or "Export" on your statement page.</td></tr>';
     document.getElementById('pdf-totals').innerHTML = '';
     const r = document.getElementById('pdf-reset-edits-btn'); if (r) r.style.display = 'none';
     return;
@@ -6804,22 +6804,95 @@ function parseTD(text) {
 }
 
 function parseGeneric(text) {
-  // Generic fallback: look for any line with a date pattern and amount
+  // Generic fallback. Two passes: (1) single-line records with date + amount on the same line,
+  // (2) multi-line records where the date sits on one line and the amount appears on a following line.
+  // Dedupe on date|amount|merchant so the two passes don't double-count.
   const txns = [];
-  const lines = text.split('\n');
-  const dateAmtRe = /([A-Za-z]{3}\s+\d{1,2}(?:\s+\d{4})?|\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?)\s+(.{3,50}?)\s+([-]?[\d,]+\.\d{2})\s*$/;
-  lines.forEach(line => {
-    line = line.trim();
-    if (line.length < 10) return;
-    const m = line.match(dateAmtRe);
-    if (!m) return;
-    const date = normDate(m[1]);
+  const found = new Set();
+  const lines = text.split('\n').map(l => l.trim());
+  const sy = extractStatementYears(text);
+
+  // Resolve a year if the date string lacks one (e.g. "Jan 15") using the statement window.
+  const resolveDate = (raw) => {
+    let date = normDate(raw);
+    if (date) return date;
+    if (sy) {
+      const monMatch = raw.match(/^([A-Za-z]{3,9})\s+(\d{1,2})/);
+      if (monMatch) return normDate(`${monMatch[1]} ${monMatch[2]} ${yearFor(monMatch[1], sy)}`);
+    }
+    return null;
+  };
+
+  // Patterns
+  // Date covers: "Jan 15", "Jan 15 2026", "Jan 15, 2026", "01/15", "01/15/26", "01-15-2026", "2026-01-15"
+  const datePat = '(?:[A-Za-z]{3,9}\\.?\\s+\\d{1,2}(?:[,.]?\\s+\\d{4})?|\\d{1,2}[\\/\\-]\\d{1,2}(?:[\\/\\-]\\d{2,4})?|\\d{4}-\\d{2}-\\d{2})';
+  // Amount: 1,234.56 / -1,234.56 / $1,234.56 / (123.45) (parens = credit) / 123.45 CR
+  const amtPat = '(?:\\$\\s*)?(?:\\(([\\d,]+\\.\\d{2})\\)|([\\-\\u2212]?[\\d,]+\\.\\d{2}))(?:\\s*(CR|DR))?';
+  const singleRe = new RegExp(`(?:^|\\s)(${datePat})\\s+(.{3,80}?)\\s+${amtPat}\\s*$`, 'i');
+  const dateOnlyRe = new RegExp(`^(${datePat})(?:\\s+(.{0,40}))?$`, 'i');
+  const amtAtEndRe = new RegExp(`^(.*?)\\s*${amtPat}\\s*$`, 'i');
+
+  const pushIfValid = (date, merchant, amt) => {
     if (!date) return;
-    const merchant = m[2].trim();
-    const amt = parseFloat(m[3].replace(/,/g,''));
+    merchant = (merchant || '').replace(/\s+/g, ' ').trim().substring(0, 80);
     if (isSkippable(merchant, amt)) return;
+    const key = `${date}|${amt}|${merchant.toLowerCase().substring(0, 24)}`;
+    if (found.has(key)) return;
+    found.add(key);
     txns.push({ date, merchant, amount: amt });
+  };
+
+  // Pass 1: single-line
+  lines.forEach(line => {
+    if (line.length < 10) return;
+    const m = line.match(singleRe);
+    if (!m) return;
+    const dateRaw = m[1];
+    const merchant = m[2].trim();
+    const amtStr = m[3] || m[4];
+    let amt = parseFloat(amtStr.replace(/,/g, ''));
+    if (!isFinite(amt)) return;
+    const isCredit = !!m[3] || (m[5] && /CR/i.test(m[5]));
+    if (isCredit) amt = -Math.abs(amt);
+    pushIfValid(resolveDate(dateRaw), merchant, amt);
   });
+
+  // Pass 2: multi-line (date line + amount within next 3 lines)
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
+    const dm = line.match(dateOnlyRe);
+    if (!dm) continue;
+    const dateRaw = dm[1];
+    let desc = (dm[2] || '').trim();
+    let amtMatch = null;
+    let amtLineIdx = -1;
+    for (let j = i + 1; j <= Math.min(i + 3, lines.length - 1); j++) {
+      const next = lines[j];
+      if (!next) continue;
+      const am = next.match(amtAtEndRe);
+      if (am) {
+        amtMatch = am;
+        amtLineIdx = j;
+        for (let k = i + 1; k < j; k++) {
+          if (lines[k]) desc += ' ' + lines[k];
+        }
+        const prefix = (am[1] || '').trim();
+        if (prefix && prefix.length >= 2) desc += ' ' + prefix;
+        break;
+      }
+    }
+    if (!amtMatch) continue;
+    const amtStr = amtMatch[2] || amtMatch[3];
+    if (!amtStr) continue;
+    let amt = parseFloat(amtStr.replace(/,/g, ''));
+    if (!isFinite(amt)) continue;
+    const isCredit = !!amtMatch[2] || (amtMatch[4] && /CR/i.test(amtMatch[4]));
+    if (isCredit) amt = -Math.abs(amt);
+    pushIfValid(resolveDate(dateRaw), desc, amt);
+    i = amtLineIdx;
+  }
+
   return txns;
 }
 
