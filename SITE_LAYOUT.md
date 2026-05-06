@@ -36,53 +36,55 @@ No `cp` step. No iCloud sync. Repo is the only place the file lives.
 2. `cp` to `/Users/michaellane/CLAUDE CODE/ledger-saas/public/index.html`.
 3. `cd` into the repo, commit, push.
 
-## Auto-Pull (Personal Site Only)
+## Auto-Pull (All Three Repos)
 
-A LaunchAgent on this Mac pulls the personal repo every 5 minutes so remote agents and other-machine pushes flow back automatically.
+A LaunchAgent per repo pulls every 5 minutes so remote agents and other-machine pushes flow back automatically.
 
-**Files:**
+**Per-repo files:**
 
-- Script: `~/ledger-archive/auto-pull.sh`
-- LaunchAgent plist: `~/Library/LaunchAgents/com.michaellane.ledger-pull.plist`
-- Log: `~/ledger-archive/auto-pull.log`
+| Repo | Script | LaunchAgent label | Log |
+|---|---|---|---|
+| `ledger` (personal) | `~/ledger-archive/auto-pull.sh` | `com.michaellane.ledger-pull` | `~/ledger-archive/auto-pull.log` |
+| `expensetracker` (self-host) | `~/ledger-archive/auto-pull-expensetracker.sh` | `com.michaellane.expensetracker-pull` | `~/ledger-archive/auto-pull-expensetracker.log` |
+| `ledger-saas` (SaaS) | `~/ledger-archive/auto-pull-ledger-saas.sh` | `com.michaellane.ledger-saas-pull` | `~/ledger-archive/auto-pull-ledger-saas.log` |
 
-**Behavior:**
+Plists live at `~/Library/LaunchAgents/<label>.plist`.
+
+**Behavior (identical for all three):**
 
 - Runs every 300s (5 min).
-- Checks `git status --porcelain` first; if you have uncommitted changes, it skips with a log entry. Your in-progress edits are never clobbered.
+- Checks `git status --porcelain` first; if the working tree has uncommitted changes, it skips with a log entry. In-progress edits are never clobbered.
 - Uses `git pull --ff-only` so it never auto-merges. If history diverged, it skips and logs.
 - Silent on "Already up to date"; only logs skips / actual pulls / errors.
 
-**Inspect:**
+**Inspect all three:**
 
 ```bash
-launchctl list | grep ledger-pull        # confirm loaded; PID 0 = idle, exit code 0 = healthy
-tail -f ~/ledger-archive/auto-pull.log    # watch activity
+launchctl list | grep -E "ledger-pull|expensetracker-pull|ledger-saas-pull"
+tail -f ~/ledger-archive/auto-pull*.log    # tail every repo's log together
 ```
 
-**Disable:**
+**Disable / re-enable a single repo:**
 
 ```bash
-launchctl unload ~/Library/LaunchAgents/com.michaellane.ledger-pull.plist
+launchctl unload ~/Library/LaunchAgents/com.michaellane.<label>-pull.plist
+launchctl load   ~/Library/LaunchAgents/com.michaellane.<label>-pull.plist
 ```
 
-**Re-enable:**
-
-```bash
-launchctl load ~/Library/LaunchAgents/com.michaellane.ledger-pull.plist
-```
+Replace `<label>` with `ledger`, `expensetracker`, or `ledger-saas`.
 
 **Force-run now:**
 
 ```bash
 bash ~/ledger-archive/auto-pull.sh
+bash ~/ledger-archive/auto-pull-expensetracker.sh
+bash ~/ledger-archive/auto-pull-ledger-saas.sh
 ```
 
 ## What's NOT Automated
 
-- Sites 2 (self-host) and 3 (SaaS) have no auto-pull. If a remote agent ever pushes to those repos, you'll need to `git pull` them manually.
 - The auto-pull does not push. If a remote agent commits and you also have local commits, the pull will be skipped (non-fast-forward). Resolve manually.
-- iCloud sync between devices is irrelevant for site #1 now. Sites 2 and 3 still rely on iCloud for that.
+- iCloud sync between devices is irrelevant for site #1 now. Sites 2 and 3 still rely on iCloud for that — but the repo working copies stay in sync via auto-pull regardless.
 
 ## Remote Agents
 
