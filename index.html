@@ -616,7 +616,9 @@ tbody tr:hover .row-menu-btn{opacity:1;}
   #dash-period-bar{position:static;left:auto;top:auto;flex-wrap:wrap;overflow-x:auto;}
   #dash-currency-wrap{margin-left:0!important;}
   #dash-push-btn .push-label{display:none;}
-  .main.dash-bar-visible{padding-top:58px;}
+  /* On dashboard, mobile-month-pills (fixed below topbar) gets populated and covers the
+     period bar — bump padding so the bar (with currency pill) sits below it on phones. */
+  .main.dash-bar-visible{padding-top:104px;}
   .content{padding:16px;}
   .month-hero{flex-direction:column;align-items:flex-start;gap:16px;padding:20px;}
   .hero-total{font-size:38px;}
