@@ -442,9 +442,14 @@ tbody td{padding:10px 15px;font-size:13.5px;vertical-align:middle;}
 .txn-edit-text:focus{border-bottom-color:var(--accent);background:var(--bg);}
 .del-btn{background:none;border:none;cursor:pointer;color:var(--faint);padding:4px 6px;border-radius:4px;font-size:14px;line-height:1;transition:all .15s;opacity:0;}
 tbody tr:hover .del-btn{opacity:1;}
+/* Edit-action variant: accent-colored, bigger, always visible on its own. Distinguishes the
+   pencil from the delete X so users can find it at a glance. */
+.del-btn.edit-btn{color:var(--accent);font-size:16px;opacity:1;border:1px solid var(--border);background:var(--surface);}
+.del-btn.edit-btn:hover{color:var(--accent-hover);background:var(--accent-soft);border-color:var(--accent);}
 /* Touch devices have no hover, so always show the row action buttons (edit, delete). */
 @media (hover: none), (max-width: 768px){
   .del-btn{opacity:1;}
+  .del-btn.edit-btn{padding:5px 8px;}
 }
 .del-btn.always-on{opacity:1 !important;}
 .del-btn:hover{color:#dc2626;background:#fef2f2;}
@@ -4105,7 +4110,7 @@ function renderTxns() {
       <td class="txn-td-amount" style="text-align:right;white-space:nowrap;">
         ${amtDisplay}
         ${(!isIncome && !isSavings && !isRefund) ? `<button onclick="setNeeds('${t.id}',${!isNeeds(t)})" style="font-size:10px;padding:1px 6px;border-radius:4px;border:1px solid var(--border);background:${isNeeds(t)?'#fef3e2':'#eaf0f9'};color:${isNeeds(t)?'#b45309':'#2563eb'};cursor:pointer;font-family:'Inter',sans-serif;margin-top:2px;display:block;margin-left:auto;">${isNeeds(t)?'Need':'Want'}</button>` : ''}
-        <button class="del-btn" onclick="openEditModal('${t.id}')" title="Edit transaction">✎</button>
+        <button class="del-btn edit-btn" onclick="openEditModal('${t.id}')" title="Edit transaction">✎</button>
         <button class="del-btn" onclick="deleteTxn('${t.id}')" title="Remove transaction">✕</button>
       </td>
     </tr>`;
