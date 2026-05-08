@@ -615,6 +615,8 @@ tbody tr:hover .row-menu-btn{opacity:1;}
   .topbar-pills-row{position:static;left:auto;top:auto;}
   #dash-period-bar{position:static;left:auto;top:auto;flex-wrap:wrap;overflow-x:auto;}
   #dash-currency-wrap{margin-left:0!important;}
+  /* Currency menu: cap to dynamic viewport so it doesn't extend behind iOS Safari URL bar. */
+  #dash-currency-menu{max-height:50dvh!important;}
   #dash-push-btn .push-label{display:none;}
   /* On dashboard, mobile-month-pills (fixed below topbar) gets populated and covers the
      period bar — bump padding so the bar (with currency pill) sits below it on phones. */
