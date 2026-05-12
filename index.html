@@ -770,7 +770,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       Dashboard
     </div>
-    <div class="nav-item" onclick="goNav('transactions')">
+    <div class="nav-item" onclick="gotoTxnsClean()">
       <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
       Transactions
     </div>
@@ -3932,6 +3932,20 @@ function resetTxnFilters() {
   const p = document.getElementById('f-person'); if (p) p.value = '';
   renderTxns();
 }
+// Sidebar entry into Transactions: start with clean filters so the user isn't surprised by
+// leftover state from a previous drill-through. Direct drill-throughs (heatmap cells, dashboard
+// tiles) still call goNav() after setting their own filters and are unaffected.
+function gotoTxnsClean() {
+  txnTypeFilter  = '';
+  txnNeedsFilter = '';
+  txnCatFilter   = new Set();
+  txnCardFilter  = new Set();
+  txnMonthFilter = new Set();
+  txnSort        = 'date-desc';
+  const s = document.getElementById('f-search'); if (s) s.value = '';
+  const p = document.getElementById('f-person'); if (p) p.value = '';
+  goNav('transactions');
+}
 function saveTxnDate(id, date) {
   if (!date) return;
   const t = txns.find(x => x.id === id);
@@ -3996,8 +4010,19 @@ function renderTxns() {
   const s   = (document.getElementById('f-search').value || '').toLowerCase();
   const cpf = document.getElementById('f-person').value;
 
-  // Rebuild cat multi-select
-  buildMsDrop('ms-cat', CATS.map(c => ({value: c.key, label: c.label})), txnCatFilter);
+  // Rebuild cat multi-select — items depend on the active type pill so the user sees
+  // only the relevant set (e.g. income shows salary/bonus/rental, not expense categories).
+  const catItems = txnTypeFilter === 'income'
+    ? (typeof INCOME_TYPES_ARR !== 'undefined'
+        ? INCOME_TYPES_ARR.filter(t => t.key !== 'transfer').map(t => ({ value: t.key, label: t.label }))
+        : [])
+    : CATS.map(c => ({ value: c.key, label: c.label }));
+  buildMsDrop('ms-cat', catItems, txnCatFilter);
+  // Override the empty-state label when filtering income so the placeholder reads accurately.
+  if (txnTypeFilter === 'income' && txnCatFilter.size === 0) {
+    const catBtn = document.getElementById('ms-cat-btn');
+    if (catBtn) catBtn.textContent = 'All income types';
+  }
 
   // Rebuild month multi-select
   buildMsDrop('ms-month', getMonths().map(m => ({value: m, label: fmtMonth(m)})), txnMonthFilter);
@@ -4037,8 +4062,12 @@ function renderTxns() {
     if (s && !t.merchant.toLowerCase().includes(s)) return false;
     if (txnTypeFilter === 'transfer') {
       if (t.incomeType !== 'transfer') return false;
+      // For transfers the cat filter applies to the offset expense category.
+      if (txnCatFilter.size > 0 && !txnCatFilter.has(t.category)) return false;
     } else if (txnTypeFilter === 'income') {
       if (!t.incomeType || t.incomeType === 'transfer') return false;
+      // For income the cat filter applies to incomeType (salary / bonus / rental / other).
+      if (txnCatFilter.size > 0 && !txnCatFilter.has(t.incomeType)) return false;
     } else if (txnTypeFilter === 'expenses') {
       if (t.incomeType || t.savingsAccountId) return false;
       if (txnCatFilter.size > 0 && !txnCatFilter.has(t.category)) return false;
