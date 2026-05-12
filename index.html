@@ -2599,7 +2599,7 @@ function renderChartSection() {
     const totals = {};
     CATS.forEach(c => {
       totals[c.key] = filteredMonths.reduce((s, m) => {
-        const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key).reduce((ss, t) => ss + t.amount, 0);
+        const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key && !t.incomeType).reduce((ss, t) => ss + t.amount, 0);
         const transferred = incomes.filter(i => i.category === c.key && i.fromTxnId && i.date.startsWith(m)).reduce((ss, i) => ss + i.amount, 0);
         return s + Math.abs(gross - transferred);
       }, 0);
@@ -2758,7 +2758,7 @@ function renderChartSection() {
     // Build per-category data with average for sort consistency
     const catDatasets = CATS.filter(c => !chartHiddenCats.has(c.key)).map(c => {
       const data = filteredMonths.map(m => {
-        const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key)
+        const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key && !t.incomeType)
                                  .reduce((s, t) => s + t.amount, 0);
         const transferred = incomes.filter(i => i.category === c.key && i.fromTxnId && i.date.startsWith(m))
                                    .reduce((s, i) => s + i.amount, 0);
@@ -2973,7 +2973,7 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
         const childCats = CATS.filter(c => !!c.fixed === wantNeeds);
         const childData = childCats.map(c => {
           const monthVals = filteredMonths.map(m => {
-            const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key).reduce((s, t) => s + t.amount, 0);
+            const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key && !t.incomeType).reduce((s, t) => s + t.amount, 0);
             const transferred = incomes.filter(i => i.category === c.key && i.fromTxnId && i.date.startsWith(m)).reduce((s, i) => s + i.amount, 0);
             return gross - transferred;
           });
@@ -3014,7 +3014,7 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
     const visibleCats = CATS.filter(c => !chartHiddenCats.has(c.key));
     const rows = visibleCats.map(c => {
       const monthVals = filteredMonths.map(m => {
-        const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key)
+        const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key && !t.incomeType)
                                  .reduce((s, t) => s + t.amount, 0);
         const transferred = incomes.filter(i => i.category === c.key && i.fromTxnId && i.date.startsWith(m))
                                    .reduce((s, i) => s + i.amount, 0);
@@ -3927,6 +3927,7 @@ function resetTxnFilters() {
   txnCatFilter   = new Set();
   txnCardFilter  = new Set();
   txnMonthFilter = new Set();
+  txnSort        = 'date-desc';
   const s = document.getElementById('f-search'); if (s) s.value = '';
   const p = document.getElementById('f-person'); if (p) p.value = '';
   renderTxns();
