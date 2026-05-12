@@ -613,8 +613,10 @@ tbody tr:hover .row-menu-btn{opacity:1;}
   .topbar{padding:0 16px;left:0;}
   .topbar .month-pills{display:none;}
   .topbar-pills-row{position:static;left:auto;top:auto;}
-  #dash-period-bar{position:static;left:auto;top:auto;flex-wrap:wrap;overflow-x:auto;}
-  #dash-currency-wrap{margin-left:0!important;}
+  /* No overflow on period-bar: it'd clip the currency dropdown that extends below.
+     flex-wrap:wrap keeps items inside the box anyway. */
+  #dash-period-bar{position:static;left:auto;top:auto;flex-wrap:wrap;overflow:visible;}
+  #dash-currency-wrap{margin-left:0!important;z-index:50;}
   /* Currency menu: cap to dynamic viewport so it doesn't extend behind iOS Safari URL bar. */
   #dash-currency-menu{max-height:50dvh!important;}
   #dash-push-btn .push-label{display:none;}
