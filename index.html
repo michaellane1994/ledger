@@ -854,10 +854,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
       <button class="dash-pill" id="dash-currency-btn" onclick="toggleCurrencyDropdown(event)" title="Display currency"><span id="dash-currency-label">CAD</span> ▾</button>
       <div id="dash-currency-menu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;min-width:200px;max-height:300px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);"></div>
     </div>
-    <button id="dash-push-btn" onclick="manualPush()" style="flex-shrink:0;display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-      <span class="push-label">Push to Sheets</span>
-    </button>
+<!-- Push button removed from top bar; auto-push runs after every change. Manual push lives in Settings if needed. -->
   </div>
 
   <div class="content">
