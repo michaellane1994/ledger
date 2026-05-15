@@ -2369,7 +2369,9 @@ function goNav(name) {
   }
   if (name === 'dashboard') renderDashboard();
   if (name === 'transactions') {
-    if (selMonth) txnMonthFilter = new Set([selMonth]);
+    // Only auto-sync from the dashboard's selMonth when the caller hasn't
+    // already set txnMonthFilter (e.g. heatmap drill-through, chart click).
+    if (selMonth && txnMonthFilter.size === 0) txnMonthFilter = new Set([selMonth]);
     renderTxns();
   }
   if (name === 'upload')    renderUploads();
@@ -3014,11 +3016,12 @@ function renderHeatmapTable(filteredMonths, allExpenses) {
     </tr>`;
   } else {
     // By category — one row per visible category, sorted by total spend desc.
+    // Use txns (not allExpenses) so refunds (negative amounts) net against gross.
     const visibleCats = CATS.filter(c => !chartHiddenCats.has(c.key));
     const rows = visibleCats.map(c => {
       const monthVals = filteredMonths.map(m => {
-        const gross = allExpenses.filter(t => t.date.startsWith(m) && t.category === c.key && !t.incomeType)
-                                 .reduce((s, t) => s + t.amount, 0);
+        const gross = txns.filter(t => t.date.startsWith(m) && t.category === c.key && !t.incomeType && !t.savingsAccountId)
+                          .reduce((s, t) => s + t.amount, 0);
         const transferred = incomes.filter(i => i.category === c.key && i.fromTxnId && i.date.startsWith(m))
                                    .reduce((s, i) => s + i.amount, 0);
         return gross - transferred;
@@ -4065,8 +4068,10 @@ function renderTxns() {
     if (s && !t.merchant.toLowerCase().includes(s)) return false;
     if (txnTypeFilter === 'transfer') {
       if (t.incomeType !== 'transfer') return false;
-      // For transfers the cat filter applies to the offset expense category.
-      if (txnCatFilter.size > 0 && !txnCatFilter.has(t.category)) return false;
+      // Transfers store the offset expense category on t.incomeCategory
+      // (t.category is usually 'misc'), so match against the offset cat.
+      const offsetCat = t.incomeCategory || t.category;
+      if (txnCatFilter.size > 0 && !txnCatFilter.has(offsetCat)) return false;
     } else if (txnTypeFilter === 'income') {
       if (!t.incomeType || t.incomeType === 'transfer') return false;
       // For income the cat filter applies to incomeType (salary / bonus / rental / other).
