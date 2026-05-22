@@ -1,7 +1,34 @@
-# Ledger SaaS — Roadmap
+# Trove SaaS — Roadmap
 
-Everything I need to go from demo template to a paying product.
+Everything needed to go from demo template to a paying product.
 Budget: **~20 hrs of focused work, ~$10 to start.**
+
+**Brand:** Trove. **Domain:** householdtrove.com (Cloudflare Registrar, $10/yr).
+
+---
+
+## Current status (2026-05-21)
+
+Shipped:
+- Brand + domain locked in: Trove on `householdtrove.com`
+- Cloudflare Worker live, custom domain wired, SSL provisioned
+- Supabase auth with both magic link AND email/password sign-in; forgot-password + inline change-password flows
+- Stripe Checkout + Customer Portal + webhooks operating in test mode (32 invocations / 0 errors verified end-to-end on new domain)
+- Google Drive sync working (user-owned `ledger-data.json`)
+- Privacy + Terms pages at `/privacy.html` and `/terms.html`, linked from sidebar foot and demo hero
+- Mobile UX polish (topbar overflow fix, sidebar close-on-tap, larger logo + topbar title)
+- "Manage My Trove" Settings page with Account section (subscription status badge + billing controls + inline set/change password)
+- Sample-data warning banner on Upload page (prevents mixing demo data with real imports)
+- Welcome hero consolidated (one banner, not two) — adapts CTAs based on signed-in vs demo state
+
+Active near-term:
+- Phase 5 (Resend transactional email) — not started
+- Cloudflare Email Routing for `support@householdtrove.com` — pending user action
+- Supabase config verification (Email provider enabled, reset-password URL whitelisted) — pending user action
+- Stripe Public Business Info page (legal URLs + statement descriptor) — partially started, pending user action
+
+Deferred:
+- Dashboard hero Needs/Wants discrepancy (math doesn't quite reconcile with heatmap totals)
 
 ---
 
@@ -9,13 +36,13 @@ Budget: **~20 hrs of focused work, ~$10 to start.**
 
 | | |
 |---|---|
-| **Product** | Privacy-first expense tracker. Data stays in user's own Google Sheet. |
-| **Price** | $5/mo or $49/yr. 14-day free trial. No card to start. |
+| **Product** | Privacy-first household expense tracker. Data stays in user's own Google Drive. |
+| **Price** | $9/mo or $89/yr (test mode). 14-day free trial. No card to start. |
 | **Moat** | "We literally never see your data." |
-| **Stack** | Cloudflare Pages + Supabase + Stripe + Resend |
-| **Backend code** | ~50 lines in a Cloudflare Worker |
-| **Day-1 cost** | ~$10 (domain). Rest is free tier. |
-| **At 100 paying users** | ~$471/mo profit after Stripe fees |
+| **Stack** | Cloudflare Workers + Supabase + Stripe + Resend |
+| **Backend code** | ~340 lines in a Cloudflare Worker (`src/worker.js`) |
+| **Day-1 cost** | ~$15 USD (domain). Rest is free tier. |
+| **At 100 paying users** | ~$847/mo profit after Stripe fees (at $9/mo) |
 
 ---
 
@@ -73,19 +100,19 @@ Budget: **~20 hrs of focused work, ~$10 to start.**
 
 ## Build order
 
-### ✅ Phase 1 — Demo polish (mostly done)
+### ✅ Phase 1 — Demo polish (DONE)
 
 - [x] Demo top strip + CTAs
-- [x] Demo hero card with sample data button
+- [x] Demo hero card with sample data button (now unified with welcome banner — single hero serves both audiences)
 - [x] Sync controls greyed out in demo
 - [x] Pricing modal (monthly/yearly)
 - [x] Reset demo / Clear demo buttons
 - [x] Import preview with statement-total check
 - [x] Remove "Repair missing income" button (both files)
 - [x] Banner refers users to the `?` help button
-- [ ] FAQ modal
-- [ ] Footer (Privacy · Terms · Contact)
-- [ ] Final brand name decision
+- [x] FAQ modal (Help modal with Quick Start + Features + FAQ + Contact sections)
+- [x] Footer (Privacy · Terms in sidebar foot, also in demo hero legal line)
+- [x] Final brand name decision — **Trove**
 
 ### Phase 1.5 — Sync architecture: migrate SaaS template to Google Drive API
 
@@ -145,38 +172,34 @@ Submit for Google OAuth verification when approaching 100 users. Requirements:
 - Setup video (Loom walkthrough) — no longer needed since Drive API onboarding is one click
 - Apps Script template sheet (`/copy` URL approach) — abandoned in favor of Drive API
 
-### Phase 2 — Deploy *(1 hr)*
+### ✅ Phase 2 — Deploy (DONE)
 
-**Hosting model:** GitHub is the source of truth, Cloudflare Pages is the host. Every `git push` to `main` auto-deploys in ~30s. No manual uploads.
+GitHub source of truth → Cloudflare Worker auto-deploys on `git push origin main`.
 
-**Steps:**
+- [x] GitHub repo `ledger-saas` created
+- [x] Cloudflare Worker deployed (auto-deploys from `main`)
+- [x] Domain `householdtrove.com` registered on Cloudflare Registrar
+- [x] Custom domain attached: apex + `www.householdtrove.com`, SSL auto-provisioned
+- [x] End-to-end tested on production domain
 
-1. [ ] **Create new GitHub repo** `ledger-saas` (separate from the `expensetracker` self-host repo so SaaS + family versions never mix)
-2. [ ] Push `General Template/index.html` → `index.html` at repo root
-3. [ ] **Sign up at [dash.cloudflare.com](https://dash.cloudflare.com)** (free, no card)
-4. [ ] **Workers & Pages → Create → Pages → Connect to Git** → authorize GitHub app → grant access to `ledger-saas` only
-5. [ ] **Configure build:**
-   - Production branch: `main`
-   - Framework preset: **None**
-   - Build command: *(blank)*
-   - Build output directory: `/`
-   - Root directory: *(blank)*
-6. [ ] **Save and Deploy** → live at `ledger-saas-xxx.pages.dev` in ~60s
-7. [ ] Test live demo on mobile + desktop
-8. [ ] *(Later, once brand picked)* Buy domain on Cloudflare Registrar → attach via **Custom domains** tab → Cloudflare handles DNS automatically
+**Live URL:** `https://householdtrove.com` (fallback `ledger-saas.michael-lane867.workers.dev` still active — disable before public launch).
 
-**After first deploy:** every push to `main` auto-deploys. Deploy history + commit SHAs in the Pages dashboard. Purge Cache button there if you need users to see a fix immediately.
+### ✅ Phase 3 — Auth (DONE)
 
-### Phase 3 — Auth *(4–6 hrs)*
+- [x] Supabase project created
+- [x] Email auth enabled (magic link + email/password)
+- [x] `users` table with row-level security (see schema below)
+- [x] Supabase JS via CDN
+- [x] Login / signup modal with method toggle (Password / Magic link)
+- [x] Forgot password flow + `/reset-password.html` recovery page
+- [x] Inline Set/Change Password in Manage My Trove → Account
+- [x] `_isDemo` flag wired to session state
+- [x] Signup → set `trial_ends_at = now + 14d`
+- [x] Trial expired / cancelled → fallback to demo mode
 
-- [ ] Create Supabase project
-- [ ] Enable Email + Google OAuth
-- [ ] Create `users` table (see below)
-- [ ] Add Supabase JS via CDN
-- [ ] Build login / signup modal
-- [ ] Wire `_isDemo` flag to session state
-- [ ] Signup → set `trial_ends_at = now + 14d`
-- [ ] Trial expired / cancelled → fallback to demo mode
+**Pending small actions (user, in Supabase Dashboard):**
+- [ ] Authentication → Providers → Email: confirm enabled, "Confirm email" OFF
+- [ ] Authentication → URL Configuration → add `https://householdtrove.com/reset-password.html` to Redirect URLs
 
 ```sql
 users:
@@ -188,58 +211,26 @@ users:
   subscription_status text  -- 'trialing' | 'active' | 'cancelled' | 'past_due'
 ```
 
-### Phase 4 — Billing *(4–6 hrs)*
+### ✅ Phase 4 — Billing (DONE in test mode)
 
-**Status as of 2026-04-25:** Worker code shipped, client wiring shipped, products created. Three dashboard tasks left to complete the loop.
+Stripe Checkout + Customer Portal + webhooks fully operational on `householdtrove.com`.
 
-#### Already done
-- [x] Stripe account created (Test/Sandbox mode)
-- [x] Two products created: Monthly $9 (`price_1TPzDqBo3t6OY2ICaaC1KtDK`), Yearly $89 (`price_1TPzEIBo3t6OY2ICBOBW8cYb`)
-- [x] Stripe Customer Portal activated
-- [x] Cloudflare Worker deployed with 3 endpoints (`/api/create-checkout-session`, `/api/create-portal-session`, `/api/webhook`) — see `ledger-saas/src/worker.js`
-- [x] Client wiring: `startCheckout(plan)`, `openCustomerPortal()`, Subscribe button in trial-expired strip, Manage subscription link in signed-in strip, `?subscribed=1` return URL handler
+- [x] Stripe account created (Test mode)
+- [x] Two products: Monthly $9 (`price_1TPzDqBo3t6OY2ICaaC1KtDK`), Yearly $89 (`price_1TPzEIBo3t6OY2ICBOBW8cYb`)
+- [x] Customer Portal activated
+- [x] Cloudflare Worker endpoints: `/api/create-checkout-session`, `/api/create-portal-session`, `/api/webhook`, `/api/me`, `/api/diag`
+- [x] Client wiring: `startCheckout(plan)`, `openCustomerPortal()`, Subscribe/Manage buttons, `?subscribed=1` return handler
+- [x] 5 secrets configured in Cloudflare (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`)
+- [x] Stripe webhook configured at `https://householdtrove.com/api/webhook` listening to 5 events: `checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.payment_failed`
+- [x] End-to-end tested: signup → subscribe (4242 4242 4242 4242) → webhook fires → Supabase row updates → Manage in portal → cancel → status reverts
+- [x] Cloudflare Cron heartbeat (10:00 UTC daily) keeps Supabase free-tier project from auto-pausing
+- [x] Cloudflare Workers Logs / Observability enabled
 
-#### Still to do (user, in dashboards)
-
-**Task 1 — Add 5 secrets to Cloudflare Worker** (~5 min)
-
-dash.cloudflare.com → Workers & Pages → ledger-saas → Settings → Variables and Secrets → Add variable (Type: Secret) for each:
-
-| Name | Source |
-|---|---|
-| `STRIPE_SECRET_KEY` | Stripe → Developers → API keys → reveal Secret key (`sk_test_...`) |
-| `SUPABASE_URL` | `https://eiekaxvlmspqpwqsikhg.supabase.co` |
-| `SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_mx6vAI1hbZvC-0kQy_Hqnw_46cvMNH8` |
-| `SUPABASE_SECRET_KEY` | Supabase → Project Settings → API Keys → reveal Secret key (`sb_secret_...`). Replaces the legacy `service_role` JWT. |
-| `STRIPE_WEBHOOK_SECRET` | Filled after Task 2 — leave blank or set placeholder for now |
-
-Click **Deploy** at the bottom — Cloudflare requires a redeploy for new secrets to take effect.
-
-**Task 2 — Create the Stripe webhook** (~3 min)
-
-Stripe → Developers → Webhooks → Add endpoint:
-- Endpoint URL: `https://ledger.michael-lane867.workers.dev/api/webhook`
-- Events to listen for (5 only):
-  - `checkout.session.completed`
-  - `customer.subscription.created`
-  - `customer.subscription.updated`
-  - `customer.subscription.deleted`
-  - `invoice.payment_failed`
-- Click Add endpoint → on the next page click "Reveal signing secret" → copy `whsec_...`
-
-Back to Cloudflare → update `STRIPE_WEBHOOK_SECRET` with the `whsec_...` value → Deploy.
-
-**Task 3 — End-to-end test** (~5 min)
-
-1. Hard-reload `https://ledger.michael-lane867.workers.dev`
-2. Sign in (green top strip)
-3. Click Subscribe → Stripe Checkout
-4. Test card: `4242 4242 4242 4242` / any future expiry / any CVC / any postal
-5. Return to app → strip flips to "Active" + Manage subscription button
-6. Supabase → Table Editor → users → row should show `subscription_status: active` + `stripe_customer_id: cus_...`
-7. Click Manage subscription → Stripe portal → cancel → return → strip flips back
-
-Most likely failure points: missing/typo'd secret, wrong webhook URL, or webhook not yet wired (status won't update until webhook is set up).
+**Pending before live mode (deferred — user wants to stay in test mode for now):**
+- Stripe Public Business Info (business name, website, privacy/terms URLs, statement descriptor)
+- Stripe identity + bank account verification
+- Recreate products in live mode (new price IDs)
+- Live-mode webhook endpoint + signing secret swap
 
 ### Phase 5 — Email *(2 hrs)*
 
@@ -255,9 +246,11 @@ Most likely failure points: missing/typo'd secret, wrong webhook URL, or webhook
 
 ### Phase 7 — Launch prep *(2–3 hrs)*
 
-- [ ] Privacy Policy (key line: "we don't see your data")
-- [ ] Terms of Service
-- [ ] Test full loop: signup → trial → auto-convert → cancel → resubscribe
+- [x] Privacy Policy at `/privacy.html` (key line: "we don't see your data" — covered)
+- [x] Terms of Service at `/terms.html`
+- [x] Test full loop in test mode: signup → trial → subscribe → portal → cancel → resubscribe
+- [ ] Add privacy + terms URLs to Stripe Public Business Info
+- [ ] Beta-test with 3–5 real users in test mode
 - [ ] Canadian sales tax: register for GST/HST if I expect >$30k/yr
 
 ---
@@ -451,8 +444,8 @@ A reference for thinking about which decisions to lean into vs which to defer.
 
 ### Decisions to lock in before launch
 
-- [ ] Final brand name
-- [ ] Final domain (Cloudflare Registrar)
-- [ ] Final monthly + yearly Stripe price
-- [ ] Privacy policy text — must explicitly state "we cannot read your data"
-- [ ] Drive file `version: 1` shipped — ✓ (2026-04-24)
+- [x] Final brand name — **Trove**
+- [x] Final domain (Cloudflare Registrar) — **householdtrove.com**
+- [x] Final monthly + yearly Stripe price — **$9/mo, $89/yr** (test mode; can change for new live-mode customers before public launch)
+- [x] Privacy policy text — published at `/privacy.html`, explicitly covers "we never see your transactions"
+- [x] Drive file `version: 1` shipped (2026-04-24)
