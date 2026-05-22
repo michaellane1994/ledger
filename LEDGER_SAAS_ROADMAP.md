@@ -325,6 +325,86 @@ Short walkthrough video(s) — 2–5 min total.
 
 ---
 
+## Customer acquisition strategy
+
+Living plan for how to find paying users. Updated as channels are tested.
+
+### Honest framing
+
+- Indie SaaS at $9/mo grows slowly. Typical: 5–15 paying users month 1–3, 30–100 by year 1, scale via referrals + SEO in year 2+.
+- Paid ads do not math at $9 LTV (CAC $20–50 on Google/Meta). Skip paid until annual plans + low churn give $30+ LTV proven.
+- Moat is the angle, not the features. Mint/Monarch/Copilot all have more features. Trove wins on **"your data stays in YOUR Drive."** Every marketing message hammers this.
+
+### Positioning
+
+**The story, three lines:**
+> Mint shut down. The replacements want your bank login, scrape your data, and sell you ads. Trove doesn't. Your transactions stay in your Google Drive — we literally never see them. $9/mo. Households welcome.
+
+**Target audiences, ranked by fit:**
+1. **Mint refugees** — Intuit killed Mint Mar 2024; users still drifting between alternatives. Hot lead.
+2. **Privacy-conscious tech users** — r/selfhosted, r/privacy, r/degoogle, r/datahoarder
+3. **Couples managing joint finances** — Trove's household angle is genuinely unique
+4. **YNAB-curious but simpler** — YNAB has a cult following but is opinionated; some bounce off it
+
+### Phase A — Pre-launch foundations (now → 4 weeks)
+
+Before pushing anywhere publicly, the launch surface needs to exist:
+
+- [ ] **Separate marketing landing page** — `householdtrove.com` currently *is* the app. Need a proper marketing page at the root with hero → problem → solution → pricing → FAQ → CTA. App lives at `/app` or `/dashboard`. ~half-day of work.
+- [ ] **30–60s demo video on YouTube** — what is Trove, why does it exist. Drives signups + onboards.
+- [ ] **5–10 beta users** in test mode — friends, family, Reddit volunteers. Real testimonials before any public push.
+- [ ] **Live Stripe mode activated** — can't sell without it. Requires identity + bank verification.
+- [ ] **PDF parser improved** — current parsers only handle ~6 banks; Claude fallback for the rest. #1 hidden blocker.
+
+### Phase B — Soft launch (4–8 weeks out)
+
+Free / near-free channels, in this order:
+
+- [ ] **r/PersonalFinanceCanada + r/personalfinance** — write a "what I built and why" post (mods strict — must be helpful, not promotional). Single best inbound channel for personal-finance indie SaaS.
+- [ ] **Indie Hackers launch post** — their community supports indie SaaS launches.
+- [ ] **Hacker News "Show HN"** — Tue/Wed/Thu morning. Risk: HN can be brutal, but a front-page day = 500–2000 visits.
+- [ ] **X/Twitter "build in public"** — share progress, screenshots, lessons. Slow burn but compounds.
+- [ ] **Direct outreach** — message 20 friends/contacts personally with "would you try this?"
+
+Expected outcome: **30–50 trials, 5–15 paying users.**
+
+### Phase C — Scale (3–12 months out)
+
+Compounding channels — start when Phase B gives real signal:
+
+- [ ] **SEO blog** — articles like "Mint alternatives 2026", "household budget templates", "private personal finance apps". ~1 post/week.
+- [ ] **YouTube channel** — same topics; even higher SEO yield. Pairs with the onboarding video.
+- [ ] **Product Hunt launch** — saved for when you have testimonials + screenshots ready.
+- [ ] **Affiliate / referral program** — "give a month, get a month" for existing users.
+- [ ] **Partnerships** — privacy newsletters, finance newsletters, mutual cross-promo with other indie tools.
+
+### What NOT to do
+
+- Cold email — low conversion, often spammy
+- Facebook/Instagram ads — CAC > LTV at $9 pricing
+- TikTok ads — same
+- Sponsored content from generic influencers — expensive, low ROI
+- Affiliate networks — low margins to share
+- Generic "growth hacking" funnel tools
+- Posting on every subreddit — self-promo rule kills it
+
+### Marketing assets to build before any public push
+
+| Asset | Status | Notes |
+|---|---|---|
+| Marketing landing page | not started | `householdtrove.com/` (with app moved to `/app`) |
+| Onboarding video (60–90s) | not started | YouTube, embedded on landing page |
+| 5–10 beta testimonials | not started | From test-mode friends/family |
+| Reddit / IH / Show HN launch posts | not started | Draft now, file away; launch-day is the wrong time to write |
+| Twitter / X build-in-public account | not started | Slow burn, start anyway |
+| Newsletter or waitlist signup | not started | Capture interest from non-converters |
+
+### Notes / lessons (update as channels are tested)
+
+*(Empty for now — log results as channels are tried.)*
+
+---
+
 ## Minimum code additions
 
 ```html
