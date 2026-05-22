@@ -262,6 +262,76 @@ Most likely failure points: missing/typo'd secret, wrong webhook URL, or webhook
 
 ---
 
+## Future state goals
+
+Captured ideas for v2 / v3. Not committed; thinking out loud. Add to this list as ideas come up. Each entry: **what / why / tradeoffs**.
+
+### 1. AI-powered PDF parser (Claude)
+
+Replace the current bank-specific regex parsers with a Claude-powered extraction step.
+
+**How it would work:** PDF upload → Worker proxies to Anthropic API with a structured-extraction prompt → Claude returns `[{date, merchant, amount, category_guess}]` → app shows preview → user confirms → import (same UX as today).
+
+**Why:** current parser only handles ~6 specific bank formats; everything else is broken. Claude can read any layout — RBC, Scotia, Wealthsimple, US banks, international, weird credit card statements. Bonus: Claude can also guess categories, reducing manual cleanup.
+
+**Tradeoffs:**
+- Latency: ~5–15s vs instant local parse
+- Cost: ~$0.01–$0.05 per PDF in API spend (a $5/mo user uploading 4 statements/mo = ~$0.20/mo COGS)
+- Privacy: PDF transits Anthropic servers — softens the "we never see your data" promise. Probably keep regex parser as default and offer AI as opt-in fallback when regex returns 0 results.
+- Dependency: needs internet + API key
+
+**Implementation note:** position as a paid-tier-only feature to recoup API costs and reinforce the value of subscribing.
+
+### 2. Annual / quarterly snapshot ("Trove Wrapped")
+
+Spotify-Wrapped-style end-of-period recap of expense activity. Sharable.
+
+**Content ideas:** top 3 categories by spend, biggest single transaction, most-spent vs least-spent month, year-over-year comparison (if data exists), savings streak stats, quirky stats ("your weekend spending is 2.3× your weekday spending").
+
+**Output formats:** in-app animated view (scrollable like Stories), shareable PNG / PDF export, optional end-of-year email.
+
+**Why:** triple win — user delight + retention + viral growth. Users share with friends → friends curious → free user acquisition. Anchors the product in users' minds at a memorable moment each quarter.
+
+**Open questions:**
+- Privacy: users probably won't share absolute numbers, but might share percentages and category rankings
+- Needs 3+ months of data to feel meaningful — gate behind a minimum data threshold
+
+### 3. YouTube onboarding video
+
+Short walkthrough video(s) — 2–5 min total.
+
+**Content:** 30s "why Trove" overview (positioning) + 2-min full demo (upload CSV → categorise → dashboard → savings/debt). Optional follow-ups: power-user tips, reconciling with your bank, sharing with a partner.
+
+**Where it shows up:** linked from the welcome banner, "Watch a 2-min tour" in Help modal, embedded on a future landing page, linked from email onboarding (Phase 5).
+
+**Why:** reduces support burden for visual learners (huge audience), sets expectations correctly before signup, SEO bonus on YouTube. One-time effort, long-term return.
+
+### 4. Free / freemium tier — *open design question*
+
+**Goal:** prevent users churning at the 14-day cliff. Give them a reason to stay engaged.
+
+**Honest tradeoff context:**
+- Trial → paid conversion: typically **30–60%**
+- Free → paid conversion: typically **1–5%**
+- Free users still cost in support + infrastructure
+- Risk: cannibalise paying users who would've subscribed anyway
+
+**Options to consider:**
+
+| Option | What it looks like | Pros | Cons |
+|---|---|---|---|
+| **A. Free with transaction cap** | "50 txns/mo free" | Familiar freemium pattern; clear upgrade prompt | Casual users never hit cap → stay free forever, never convert |
+| **B. Local-only after trial** *(already exists as demo mode)* | After 14 days, lose cloud sync but app still works locally | Soft cliff, not a hard lock; users already in the habit | Some users won't notice the difference, never upgrade |
+| **C. Longer trial (30 days)** | Same model, more time to build habit | Smaller eng lift; better conversion mechanics | Just delays churn 2 weeks |
+| **D. "Lite" plan at $2/mo** | Half-price tier with limited features (no AI parser, no sharing, etc.) | Captures price-sensitive users; cleaner economics than free | Adds plan complexity |
+| **E. Trial-ending nudge email** | Day 12 email: "your trial ends in 2 days, here's what you'd lose" | Cheap to implement; targets the actual churn moment | Doesn't change the cliff — just makes users aware |
+
+**Current lean:** B + E. Local-only-after-trial is already there; add Phase 5 to send the day-12 nudge. Re-evaluate freemium once you have 100+ subscribers and real churn data.
+
+**Open question for later:** what % of trial users actually finish onboarding (load real data)? If conversion is low *during* trial, no amount of free tier fixes that — fix onboarding first.
+
+---
+
 ## Minimum code additions
 
 ```html
