@@ -2357,7 +2357,10 @@ function goNav(name) {
   const mainEl    = document.querySelector('.main');
   const mobilePills  = document.getElementById('mobile-month-pills');
   const desktopPills = document.getElementById('month-pills');
-  const showPills = ['dashboard', 'transactions', 'income', 'savings'].includes(name);
+  // Period selectors (year/month pills + Latest/3M/YTD bar) are dashboard-only.
+  // Income, Savings, and Transactions screens each have their own per-page filters
+  // that apply at the table level, so the global period bar would just contradict them.
+  const showPills = name === 'dashboard';
   if (showPills) {
     if (periodBar)    periodBar.style.display = 'flex';
     if (desktopPills) desktopPills.style.display = '';
@@ -2440,11 +2443,6 @@ function renderPills() {
         renderDashboard();
         txnMonthFilter = new Set([m]);
         renderTxns();
-        const activeView = document.querySelector('.view.active');
-        if (activeView) {
-          if (activeView.id === 'view-income')  renderIncome();
-          if (activeView.id === 'view-savings') renderSavings();
-        }
       };
       container.appendChild(p);
     });
@@ -5246,17 +5244,20 @@ function renderIncome() {
   }
 
   let list = allInc;
-  if (selMonth) list = list.filter(i => i.date?.startsWith(selMonth));
   if (s) list = list.filter(i => (i.desc||'').toLowerCase().includes(s));
   if (incTypeFilter.size)  list = list.filter(i => incTypeFilter.has(i.type));
   if (incMonthFilter.size) list = list.filter(i => incMonthFilter.has(i.date?.substring(0,7)));
   if (incPersonFilter)     list = list.filter(i => i.person === incPersonFilter);
 
-  // Update income page total
+  // Update income page total. Period label reflects this page's own month filter only —
+  // the dashboard period bar no longer bleeds into this screen.
   const totalEl = document.getElementById('income-page-total');
   if (totalEl) totalEl.textContent = fmt(list.reduce((s,i) => s+i.amount, 0));
   const periodEl = document.getElementById('income-page-period');
-  if (periodEl) periodEl.textContent = selMonth ? fmtMonth(selMonth) : 'All time';
+  if (periodEl) {
+    const months = [...incMonthFilter];
+    periodEl.textContent = months.length === 1 ? fmtMonth(months[0]) : 'All time';
+  }
   if (!list.length) { body.innerHTML = ''; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
   const allCards = [...new Set(txns.map(t => t.card).filter(Boolean))].sort();
@@ -5505,19 +5506,20 @@ function renderSavings() {
     }).join('');
   }
 
-  // Contributions — filtered by selected month
+  // Contributions — show all by default. The dashboard period bar no longer applies
+  // here (it caused bugs like "Full Year" showing only one month, since dashboard's
+  // selMonth was a single month even when dashPeriod was 'year').
   const body  = document.getElementById('contrib-body');
   const empty = document.getElementById('contrib-empty');
   const allContribs = [...contribs].sort((a,b) => b.date.localeCompare(a.date));
-  const list  = selMonth ? allContribs.filter(c => c.date.startsWith(selMonth)) : allContribs;
-  // Update contributions total
+  const list  = allContribs;
   const ctotalEl = document.getElementById('contrib-page-total');
   if (ctotalEl) {
     const ctotal = list.filter(c=>c.type==='contribution').reduce((s,c)=>s+c.amount,0);
     ctotalEl.textContent = fmt(ctotal);
   }
   const cperiodEl = document.getElementById('contrib-page-period');
-  if (cperiodEl) cperiodEl.textContent = selMonth ? fmtMonth(selMonth) : 'All time';
+  if (cperiodEl) cperiodEl.textContent = 'All time';
   if (!list.length) { body.innerHTML = ''; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
   body.innerHTML = list.map(c => {
