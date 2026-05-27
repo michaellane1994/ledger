@@ -2434,14 +2434,24 @@ function renderPills() {
     fy.textContent = 'Full Year';
     fy.onclick = () => { dashPeriod = 'year'; renderPills(); renderDashboard(); };
     container.appendChild(fy);
-    // Month pills (only for selected year)
-    yearMonths.forEach(m => {
-      const [, mo] = m.split('-');
-      const label = new Date(selYear, mo - 1).toLocaleString('default', { month: 'short' });
-      const p = document.createElement('div');
-      p.className = 'mpill' + (m === selMonth && dashPeriod === '' ? ' active' : '');
-      p.textContent = label;
-      p.onclick = () => {
+    // Month is a dropdown (mirrors the year selector) so the topbar stays compact
+    // regardless of how many months exist for the selected year. Placeholder "Month"
+    // is shown when Full Year is active; picking a month switches out of Full Year.
+    if (yearMonths.length) {
+      const msel = document.createElement('select');
+      msel.className = 'year-select month-select';
+      msel.setAttribute('aria-label', 'Month');
+      const placeholder = `<option value="" disabled${dashPeriod === 'year' ? ' selected' : ''}>Month</option>`;
+      const monthOpts = yearMonths.map(m => {
+        const [, mo] = m.split('-');
+        const label = new Date(selYear, mo - 1).toLocaleString('default', { month: 'short' });
+        const sel = (dashPeriod === '' && m === selMonth) ? ' selected' : '';
+        return `<option value="${m}"${sel}>${label}</option>`;
+      }).join('');
+      msel.innerHTML = placeholder + monthOpts;
+      msel.onchange = (e) => {
+        const m = e.target.value;
+        if (!m) return;
         dashPeriod = '';
         selMonth = m;
         renderPills();
@@ -2449,8 +2459,8 @@ function renderPills() {
         txnMonthFilter = new Set([m]);
         renderTxns();
       };
-      container.appendChild(p);
-    });
+      container.appendChild(msel);
+    }
   }
 
   buildPills(el);
