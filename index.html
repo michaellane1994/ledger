@@ -739,6 +739,30 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .mort-vol-impact-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
 .mort-vol-impact-value{font-size:14px;font-weight:600;}
 .mort-vol-impact-item.positive .mort-vol-impact-value{color:#16a34a;}
+/* Payoff trajectory: per-debt slider + extra input + impact stats + balance-over-time SVG chart. */
+.mort-trajectory{border-top:1px solid var(--border);padding-top:20px;margin-top:20px;}
+.mort-traj-head{margin-bottom:14px;}
+.mort-traj-title{font-family:'Playfair Display',serif;font-size:17px;letter-spacing:-0.015em;margin-bottom:3px;}
+.mort-traj-sub{font-size:12.5px;color:var(--muted);}
+.mort-traj-controls{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);}
+.mort-traj-control{display:flex;flex-direction:column;gap:6px;min-width:140px;}
+.mort-traj-control.slider{flex:1 1 240px;}
+.mort-traj-control label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
+.mort-traj-control input[type=range]{width:100%;cursor:pointer;accent-color:var(--accent);}
+.mort-traj-control input[type=number]{padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;width:110px;}
+.mort-traj-range-labels{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);}
+.mort-traj-range-labels .current{color:var(--ink);font-weight:600;}
+.mort-traj-impact{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+.mort-traj-impact-item{display:flex;flex-direction:column;gap:2px;min-width:120px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);}
+.mort-traj-impact-item.positive{background:#edf5f1;border-color:#a8d5be;}
+[data-theme="dark"] .mort-traj-impact-item.positive{background:#071a10;border-color:#1a4030;}
+.mort-traj-impact-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
+.mort-traj-impact-value{font-size:14px;font-weight:600;color:var(--ink);}
+.mort-traj-impact-item.positive .mort-traj-impact-value{color:#16a34a;}
+.mort-traj-chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;}
+.mort-traj-chart{display:block;width:100%;height:200px;}
+.mort-traj-legend{display:flex;gap:18px;font-size:11px;color:var(--muted);margin-top:8px;flex-wrap:wrap;}
+.mort-traj-legend-swatch{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:6px;}
 @media(max-width:700px){.mort-schedule .income-table{overflow-x:auto;}.mort-schedule table{min-width:760px;}.mort-extra-input{width:70px;}}
 .mort-card-add{background:transparent;border:2px dashed var(--border);border-radius:var(--radius);padding:18px 20px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px;font-weight:500;min-height:160px;}
 .mort-card-add:hover{border-color:var(--accent);color:var(--accent);}
@@ -7794,6 +7818,45 @@ function renderMortgages() {
 
       ${termNotice}
 
+      ${(() => {
+        const extra = _trajExtraByMort[sel.id] || 0;
+        const adjPmt = sel.payment + extra;
+        const periodLabel = sel.frequency === 'biweekly' ? 'Biweekly' : 'Monthly';
+        const sliderMin = sel.payment;
+        const sliderMax = sel.payment * 3;
+        const sliderStep = Math.max(5, Math.round(sel.payment * 0.02));
+        return `<div class="mort-trajectory">
+          <div class="mort-traj-head">
+            <div class="mort-traj-title">Payoff Trajectory</div>
+            <div class="mort-traj-sub">Drag the slider or type an extra amount to see how higher payments shorten payoff and cut interest.</div>
+          </div>
+          <div class="mort-traj-controls">
+            <div class="mort-traj-control slider">
+              <label>${periodLabel} payment</label>
+              <input type="range" id="traj-pmt" min="${sliderMin}" max="${sliderMax}" step="${sliderStep}" value="${adjPmt}" oninput="_onTrajSliderInput()">
+              <div class="mort-traj-range-labels">
+                <span>${fmt(sel.payment)} current</span>
+                <span class="current" id="traj-pmt-value">${fmt(adjPmt)}</span>
+                <span>${fmt(sliderMax)}</span>
+              </div>
+            </div>
+            <div class="mort-traj-control">
+              <label>Extra per period</label>
+              <input type="number" id="traj-extra" min="0" step="25" value="${extra}" oninput="_onTrajExtraInput()">
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="_resetTrajectory()" style="margin-bottom:2px;">Reset</button>
+          </div>
+          <div class="mort-traj-impact" id="mort-traj-impact"></div>
+          <div class="mort-traj-chart-wrap">
+            <svg class="mort-traj-chart" id="traj-chart" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+            <div class="mort-traj-legend">
+              <span><span class="mort-traj-legend-swatch" style="background:var(--muted);border-top:1px dashed var(--muted);"></span>Current payment</span>
+              <span><span class="mort-traj-legend-swatch" style="background:${sel.color || 'var(--accent)'};height:2px;"></span>Adjusted payment</span>
+            </div>
+          </div>
+        </div>`;
+      })()}
+
       <div class="mort-schedule">
         <div class="mort-sched-head">
           <div class="mort-sched-title">Amortization Schedule</div>
@@ -7867,6 +7930,137 @@ function renderMortgages() {
         </div>
       </div>
     </div>
+  `;
+  // Stash context for the trajectory handlers and trigger the initial render so the
+  // impact stats + chart are populated as soon as the detail view is in the DOM.
+  _trajCtx = { id: sel.id, balance: sel.balance, annualRate: sel.annualRate, basePayment: sel.payment, frequency: sel.frequency, nextDate: sel.nextDate, color: sel.color };
+  _renderTrajImpact();
+}
+
+// ── PAYOFF TRAJECTORY ──────────────────────────────────────
+// Per-debt extra-payment amount, stored in memory only (resets on reload by design —
+// users are exploring "what ifs", not persistent overrides). Voluntary payments tracked
+// in the amortization schedule are the persistent mechanism for actual extra payments.
+let _trajExtraByMort = {};
+let _trajCtx = null;
+
+function _onTrajSliderInput() {
+  if (!_trajCtx) return;
+  const v = parseFloat(document.getElementById('traj-pmt')?.value || _trajCtx.basePayment);
+  const extra = Math.max(0, v - _trajCtx.basePayment);
+  _trajExtraByMort[_trajCtx.id] = extra;
+  const extraInp = document.getElementById('traj-extra');
+  if (extraInp) extraInp.value = extra;
+  _renderTrajImpact();
+}
+
+function _onTrajExtraInput() {
+  if (!_trajCtx) return;
+  const v = Math.max(0, parseFloat(document.getElementById('traj-extra')?.value || 0) || 0);
+  _trajExtraByMort[_trajCtx.id] = v;
+  const slider = document.getElementById('traj-pmt');
+  if (slider) {
+    const newPmt = _trajCtx.basePayment + v;
+    const sliderMax = parseFloat(slider.max);
+    if (newPmt > sliderMax) slider.value = sliderMax; else slider.value = newPmt;
+  }
+  _renderTrajImpact();
+}
+
+function _resetTrajectory() {
+  if (!_trajCtx) return;
+  _trajExtraByMort[_trajCtx.id] = 0;
+  const slider = document.getElementById('traj-pmt');
+  if (slider) slider.value = _trajCtx.basePayment;
+  const extraInp = document.getElementById('traj-extra');
+  if (extraInp) extraInp.value = 0;
+  _renderTrajImpact();
+}
+
+function _renderTrajImpact() {
+  if (!_trajCtx) return;
+  const { balance, annualRate, basePayment, frequency, nextDate, color } = _trajCtx;
+  const extra = _trajExtraByMort[_trajCtx.id] || 0;
+  const baseRes = calcMort(balance, annualRate, basePayment, frequency, nextDate);
+  const adjRes = extra > 0 ? calcMort(balance, annualRate, basePayment + extra, frequency, nextDate) : baseRes;
+
+  const basePayoff = baseRes.schedule.length ? baseRes.schedule[baseRes.schedule.length - 1].date : null;
+  const adjPayoff = adjRes.schedule.length ? adjRes.schedule[adjRes.schedule.length - 1].date : null;
+  const interestSaved = Math.max(0, baseRes.totalInterest - adjRes.totalInterest);
+  const periodsSaved = Math.max(0, baseRes.periods - adjRes.periods);
+  const ppy = baseRes.ppy;
+
+  const pmtValEl = document.getElementById('traj-pmt-value');
+  if (pmtValEl) pmtValEl.textContent = fmt(basePayment + extra);
+
+  const impactEl = document.getElementById('mort-traj-impact');
+  if (impactEl) {
+    impactEl.innerHTML = `
+      <div class="mort-traj-impact-item">
+        <div class="mort-traj-impact-label">New payoff</div>
+        <div class="mort-traj-impact-value">${adjPayoff ? fmtMortDate(adjPayoff) : '—'}</div>
+        ${extra > 0 && basePayoff ? `<div style="font-size:10.5px;color:var(--muted);">was ${fmtMortDate(basePayoff)}</div>` : ''}
+      </div>
+      <div class="mort-traj-impact-item">
+        <div class="mort-traj-impact-label">Total interest</div>
+        <div class="mort-traj-impact-value">${fmt(adjRes.totalInterest)}</div>
+      </div>
+      <div class="mort-traj-impact-item${interestSaved > 0 ? ' positive' : ''}">
+        <div class="mort-traj-impact-label">Interest saved</div>
+        <div class="mort-traj-impact-value">${fmt(interestSaved)}</div>
+      </div>
+      <div class="mort-traj-impact-item${periodsSaved > 0 ? ' positive' : ''}">
+        <div class="mort-traj-impact-label">Payoff sooner</div>
+        <div class="mort-traj-impact-value">${periodsSaved > 0 ? fmtYrs(periodsSaved, ppy) : '—'}</div>
+      </div>
+    `;
+  }
+
+  _drawTrajChart(baseRes.schedule, adjRes.schedule, balance, color);
+}
+
+function _drawTrajChart(baseSched, adjSched, startBalance, accent) {
+  const svg = document.getElementById('traj-chart');
+  if (!svg) return;
+  const W = 600, H = 200;
+  const padL = 56, padR = 12, padT = 12, padB = 34;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const maxPeriods = Math.max(baseSched.length, adjSched.length, 1);
+  const maxBal = startBalance || 1;
+  const pathFor = (sched) => {
+    if (!sched.length) return '';
+    const pts = ['M' + padL.toFixed(1) + ',' + padT.toFixed(1)];
+    for (const s of sched) {
+      const x = padL + (s.p / maxPeriods) * plotW;
+      const y = padT + (1 - s.balance / maxBal) * plotH;
+      pts.push('L' + x.toFixed(1) + ',' + y.toFixed(1));
+    }
+    return pts.join(' ');
+  };
+  const ticks = [0, 0.33, 0.66, 1];
+  const grid = ticks.map(f => {
+    const y = padT + f * plotH;
+    return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="var(--border)" stroke-width="0.5"/>`;
+  }).join('');
+  const yLabels = ticks.map(f => {
+    const y = padT + f * plotH;
+    const v = maxBal * (1 - f);
+    const shortFmt = v >= 1000 ? '$' + (v / 1000).toFixed(0) + 'k' : '$' + Math.round(v);
+    return `<text x="${padL - 6}" y="${y + 3}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="Inter">${shortFmt}</text>`;
+  }).join('');
+  const baseEnd = baseSched.length ? baseSched[baseSched.length - 1].date : null;
+  const xLabels = `
+    <text x="${padL}" y="${H - 12}" text-anchor="start" font-size="10" fill="var(--muted)" font-family="Inter">Now</text>
+    ${baseEnd ? `<text x="${W - padR}" y="${H - 12}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="Inter">${fmtMortDate(baseEnd)}</text>` : ''}
+  `;
+  const stroke = accent || '#3b82f6';
+  svg.innerHTML = `
+    ${grid}
+    ${yLabels}
+    ${xLabels}
+    <path d="${pathFor(baseSched)}" stroke="var(--muted)" stroke-width="1.5" fill="none" stroke-dasharray="4 3" opacity="0.85"/>
+    <path d="${pathFor(adjSched)}" stroke="${stroke}" stroke-width="2" fill="none"/>
   `;
 }
 
