@@ -4791,9 +4791,14 @@ function renderImportPreview() {
     const amtAbs = Math.abs(t.amount);
     const amtColor = t.refund ? 'color:#16a34a;' : '';
     const sign = t.refund ? '-' : '';
-    const catSelected = CATS.some(c => c.key === t.category) ? t.category : 'misc';
-    const catSelect = CATS.map(c => `<option value="${esc(c.key)}" ${c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
-    return `<tr data-row-idx="${i}" style="border-bottom:1px solid var(--border);">
+    const isIncome = !!t.isIncome;
+    const catSelected = isIncome ? '__income__' : (CATS.some(c => c.key === t.category) ? t.category : 'misc');
+    const catSelect = `<option value="__income__" ${isIncome ? 'selected' : ''}>Income ↗</option>` +
+      CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
+    const rowStyle = isIncome
+      ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
+      : 'border-bottom:1px solid var(--border);';
+    return `<tr data-row-idx="${i}" style="${rowStyle}">
       <td style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editImportRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
@@ -4808,13 +4813,17 @@ function renderImportPreview() {
 function renderImportPreviewFooter() {
   const rows = _pendingImportRows || [];
   const invalid = _pendingImportInvalid || [];
-  const expenseTotal = rows.filter(t => !t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
-  const refundTotal = rows.filter(t => t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const incomeRows = rows.filter(t => t.isIncome);
+  const expenseRows = rows.filter(t => !t.isIncome);
+  const expenseTotal = expenseRows.filter(t => !t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const refundTotal = expenseRows.filter(t => t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const incomeTotal = incomeRows.reduce((s, t) => s + Math.abs(t.amount), 0);
   const net = expenseTotal - refundTotal;
   const footer = document.getElementById('import-preview-footer');
   footer.innerHTML = `
-    <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Expenses</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(expenseTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${rows.filter(t=>!t.refund).length} transaction${rows.filter(t=>!t.refund).length===1?'':'s'}</div></div>
-    ${refundTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Refunds / Credits</div><div style="font-size:14px;font-weight:600;color:#16a34a;">-${fmt(refundTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${rows.filter(t=>t.refund).length} transaction${rows.filter(t=>t.refund).length===1?'':'s'}</div></div>` : ''}
+    <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Expenses</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(expenseTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${expenseRows.filter(t=>!t.refund).length} transaction${expenseRows.filter(t=>!t.refund).length===1?'':'s'}</div></div>
+    ${refundTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Refunds / Credits</div><div style="font-size:14px;font-weight:600;color:#16a34a;">-${fmt(refundTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${expenseRows.filter(t=>t.refund).length} transaction${expenseRows.filter(t=>t.refund).length===1?'':'s'}</div></div>` : ''}
+    ${incomeTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Income</div><div style="font-size:14px;font-weight:600;color:#16a34a;">+${fmt(incomeTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${incomeRows.length} row${incomeRows.length===1?'':'s'} → Income</div></div>` : ''}
     <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Net</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(net)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${rows.length} row${rows.length===1?'':'s'} to import</div></div>
     ${invalid.length ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:#c15c1e;font-weight:600;margin-bottom:3px;">Skipped</div><div style="font-size:14px;font-weight:600;color:#c15c1e;">${invalid.length}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;" title="${esc(invalid.slice(0,5).map(r=>r.reason).join(' · '))}">${esc(invalid[0].reason)}${invalid.length>1?' + others':''}</div></div>` : ''}
   `;
@@ -4830,13 +4839,19 @@ function editImportRow(idx, field, value) {
     row.merchant = value;
     if (!row._catManual) row.category = autoCat(value);
   } else if (field === 'category') {
-    row.category = value;
+    if (value === '__income__') {
+      row.isIncome = true;
+      row.category = null;
+    } else {
+      row.isIncome = false;
+      row.category = value;
+    }
     row._catManual = true;
   } else if (field === 'date') {
     row.date = value;
   }
   _pendingImportEdited = true;
-  renderImportPreviewFooter();
+  renderImportPreview();
   const resetBtn = document.getElementById('reset-edits-btn');
   if (resetBtn) resetBtn.style.display = '';
 }
@@ -4886,7 +4901,8 @@ async function doImport() {
       person,
       card: cardName,
       note: '',
-      refund: !!r.refund
+      refund: !!r.refund,
+      isIncome: !!r.isIncome
     }));
   } else {
     parsed = [];
@@ -4931,11 +4947,17 @@ async function doImport() {
 
   const importMode = document.querySelector('input[name="import-mode"]:checked').value;
 
+  // Split rows: user-flagged income rows land in incomes[]; everything else
+  // continues through the existing expense (txns[]) pipeline.
+  const incomeRows  = parsed.filter(t =>  t.isIncome);
+  const expenseParsed = parsed.filter(t => !t.isIncome);
+
   // Dedup key: date + amount + card + normalised merchant prefix
   function dedupKey(t) {
     const normMerchant = (t.merchant||'').toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,20);
     return `${t.date}|${t.amount}|${t.card||t.person}|${normMerchant}`;
   }
+  const incomeDedupKey = t => `${t.date}|${Math.abs(t.amount)}|${t.person}|${(t.merchant||t.desc||'').toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,20)}`;
 
   let fresh, skipped, removedCount = 0;
 
@@ -4967,16 +4989,34 @@ async function doImport() {
       if (!i.fromTxnId) return true; // manually added income — keep
       return !removedTxnIds.has(i.fromTxnId);
     });
-    // Import all parsed (no dedup needed since we cleared the period)
-    fresh   = parsed;
+    // Import all expense-parsed (no dedup needed since we cleared the period)
+    fresh   = expenseParsed;
     skipped = 0;
     txns    = [...txns, ...fresh];
   } else {
     // Add new only — standard dedup
     const ex = new Set(txns.map(dedupKey));
-    fresh    = parsed.filter(t => !ex.has(dedupKey(t)));
-    skipped  = parsed.length - fresh.length;
+    fresh    = expenseParsed.filter(t => !ex.has(dedupKey(t)));
+    skipped  = expenseParsed.length - fresh.length;
     txns     = [...txns, ...fresh];
+  }
+
+  // Income rows: dedup against existing incomes, then append as standalone
+  // records (positive amount, type 'income', no fromTxnId).
+  if (incomeRows.length) {
+    const existingIncomeKeys = new Set(incomes.map(i => incomeDedupKey(i)));
+    const freshIncomes = incomeRows.filter(t => !existingIncomeKeys.has(incomeDedupKey(t)));
+    freshIncomes.forEach(t => {
+      incomes.push({
+        id: uid(),
+        date: t.date,
+        amount: Math.abs(t.amount),
+        type: 'income',
+        person: t.person,
+        desc: t.merchant,
+        note: '',
+      });
+    });
   }
 
   const modeNote = importMode === 'replace' ? ` (replaced ${removedCount} existing)` : '';
