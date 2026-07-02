@@ -6551,9 +6551,16 @@ function renderPdfPreview() {
     const amtAbs = Math.abs(t.amount);
     const amtColor = t.amount < 0 ? 'color:#16a34a;' : '';
     const sign = t.amount < 0 ? '-' : '';
-    const catSelected = CATS.some(c => c.key === t.category) ? t.category : 'misc';
-    const catSelect = CATS.map(c => `<option value="${esc(c.key)}" ${c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
-    return `<tr data-row-idx="${i}" style="border-bottom:1px solid var(--border);">
+    const isIncome = !!t.isIncome;
+    const catSelected = isIncome ? '__income__' : (CATS.some(c => c.key === t.category) ? t.category : 'misc');
+    // Prepend an "Income ↗" option so users can flag statement lines (e.g. salary
+    // deposits) that should land in the Income ledger rather than as expenses.
+    const catSelect = `<option value="__income__" ${isIncome ? 'selected' : ''}>Income ↗</option>` +
+      CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
+    const rowStyle = isIncome
+      ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
+      : 'border-bottom:1px solid var(--border);';
+    return `<tr data-row-idx="${i}" style="${rowStyle}">
       <td style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editPdfRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editPdfRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editPdfRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
@@ -6562,12 +6569,16 @@ function renderPdfPreview() {
     </tr>`;
   }).join('');
 
-  const charges = pdfParsedTxns.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-  const credits = pdfParsedTxns.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
+  const expenseRows = pdfParsedTxns.filter(t => !t.isIncome);
+  const incomeRows  = pdfParsedTxns.filter(t =>  t.isIncome);
+  const charges = expenseRows.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const credits = expenseRows.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
+  const incomeTotal = incomeRows.reduce((s, t) => s + Math.abs(t.amount), 0);
   const totalsEl = document.getElementById('pdf-totals');
   totalsEl.innerHTML = `
     <span style="color:var(--muted);">Charges <strong style="color:var(--ink);margin-left:4px;">${fmt(charges)}</strong></span>
     ${credits < 0 ? `<span style="color:var(--muted);">Credits <strong class="clr-credit" style="margin-left:4px;">-${fmt(Math.abs(credits))}</strong></span>` : ''}
+    ${incomeTotal > 0 ? `<span style="color:var(--muted);">Income <strong style="color:#16a34a;margin-left:4px;">+${fmt(incomeTotal)}</strong></span>` : ''}
     <span style="color:var(--muted);">Net <strong style="color:var(--ink);margin-left:4px;">${fmt(charges + credits)}</strong></span>`;
   const resetBtn = document.getElementById('pdf-reset-edits-btn');
   if (resetBtn) resetBtn.style.display = _pdfEdited ? '' : 'none';
@@ -6585,7 +6596,13 @@ function editPdfRow(idx, field, value) {
     row.merchant = value;
     if (!row._catManual) row.category = autoCat(value);
   } else if (field === 'category') {
-    row.category = value;
+    if (value === '__income__') {
+      row.isIncome = true;
+      row.category = null;
+    } else {
+      row.isIncome = false;
+      row.category = value;
+    }
     row._catManual = true;
   } else if (field === 'date') {
     row.date = value;
@@ -6608,9 +6625,15 @@ function resetPdfEdits() {
 
 async function importPdfTransactions() {
   const pdfDedupKey = t => `${t.date}|${t.amount}|${t.card||t.person}|${(t.merchant||'').toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,20)}`;
+  const incomeDedupKey = t => `${t.date}|${Math.abs(t.amount)}|${t.person}|${(t.merchant||t.desc||'').toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,20)}`;
   const importMode = document.querySelector('input[name="pdf-import-mode"]:checked').value;
   const person   = pdfParsedTxns[0]?.person || '';
   const cardName = pdfParsedTxns[0]?.card   || '';
+
+  // Split rows: user-flagged income rows land in incomes[]; everything else
+  // continues through the existing expense (txns[]) pipeline.
+  const incomeRows  = pdfParsedTxns.filter(t =>  t.isIncome);
+  const expenseRows = pdfParsedTxns.filter(t => !t.isIncome);
 
   let fresh, skipped, removedCount = 0;
 
@@ -6633,14 +6656,33 @@ async function importPdfTransactions() {
     });
     removedCount = removedTxnIds.size;
     incomes = incomes.filter(i => !i.fromTxnId || !removedTxnIds.has(i.fromTxnId));
-    fresh   = pdfParsedTxns;
+    fresh   = expenseRows;
     skipped = 0;
     txns    = [...txns, ...fresh];
   } else {
     const ex = new Set(txns.map(pdfDedupKey));
-    fresh   = pdfParsedTxns.filter(t => !ex.has(pdfDedupKey(t)));
-    skipped = pdfParsedTxns.length - fresh.length;
+    fresh   = expenseRows.filter(t => !ex.has(pdfDedupKey(t)));
+    skipped = expenseRows.length - fresh.length;
     txns    = [...txns, ...fresh];
+  }
+
+  // Income rows: dedup against existing incomes, then append. Standalone income
+  // records with no fromTxnId, positive amounts, default type 'income' — user
+  // can retype/recategorize on the Income page.
+  if (incomeRows.length) {
+    const existingIncomeKeys = new Set(incomes.map(i => incomeDedupKey(i)));
+    const freshIncomes = incomeRows.filter(t => !existingIncomeKeys.has(incomeDedupKey(t)));
+    freshIncomes.forEach(t => {
+      incomes.push({
+        id: uid(),
+        date: t.date,
+        amount: Math.abs(t.amount),
+        type: 'income',
+        person: t.person,
+        desc: t.merchant,
+        note: '',
+      });
+    });
   }
 
   uploads.unshift({
