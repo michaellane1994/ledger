@@ -783,6 +783,15 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .mort-form-input:focus{border-color:var(--accent);}
 .mort-form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:14px;border-top:1px solid var(--border);}
 .mort-form-hint{font-size:11px;color:var(--faint);margin-top:3px;}
+/* Toast + undo toast (ported from SaaS). Undo-toast is dark with an inline
+   Undo button, dismisses on click or after `durationMs` — used by all delete
+   flows and statement imports for reversible actions. */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1f1c15;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:2000;opacity:0;transition:opacity .2s, transform .2s;pointer-events:none;max-width:90vw;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.undo-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1f1c15;color:#fff;padding:10px 12px 10px 18px;border-radius:8px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:2001;opacity:0;transition:opacity .2s, transform .2s;pointer-events:none;max-width:90vw;display:flex;align-items:center;gap:14px;}
+.undo-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;}
+.undo-toast button{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2);padding:5px 12px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .12s;}
+.undo-toast button:hover{background:rgba(255,255,255,.22);}
 </style>
 </head>
 <body>
@@ -1283,7 +1292,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
         <table>
           <thead>
             <tr>
-              <th>Deleted</th><th>Date</th><th>Merchant</th><th>Category</th><th>Card</th>
+              <th>Deleted</th><th>Type</th><th>Item</th><th></th>
               <th style="text-align:right;">Amount</th><th></th>
             </tr>
           </thead>
@@ -4523,23 +4532,115 @@ function saveTxnAmount(id, raw) {
   autoPush();
 }
 
+// ── UNDO TOAST + BIN HELPERS (ported from SaaS) ──────────
+// The app calls showToast(...) in several places but never defined it —
+// silently no-oped. Adding a real implementation + a matching undo variant.
+let _toastTimer = null;
+function showToast(msg) {
+  let t = document.getElementById('global-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'global-toast';
+    t.className = 'toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// Undo-toast: shows a message with an Undo button for `durationMs` ms. If the
+// user clicks Undo before it disappears, `onUndo` fires and no commit happens.
+// If they let it expire, `onCommit` fires (used to defer the trash push).
+let _undoToastTimer = null;
+let _undoToastPending = null;
+function showUndoToast(msg, onUndo, opts) {
+  const durationMs = opts?.durationMs || 5000;
+  const onCommit = opts?.onCommit || (() => {});
+  if (_undoToastPending) {
+    try { _undoToastPending.onCommit(); } catch (_) {}
+    _undoToastPending = null;
+    clearTimeout(_undoToastTimer);
+  }
+  let el = document.getElementById('global-undo-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'global-undo-toast';
+    el.className = 'undo-toast';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    document.body.appendChild(el);
+  }
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = msg;
+  const undoBtn = document.createElement('button');
+  undoBtn.textContent = 'Undo';
+  undoBtn.setAttribute('aria-label', 'Undo — ' + msg);
+  el.innerHTML = '';
+  el.appendChild(msgSpan);
+  el.appendChild(undoBtn);
+  _undoToastPending = { onCommit, onUndo };
+  const commit = () => {
+    if (!_undoToastPending) return;
+    const cb = _undoToastPending.onCommit;
+    _undoToastPending = null;
+    el.classList.remove('show');
+    try { cb(); } catch (e) { console.error('[undo-toast] commit failed:', e); }
+  };
+  const undo = () => {
+    if (!_undoToastPending) return;
+    const cb = _undoToastPending.onUndo;
+    _undoToastPending = null;
+    clearTimeout(_undoToastTimer);
+    el.classList.remove('show');
+    try { cb(); } catch (e) { console.error('[undo-toast] undo failed:', e); }
+  };
+  undoBtn.onclick = undo;
+  requestAnimationFrame(() => el.classList.add('show'));
+  _undoToastTimer = setTimeout(commit, durationMs);
+  return commit;
+}
+
+// Bin retention: 30 days from deletedAt. Called after every trash.push.
+function pruneTrash() {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  trash = trash.filter(t => new Date(t.deletedAt) > cutoff);
+}
+
+function _trashType(t) { return t._type || 'txn'; }
+
 function deleteTxn(id) {
   const t = txns.find(x => x.id === id);
-  if (t) {
-    trash.push({ ...t, deletedAt: new Date().toISOString() });
-    txns = txns.filter(x => x.id !== id);
-    // Cascade: remove any income row linked to this txn
-    incomes = incomes.filter(i => i.fromTxnId !== id);
-    // Prune trash older than 30 days
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
-    trash = trash.filter(t => new Date(t.deletedAt) > cutoff);
-  }
+  if (!t) return;
+  const idx = txns.findIndex(x => x.id === id);
+  const linkedIncomes = incomes.filter(i => i.fromTxnId === id).map(i => ({ ...i }));
+  const snapshot = { ...t };
+  txns = txns.filter(x => x.id !== id);
+  incomes = incomes.filter(i => i.fromTxnId !== id);
   persist();
   renderTxns();
   if (typeof renderIncome === 'function') renderIncome();
   renderDashboard();
   autoPush();
+  showUndoToast('Transaction deleted.', () => {
+    txns.splice(Math.max(0, Math.min(idx, txns.length)), 0, snapshot);
+    linkedIncomes.forEach(li => incomes.push(li));
+    persist();
+    renderTxns();
+    if (typeof renderIncome === 'function') renderIncome();
+    renderDashboard();
+    autoPush();
+    showToast('Transaction restored.');
+  }, {
+    onCommit: () => {
+      trash.push({ ...snapshot, _type: 'txn', deletedAt: new Date().toISOString() });
+      pruneTrash();
+      persist();
+      autoPush();
+    },
+  });
 }
 
 function restoreTxn(id) {
@@ -4960,6 +5061,8 @@ async function doImport() {
   const incomeDedupKey = t => `${t.date}|${Math.abs(t.amount)}|${t.person}|${(t.merchant||t.desc||'').toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,20)}`;
 
   let fresh, skipped, removedCount = 0;
+  const removedTxnSnapshots = [];
+  const removedIncomeSnapshots = [];
 
   if (importMode === 'replace') {
     // Find all months covered by the incoming CSV
@@ -4979,6 +5082,7 @@ async function doImport() {
       const month = t.date.substring(0,7);
       if (incomingMonths.has(month) && cardMatch(t)) {
         removedTxnIds.add(t.id);
+        removedTxnSnapshots.push({ ...t });
         return false;
       }
       return true;
@@ -4987,7 +5091,11 @@ async function doImport() {
     // Also remove income entries that were flagged from those removed transactions
     incomes = incomes.filter(i => {
       if (!i.fromTxnId) return true; // manually added income — keep
-      return !removedTxnIds.has(i.fromTxnId);
+      if (removedTxnIds.has(i.fromTxnId)) {
+        removedIncomeSnapshots.push({ ...i });
+        return false;
+      }
+      return true;
     });
     // Import all expense-parsed (no dedup needed since we cleared the period)
     fresh   = expenseParsed;
@@ -5003,12 +5111,15 @@ async function doImport() {
 
   // Income rows: dedup against existing incomes, then append as standalone
   // records (positive amount, type 'income', no fromTxnId).
+  const freshIncomeIds = [];
   if (incomeRows.length) {
     const existingIncomeKeys = new Set(incomes.map(i => incomeDedupKey(i)));
     const freshIncomes = incomeRows.filter(t => !existingIncomeKeys.has(incomeDedupKey(t)));
     freshIncomes.forEach(t => {
+      const id = uid();
+      freshIncomeIds.push(id);
       incomes.push({
-        id: uid(),
+        id: id,
         date: t.date,
         amount: Math.abs(t.amount),
         type: 'income',
@@ -5020,6 +5131,7 @@ async function doImport() {
   }
 
   const modeNote = importMode === 'replace' ? ` (replaced ${removedCount} existing)` : '';
+  const freshTxnIds = fresh.map(t => t.id);
   uploads.unshift({ name: pFile.name, count: fresh.length, skipped, person, card: cardName, date: new Date().toLocaleDateString('en-CA'), mode: importMode });
   persist();
 
@@ -5030,6 +5142,30 @@ async function doImport() {
   renderDashboard();
   goNav('transactions');
   autoPush();
+
+  // Import undo: 30-second window to reverse the whole batch — useful when the
+  // user picked the wrong statement type (bank vs credit), wrong card owner,
+  // or realised they meant to upload a different file.
+  const undoMsg = importMode === 'replace'
+    ? `Imported ${fresh.length} · replaced ${removedCount} existing.`
+    : `Imported ${fresh.length} transaction${fresh.length !== 1 ? 's' : ''}${freshIncomeIds.length ? ' + ' + freshIncomeIds.length + ' income' : ''}.`;
+  showUndoToast(undoMsg, () => {
+    const freshTxnSet = new Set(freshTxnIds);
+    const freshIncSet = new Set(freshIncomeIds);
+    txns = txns.filter(t => !freshTxnSet.has(t.id));
+    incomes = incomes.filter(i => !freshIncSet.has(i.id));
+    removedTxnSnapshots.forEach(t => txns.push({ ...t }));
+    removedIncomeSnapshots.forEach(i => incomes.push({ ...i }));
+    if (uploads[0] && uploads[0].name === pFile.name) uploads.shift();
+    persist();
+    renderPills();
+    renderDashboard();
+    if (typeof renderTxns === 'function') renderTxns();
+    if (typeof renderIncome === 'function') renderIncome();
+    if (typeof renderUploads === 'function') renderUploads();
+    autoPush();
+    showToast('Import undone.');
+  }, { durationMs: 30000 });
 }
 
 // ── PROC MODAL ───────────────────────────────────────────
@@ -5467,16 +5603,33 @@ document.addEventListener('click', closeRowMenus);
 
 function deleteIncome(id) {
   const inc = incomes.find(x => x.id === id);
-  if (inc?.fromTxnId) {
-    // Cascade: remove the linked transaction (move to trash)
-    const t = txns.find(x => x.id === inc.fromTxnId);
-    if (t) {
-      trash.push({ ...t, deletedAt: new Date().toISOString() });
-      txns = txns.filter(x => x.id !== inc.fromTxnId);
-    }
+  if (!inc) return;
+  const idx = incomes.findIndex(x => x.id === id);
+  const incSnapshot = { ...inc };
+  const linkedTxnSnapshot = inc.fromTxnId ? txns.find(x => x.id === inc.fromTxnId) : null;
+  const linkedTxnSnap = linkedTxnSnapshot ? { ...linkedTxnSnapshot } : null;
+  const linkedTxnIdx = linkedTxnSnapshot ? txns.findIndex(x => x.id === linkedTxnSnapshot.id) : -1;
+  if (linkedTxnSnapshot) {
+    txns = txns.filter(x => x.id !== inc.fromTxnId);
   }
   incomes = incomes.filter(x => x.id !== id);
   persist(); renderIncome(); renderDashboard(); renderTxns(); autoPush();
+  showUndoToast('Income entry deleted.', () => {
+    incomes.splice(Math.max(0, Math.min(idx, incomes.length)), 0, incSnapshot);
+    if (linkedTxnSnap) txns.splice(Math.max(0, Math.min(linkedTxnIdx, txns.length)), 0, linkedTxnSnap);
+    persist(); renderIncome(); renderDashboard(); renderTxns(); autoPush();
+    showToast('Income entry restored.');
+  }, {
+    onCommit: () => {
+      trash.push({ ...incSnapshot, _type: 'income', deletedAt: new Date().toISOString() });
+      if (linkedTxnSnap) {
+        trash.push({ ...linkedTxnSnap, _type: 'txn', deletedAt: new Date().toISOString() });
+      }
+      pruneTrash();
+      persist();
+      autoPush();
+    },
+  });
 }
 
 function saveIncomePerson(id, person) {
@@ -5718,8 +5871,24 @@ function confirmAddSavings() {
 }
 
 function deleteSavings(id) {
+  const a = savAccts.find(x => x.id === id);
+  if (!a) return;
+  const idx = savAccts.findIndex(x => x.id === id);
+  const snapshot = { ...a };
   savAccts = savAccts.filter(x => x.id !== id);
   persist(); renderSavings(); renderDashboard();
+  showUndoToast('Savings account deleted.', () => {
+    savAccts.splice(Math.max(0, Math.min(idx, savAccts.length)), 0, snapshot);
+    persist(); renderSavings(); renderDashboard();
+    showToast('Savings account restored.');
+  }, {
+    onCommit: () => {
+      trash.push({ ...snapshot, _type: 'savings', deletedAt: new Date().toISOString() });
+      pruneTrash();
+      persist();
+      autoPush();
+    },
+  });
 }
 
 function openAddContrib() {
@@ -6012,11 +6181,9 @@ function deleteCat(key) {
   const c = CATS.find(x => x.key === key);
   if (!c) return;
   const count = txns.filter(t => t.category === key).length;
-  const msg = count > 0
-    ? `"${c.label}" has ${count} transaction${count!==1?'s':''} — they will be moved to Misc. Continue?`
-    : `Remove category "${c.label}"?`;
-  if (!confirm(msg)) return;
-  // Reassign transactions to misc
+  const idx = CATS.findIndex(x => x.key === key);
+  const catSnapshot = { ...c };
+  const reassignedTxnIds = txns.filter(t => t.category === key).map(t => t.id);
   txns.forEach(t => { if (t.category === key) t.category = 'misc'; });
   CATS = CATS.filter(x => x.key !== key);
   rebuildCAT();
@@ -6025,6 +6192,28 @@ function deleteCat(key) {
   renderCatManagement();
   renderDashboard();
   autoPush();
+  const msg = count > 0
+    ? `Category "${c.label}" deleted (${count} transaction${count!==1?'s':''} moved to Misc).`
+    : `Category "${c.label}" deleted.`;
+  showUndoToast(msg, () => {
+    CATS.splice(Math.max(0, Math.min(idx, CATS.length)), 0, catSnapshot);
+    rebuildCAT();
+    const reassignedSet = new Set(reassignedTxnIds);
+    txns.forEach(t => { if (reassignedSet.has(t.id)) t.category = key; });
+    saveCats();
+    persist();
+    renderCatManagement();
+    renderDashboard();
+    autoPush();
+    showToast('Category restored.');
+  }, {
+    onCommit: () => {
+      trash.push({ ...catSnapshot, _type: 'category', _reassignedTxnIds: reassignedTxnIds, deletedAt: new Date().toISOString() });
+      pruneTrash();
+      persist();
+      autoPush();
+    },
+  });
 }
 
 // Wire up live preview on color/label change
@@ -6676,6 +6865,9 @@ async function importPdfTransactions() {
   const expenseRows = pdfParsedTxns.filter(t => !t.isIncome);
 
   let fresh, skipped, removedCount = 0;
+  const removedTxnSnapshots = [];
+  const removedIncomeSnapshots = [];
+  const freshIncomeIds = [];
 
   if (importMode === 'replace') {
     const incomingMonths = new Set(pdfParsedTxns.map(t => t.date.substring(0,7)));
@@ -6690,12 +6882,20 @@ async function importPdfTransactions() {
     txns = txns.filter(t => {
       if (incomingMonths.has(t.date.substring(0,7)) && cardMatch(t)) {
         removedTxnIds.add(t.id);
+        removedTxnSnapshots.push({ ...t });
         return false;
       }
       return true;
     });
     removedCount = removedTxnIds.size;
-    incomes = incomes.filter(i => !i.fromTxnId || !removedTxnIds.has(i.fromTxnId));
+    incomes = incomes.filter(i => {
+      if (!i.fromTxnId) return true;
+      if (removedTxnIds.has(i.fromTxnId)) {
+        removedIncomeSnapshots.push({ ...i });
+        return false;
+      }
+      return true;
+    });
     fresh   = expenseRows;
     skipped = 0;
     txns    = [...txns, ...fresh];
@@ -6713,8 +6913,10 @@ async function importPdfTransactions() {
     const existingIncomeKeys = new Set(incomes.map(i => incomeDedupKey(i)));
     const freshIncomes = incomeRows.filter(t => !existingIncomeKeys.has(incomeDedupKey(t)));
     freshIncomes.forEach(t => {
+      const id = uid();
+      freshIncomeIds.push(id);
       incomes.push({
-        id: uid(),
+        id: id,
         date: t.date,
         amount: Math.abs(t.amount),
         type: 'income',
@@ -6725,8 +6927,10 @@ async function importPdfTransactions() {
     });
   }
 
+  const uploadName = pdfFile ? pdfFile.name : 'PDF Statement';
+  const freshTxnIds = fresh.map(t => t.id);
   uploads.unshift({
-    name: pdfFile ? pdfFile.name : 'PDF Statement',
+    name: uploadName,
     count: fresh.length, skipped, person, card: cardName,
     date: new Date().toLocaleDateString('en-CA'), mode: importMode
   });
@@ -6735,6 +6939,28 @@ async function importPdfTransactions() {
   renderPills(); renderDashboard(); renderUploads();
   goNav('transactions');
   autoPush();
+
+  // Import undo: 30-second window to reverse the whole batch. Matches CSV path.
+  const undoMsg = importMode === 'replace'
+    ? `Imported ${fresh.length} · replaced ${removedCount} existing.`
+    : `Imported ${fresh.length} transaction${fresh.length !== 1 ? 's' : ''}${freshIncomeIds.length ? ' + ' + freshIncomeIds.length + ' income' : ''}.`;
+  showUndoToast(undoMsg, () => {
+    const freshTxnSet = new Set(freshTxnIds);
+    const freshIncSet = new Set(freshIncomeIds);
+    txns = txns.filter(t => !freshTxnSet.has(t.id));
+    incomes = incomes.filter(i => !freshIncSet.has(i.id));
+    removedTxnSnapshots.forEach(t => txns.push({ ...t }));
+    removedIncomeSnapshots.forEach(i => incomes.push({ ...i }));
+    if (uploads[0] && uploads[0].name === uploadName) uploads.shift();
+    persist();
+    renderPills();
+    renderDashboard();
+    if (typeof renderTxns === 'function') renderTxns();
+    if (typeof renderIncome === 'function') renderIncome();
+    if (typeof renderUploads === 'function') renderUploads();
+    autoPush();
+    showToast('Import undone.');
+  }, { durationMs: 30000 });
 }
 
 // ── BANK-SPECIFIC PARSERS ─────────────────────────────────
@@ -7082,41 +7308,129 @@ function isSkippable(merchant, amt) {
 
 // ── TRASH / BIN ──────────────────────────────────────────
 function renderTrash() {
-  const body  = document.getElementById('trash-body');
-  const empty = document.getElementById('trash-empty');
-  if (!body) return;
+  try {
+    const body  = document.getElementById('trash-body');
+    const empty = document.getElementById('trash-empty');
+    const desc  = document.getElementById('trash-desc');
+    if (!body) return;
+    if (desc) desc.textContent = 'Deleted items are kept for 30 days.';
 
-  // Update trash count badge in nav
-  const badge = document.getElementById('trash-count');
-  if (badge) {
-    badge.textContent = trash.length;
-    badge.style.display = trash.length ? 'inline' : 'none';
+    // Update trash count badge in nav
+    const badge = document.getElementById('trash-count');
+    if (badge) {
+      badge.textContent = trash.length;
+      badge.style.display = trash.length ? 'inline' : 'none';
+    }
+
+    const sorted = [...(trash || [])].sort((a,b) => (b?.deletedAt||'').localeCompare(a?.deletedAt||''));
+    if (!sorted.length) { body.innerHTML = ''; if (empty) empty.style.display = 'block'; return; }
+    if (empty) empty.style.display = 'none';
+
+    body.innerHTML = sorted.map(t => {
+      try {
+        const daysAgo = Math.floor((Date.now() - new Date(t.deletedAt)) / 86400000);
+        const daysLeft = Math.max(0, 30 - daysAgo);
+        const opacityStyle = daysLeft <= 3 ? 'opacity:0.55;' : '';
+        const daysCell = `<td style="font-size:11.5px;color:var(--faint);width:90px;">${daysLeft}d left</td>`;
+        const type = _trashType(t);
+        const idForRestore = esc(t.id || t.key || '');
+        let label, sub, amount;
+        if (type === 'income') {
+          label = esc(t.desc || 'Income');
+          sub = `<span class="person-tag">${esc(t.person || '—')}</span>`;
+          amount = `<span style="color:#2d6a4f;">+${fmt(Math.abs(t.amount||0))}</span>`;
+        } else if (type === 'savings') {
+          label = esc(t.name || 'Savings account');
+          sub = `<span class="person-tag">${esc(t.type || '—')}</span>`;
+          amount = fmt(t.balance || t.baseBalance || 0);
+        } else if (type === 'category') {
+          label = esc(t.label || 'Category');
+          const cnt = (t._reassignedTxnIds || []).length;
+          sub = cnt > 0 ? `<span style="font-size:11px;color:var(--muted);">${cnt} txn${cnt!==1?'s':''} were reassigned to Misc</span>` : '';
+          amount = `<span style="width:14px;height:14px;background:${esc(t.color||'#94a3b8')};border-radius:3px;display:inline-block;vertical-align:middle;"></span>`;
+        } else if (type === 'mortgage') {
+          label = esc(t.label || 'Mortgage');
+          sub = `<span class="person-tag">${esc(t.rateType || 'mortgage')}</span>`;
+          amount = fmt(t.originalBalance || 0);
+        } else {
+          // txn (default / legacy entries)
+          let c = { bg:'#eee', color:'#333', label: t.category || 'misc' };
+          try {
+            if (typeof CAT !== 'undefined' && CAT) {
+              const found = CAT[t.category] || CAT.misc;
+              if (found && typeof found === 'object') c = found;
+            }
+          } catch (_) {}
+          const isRefund = t.refund || (t.amount||0) < 0;
+          label = esc(t.merchant || '—');
+          sub = `<span class="cat-badge" style="background:${c.bg||'#eee'};color:${c.color||'#333'};">${esc(c.label||'misc')}</span> <span class="person-tag" style="margin-left:6px;">${esc(t.card || t.person || '—')}</span>`;
+          amount = isRefund
+            ? `<span style="color:#2d6a4f;">−${fmt(Math.abs(t.amount||0))}</span>`
+            : fmt(t.amount||0);
+        }
+        return `<tr style="${opacityStyle}">
+          ${daysCell}
+          <td style="font-size:11px;color:var(--muted);width:90px;text-transform:uppercase;letter-spacing:.4px;">${esc(type)}</td>
+          <td style="font-weight:500;">${label}</td>
+          <td>${sub}</td>
+          <td style="text-align:right;">${amount}</td>
+          <td style="text-align:right;">
+            <button class="btn btn-ghost btn-sm" onclick="restoreFromBin('${idForRestore}')" aria-label="Restore">Restore</button>
+          </td>
+        </tr>`;
+      } catch (rowErr) {
+        console.error('[renderTrash] row failed:', rowErr, t);
+        return `<tr style="opacity:0.55;"><td colspan="6" style="color:var(--faint);font-size:12px;padding:8px 12px;">Malformed entry (skipped)</td></tr>`;
+      }
+    }).join('');
+  } catch (e) {
+    console.error('[renderTrash] failed:', e);
+    const body = document.getElementById('trash-body');
+    if (body) body.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--faint);">Could not load the Bin. Check the browser console for details.</td></tr>`;
   }
+}
 
-  const sorted = [...trash].sort((a,b) => b.deletedAt.localeCompare(a.deletedAt));
-  if (!sorted.length) { body.innerHTML = ''; empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
-
-  body.innerHTML = sorted.map(t => {
-    const c = CAT[t.category] || CAT.misc;
-    const daysAgo = Math.floor((Date.now() - new Date(t.deletedAt)) / 86400000);
-    const daysLeft = 30 - daysAgo;
-    const isRefund = t.refund || t.amount < 0;
-    const amtDisplay = isRefund
-      ? `<span style="color:#2d6a4f;">−${fmt(Math.abs(t.amount))}</span>`
-      : fmt(t.amount);
-    return `<tr style="opacity:${daysLeft <= 3 ? '0.5' : '1'}">
-      <td style="font-size:11.5px;color:var(--faint);width:90px;">${daysLeft}d left</td>
-      <td style="color:var(--faint);font-size:12px;width:88px;">${t.date}</td>
-      <td style="font-weight:500;">${esc(t.merchant)}</td>
-      <td><span class="cat-badge" style="background:${c.bg};color:${c.color};">${c.label}</span></td>
-      <td><span class="person-tag">${esc(t.card || t.person || '—')}</span></td>
-      <td style="text-align:right;">${amtDisplay}</td>
-      <td style="text-align:right;">
-        <button class="btn btn-ghost btn-sm" onclick="restoreTxn('${t.id}')">Restore</button>
-      </td>
-    </tr>`;
-  }).join('');
+// Restore an item from the Bin. Looks up by id/key across every type and
+// dispatches to the type-specific restore logic. Returns silently if the
+// entry has already been purged. Kept alongside restoreTxn (below) so any
+// legacy button still calling restoreTxn keeps working.
+function restoreFromBin(idOrKey) {
+  const t = trash.find(x => (x.id === idOrKey) || (x.key === idOrKey));
+  if (!t) return;
+  const { deletedAt, _type, _reassignedTxnIds, _mortBalances, _mortVoluntaryPmts, ...restored } = t;
+  const type = _type || 'txn';
+  if (type === 'txn') {
+    txns.push(restored);
+  } else if (type === 'income') {
+    incomes.push(restored);
+  } else if (type === 'savings') {
+    savAccts.push(restored);
+    if (typeof recalcAccountBalance === 'function' && restored.id) recalcAccountBalance(restored.id);
+  } else if (type === 'category') {
+    CATS.push(restored);
+    if (typeof rebuildCAT === 'function') rebuildCAT();
+    const reassignedSet = new Set(_reassignedTxnIds || []);
+    if (reassignedSet.size) {
+      txns.forEach(x => { if (reassignedSet.has(x.id)) x.category = restored.key; });
+    }
+    if (typeof saveCats === 'function') saveCats();
+  } else if (type === 'mortgage') {
+    mortData.push(restored);
+    if (_mortBalances && restored.id) mortBalances[restored.id] = _mortBalances;
+    if (_mortVoluntaryPmts && restored.id) mortVoluntaryPmts[restored.id] = _mortVoluntaryPmts;
+    if (typeof saveMortData === 'function') saveMortData();
+  }
+  trash = trash.filter(x => x !== t);
+  persist();
+  renderTrash();
+  if (typeof renderTxns === 'function') renderTxns();
+  if (typeof renderIncome === 'function') renderIncome();
+  if (typeof renderSavings === 'function') renderSavings();
+  if (typeof renderMortgages === 'function') renderMortgages();
+  if (typeof renderCatManagement === 'function') renderCatManagement();
+  if (typeof renderDashboard === 'function') renderDashboard();
+  autoPush();
+  showToast('Restored.');
 }
 
 // ── UTILS ────────────────────────────────────────────────
@@ -8310,13 +8624,39 @@ function submitMortForm() {
 }
 
 function deleteMortgage(id) {
-  if (!confirm('Delete this mortgage? This cannot be undone.')) return;
-  mortData = mortData.filter(m => m.id !== id);
-  if (selectedMortId === id) selectedMortId = mortData[0]?.id || '';
-  saveMortData();
-  closeMortForm();
-  renderMortgages();
-  autoPush();
+  const m = mortData.find(x => x.id === id);
+  if (!m) return;
+  const idx = mortData.findIndex(x => x.id === id);
+  const snapshot = { ...m };
+  const balancesSnap = mortBalances[id] ? JSON.parse(JSON.stringify(mortBalances[id])) : null;
+  const voluntarySnap = mortVoluntaryPmts[id] ? JSON.parse(JSON.stringify(mortVoluntaryPmts[id])) : null;
+  const wasSelected = selectedMortId === id;
+  mortData = mortData.filter(x => x.id !== id);
+  if (balancesSnap) delete mortBalances[id];
+  if (voluntarySnap) delete mortVoluntaryPmts[id];
+  if (wasSelected) selectedMortId = mortData[0]?.id || '';
+  saveMortData(); closeMortForm(); renderMortgages(); autoPush();
+  showUndoToast('Mortgage deleted.', () => {
+    mortData.splice(Math.max(0, Math.min(idx, mortData.length)), 0, snapshot);
+    if (balancesSnap) mortBalances[id] = balancesSnap;
+    if (voluntarySnap) mortVoluntaryPmts[id] = voluntarySnap;
+    if (wasSelected) selectedMortId = id;
+    saveMortData(); renderMortgages(); autoPush();
+    showToast('Mortgage restored.');
+  }, {
+    onCommit: () => {
+      trash.push({
+        ...snapshot,
+        _type: 'mortgage',
+        _mortBalances: balancesSnap,
+        _mortVoluntaryPmts: voluntarySnap,
+        deletedAt: new Date().toISOString(),
+      });
+      pruneTrash();
+      persist();
+      autoPush();
+    },
+  });
 }
 
 function toggleMortYear(yi) {
