@@ -277,6 +277,32 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .moneyflow-tt .tt-title{font-weight:600;font-size:12px;margin-bottom:1px;}
 .moneyflow-tt .tt-val{color:rgba(255,255,255,.82);}
 [data-mftt]{cursor:default;}
+/* Icon-style button used for the fullscreen-expand trigger next to the mode
+   toggles. Deliberately shape-matches the toggle pill row so the row reads
+   as one control group. */
+.moneyflow-icon-btn{width:30px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;font-size:15px;line-height:1;transition:background .12s,color .12s,border-color .12s;}
+.moneyflow-icon-btn:hover{color:var(--ink);border-color:var(--border-2);}
+/* Money flow fullscreen viewer. Overlays the whole viewport, contains a
+   scrollable SVG that can be scaled with the zoom controls (or pinched on
+   mobile via the browser's native gesture). */
+.mf-modal{position:fixed;inset:0;background:rgba(20,17,12,.55);z-index:9998;display:none;padding:12px;}
+.mf-modal.open{display:flex;align-items:stretch;justify-content:center;}
+.mf-modal-inner{background:var(--surface);border-radius:12px;width:100%;max-width:1400px;max-height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.32);}
+.mf-modal-head{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);gap:12px;}
+.mf-modal-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);}
+.mf-modal-tools{display:flex;align-items:center;gap:6px;}
+.mf-zoom-btn{background:var(--bg);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:4px 10px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;min-width:30px;}
+.mf-zoom-btn:hover{border-color:var(--border-2);}
+.mf-modal-close{background:transparent;border:0;font-size:18px;cursor:pointer;padding:2px 8px;color:var(--muted);line-height:1;margin-left:6px;}
+.mf-modal-close:hover{color:var(--ink);}
+#moneyflow-fs-body{flex:1;overflow:auto;padding:16px;-webkit-overflow-scrolling:touch;}
+#moneyflow-fs-body svg{display:block;transform-origin:top left;transition:transform .18s ease;}
+@media (max-width: 640px){
+  .mf-modal{padding:0;}
+  .mf-modal-inner{border-radius:0;max-height:100%;}
+  .mf-modal-title{font-size:16px;}
+  #moneyflow-fs-body{padding:8px;}
+}
 .moneyflow-cat-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;font-size:11.5px;border:1px solid var(--border);border-radius:100px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;transition:background .12s,color .12s,border-color .12s;}
 .moneyflow-cat-chip:hover{border-color:var(--border-2);color:var(--ink);}
 .moneyflow-cat-chip.on{background:var(--ink);color:var(--surface);border-color:var(--ink);}
@@ -1024,6 +1050,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
               <button id="moneyflow-topn-all"    class="moneyflow-mode-btn"        onclick="setMoneyflowTopN('all')"    title="Every category, sized proportionally">All</button>
               <button id="moneyflow-topn-custom" class="moneyflow-mode-btn"        onclick="setMoneyflowTopN('custom')" title="Pick which categories to break out individually">Custom</button>
             </div>
+            <button id="moneyflow-expand-btn" class="moneyflow-icon-btn" onclick="openMoneyflowFullscreen()" aria-label="Expand chart" title="Expand full-screen">⤢</button>
           </div>
         </div>
         <div class="card moneyflow-card">
@@ -1037,6 +1064,24 @@ tbody tr:hover .row-menu-btn{opacity:1;}
           </div>
         </div>
       </section>
+
+      <!-- Money flow fullscreen viewer: opens a distraction-free scrollable
+           view of the chart. On mobile, browser pinch-zoom works natively;
+           on desktop, buttons let you scale the SVG up or down for detail. -->
+      <div id="moneyflow-fullscreen" class="mf-modal" onclick="closeMoneyflowFullscreen(event)">
+        <div class="mf-modal-inner" onclick="event.stopPropagation()">
+          <div class="mf-modal-head">
+            <span class="mf-modal-title">Money flow</span>
+            <div class="mf-modal-tools">
+              <button class="mf-zoom-btn" onclick="mfSetZoom(mfZoom - 0.2)" aria-label="Zoom out" title="Zoom out">−</button>
+              <button class="mf-zoom-btn" onclick="mfSetZoom(1)" title="Reset to fit">Fit</button>
+              <button class="mf-zoom-btn" onclick="mfSetZoom(mfZoom + 0.2)" aria-label="Zoom in" title="Zoom in">+</button>
+              <button class="mf-modal-close" onclick="closeMoneyflowFullscreen()" aria-label="Close">✕</button>
+            </div>
+          </div>
+          <div id="moneyflow-fs-body"></div>
+        </div>
+      </div>
 
       <section class="dash-section" id="commitments-section" style="display:none;">
         <div class="dash-section-head">
@@ -3911,6 +3956,46 @@ function renderMoneyflow() {
   svg += '</svg>';
   container.innerHTML = svg;
   attachMoneyflowTooltips(container);
+}
+
+// ── MONEY FLOW FULLSCREEN VIEWER ─────────────────────────
+// Clones the currently-rendered chart into a fullscreen modal so users can
+// zoom (CSS transform on the SVG) and scroll for detail — especially useful
+// on mobile where the inline chart requires awkward horizontal scrolling.
+let mfZoom = 1;
+function openMoneyflowFullscreen() {
+  const modal = document.getElementById('moneyflow-fullscreen');
+  const body  = document.getElementById('moneyflow-fs-body');
+  const src   = document.querySelector('#moneyflow-svg-container svg');
+  if (!src || !modal || !body) return;
+  body.innerHTML = src.outerHTML;
+  mfZoom = 1;
+  const svgEl = body.querySelector('svg');
+  if (svgEl) svgEl.style.transform = 'scale(1)';
+  attachMoneyflowTooltips(body);
+  modal.classList.add('open');
+  // Prevent background scroll leak on mobile while the modal is open.
+  document.body.style.overflow = 'hidden';
+  // Escape to close
+  document.addEventListener('keydown', _mfEscHandler);
+}
+function closeMoneyflowFullscreen(e) {
+  // If invoked from a click, only close when the target is the backdrop or
+  // the explicit close button — not any interior click.
+  if (e && e.type === 'click') {
+    const t = e.target;
+    if (t !== e.currentTarget && !(t.classList && t.classList.contains('mf-modal-close'))) return;
+  }
+  const modal = document.getElementById('moneyflow-fullscreen');
+  if (modal) modal.classList.remove('open');
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', _mfEscHandler);
+}
+function _mfEscHandler(e) { if (e.key === 'Escape') closeMoneyflowFullscreen(); }
+function mfSetZoom(z) {
+  mfZoom = Math.max(0.5, Math.min(3, +z || 1));
+  const svg = document.querySelector('#moneyflow-fs-body svg');
+  if (svg) svg.style.transform = `scale(${mfZoom})`;
 }
 
 // Cursor-tracking tooltip for the Money flow SVG. One shared bubble (singleton
