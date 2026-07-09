@@ -269,6 +269,14 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 /* Money flow card (Sankey diagram: income sources -> destinations). */
 .moneyflow-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-xs);padding:var(--s-4) var(--s-5);}
 #moneyflow-svg-container{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
+/* Money-flow hover tooltip. Follows the cursor (Chart.js-style) with a small
+   dark bubble, positioned above-right of the pointer and flipped when it
+   would run off the viewport edge. */
+.moneyflow-tt{position:fixed;z-index:9999;background:rgba(31,28,21,.96);color:#fff;padding:7px 11px;border-radius:6px;font-size:11.5px;line-height:1.4;pointer-events:none;opacity:0;transition:opacity .08s ease;font-family:'Inter',sans-serif;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.24);letter-spacing:-0.005em;}
+.moneyflow-tt.show{opacity:1;}
+.moneyflow-tt .tt-title{font-weight:600;font-size:12px;margin-bottom:1px;}
+.moneyflow-tt .tt-val{color:rgba(255,255,255,.82);}
+[data-mftt]{cursor:default;}
 .moneyflow-cat-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;font-size:11.5px;border:1px solid var(--border);border-radius:100px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;transition:background .12s,color .12s,border-color .12s;}
 .moneyflow-cat-chip:hover{border-color:var(--border-2);color:var(--ink);}
 .moneyflow-cat-chip.on{background:var(--ink);color:var(--surface);border-color:var(--ink);}
@@ -3777,11 +3785,13 @@ function renderMoneyflow() {
   // scaling down (which shrunk everything to unreadable).
   const viewportW = container.clientWidth || 800;
   const W = Math.max(820, viewportW);
-  // Give more vertical room the more destinations we have. 60px per node covers
-  // a comfortable single-line label at 12.5px font plus gap breathing room.
   const H = Math.max(340, destinations.length * 60 + 100);
   const NODE_W = 12;
-  const NODE_GAP_PX = 14;
+  // Small gap so the destination column doesn't accumulate a visibly-taller
+  // total than the (0-gap) aggregate income column. At 5px * 6 gaps = 30px
+  // total accumulated gap-space, ribbons narrow only ~6% from source to
+  // destination side — barely perceptible.
+  const NODE_GAP_PX = 5;
   const LABEL_PAD_LEFT = 110;
   // Wider right padding fits the longest destination labels ("Remaining
   // expense categories", "Savings contribution") without clipping.
@@ -3790,30 +3800,26 @@ function renderMoneyflow() {
   const chartH = H - 24;
   const topPad = 12;
 
-  // Use the SAME bar-height budget on both sides so ribbon thickness stays
-  // consistent across the diagram (fixes the "aggregate income bar longer than
-  // destinations" mismatch). Each column then gets vertically centered within
-  // chartH so a 1-source aggregate view still reads well.
-  const nGapSrc = Math.max(0, sources.length - 1);
-  const nGapDst = Math.max(0, destinations.length - 1);
-  const avail = chartH - Math.max(nGapSrc, nGapDst) * NODE_GAP_PX;
-  const srcTotalH = avail + nGapSrc * NODE_GAP_PX;
-  const dstTotalH = avail + nGapDst * NODE_GAP_PX;
-  const srcOffsetY = topPad + Math.max(0, (chartH - srcTotalH) / 2);
-  const dstOffsetY = topPad + Math.max(0, (chartH - dstTotalH) / 2);
-
-  let ySrc = srcOffsetY;
+  // Both columns start at topPad and end at topPad + chartH — this is what
+  // makes the aggregate Income bar visually line up with the destination
+  // column at both the top and the bottom. Each side's bars sum to
+  // chartH - own_gap_total, so the small gap (5px) keeps the two totals close.
+  const totalGapsSrc = Math.max(0, sources.length - 1) * NODE_GAP_PX;
+  const availSrc = chartH - totalGapsSrc;
+  let ySrc = topPad;
   const sourceLayout = sources.map(s => {
-    const height = Math.max(2, (s.amount / totalIncome) * avail);
+    const height = Math.max(2, (s.amount / totalIncome) * availSrc);
     const layout = { ...s, x: LABEL_PAD_LEFT, y: ySrc, height };
     ySrc += height + NODE_GAP_PX;
     return layout;
   });
 
   const totalOut = destinations.reduce((s, x) => s + x.amount, 0);
-  let yDst = dstOffsetY;
+  const totalGapsDst = Math.max(0, destinations.length - 1) * NODE_GAP_PX;
+  const availDst = chartH - totalGapsDst;
+  let yDst = topPad;
   const destLayout = destinations.map(d => {
-    const height = Math.max(2, (d.amount / totalOut) * avail);
+    const height = Math.max(2, (d.amount / totalOut) * availDst);
     const layout = { ...d, x: W - LABEL_PAD_RIGHT, y: yDst, height };
     yDst += height + NODE_GAP_PX;
     return layout;
@@ -3839,31 +3845,72 @@ function renderMoneyflow() {
       const midX = (x1 + x2) / 2;
       const d = `M ${x1} ${y1a} C ${midX} ${y1a}, ${midX} ${y2a}, ${x2} ${y2a} L ${x2} ${y2b} C ${midX} ${y2b}, ${midX} ${y1b}, ${x1} ${y1b} Z`;
       const pct = (flow.value / totalIncome * 100).toFixed(1);
-      ribbons.push({ d, color: dst.color, title: `${src.name} → ${dst.name}: ${fmt(flow.value)} (${pct}% of income)` });
+      ribbons.push({ d, color: dst.color, tt: `${src.name} → ${dst.name}|${pct}% of income` });
     });
   });
 
-  // Tooltip note: we use the `title` attribute (not SVG's <title> child) so the
-  // app's custom tooltip system (delegated listener that reads getAttribute('title'))
-  // catches these on hover. The native SVG <title> element is invisible to it.
+  // Labels show name + $ amount stacked (amount below, muted); hover reveals
+  // the % of income via a cursor-tracking bubble (attachMoneyflowTooltips).
+  // Uses data-mftt (not `title`) so the app-wide tooltip doesn't compete.
   let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;">`;
   ribbons.forEach(r => {
-    svg += `<path d="${r.d}" fill="${r.color}" fill-opacity="0.32" stroke="none" class="moneyflow-ribbon" title="${esc(r.title)}"/>`;
+    svg += `<path d="${r.d}" fill="${r.color}" fill-opacity="0.32" stroke="none" class="moneyflow-ribbon" data-mftt="${esc(r.tt)}"/>`;
   });
   sourceLayout.forEach(s => {
     const pct = (s.amount / totalIncome * 100).toFixed(1);
-    const tt = `${s.name}: ${fmt(s.amount)} (${pct}% of income)`;
-    svg += `<rect x="${s.x}" y="${s.y}" width="${NODE_W}" height="${s.height}" fill="${s.color}" rx="2" title="${esc(tt)}" style="cursor:default;"/>`;
-    svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-label" title="${esc(tt)}" style="cursor:default;">${esc(s.name)}</text>`;
+    const tt = `${s.name}|${pct}% of income`;
+    svg += `<rect x="${s.x}" y="${s.y}" width="${NODE_W}" height="${s.height}" fill="${s.color}" rx="2" data-mftt="${esc(tt)}"/>`;
+    svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2 - 6}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-label" data-mftt="${esc(tt)}">${esc(s.name)}</text>`;
+    svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2 + 9}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-amount" data-mftt="${esc(tt)}">${fmt(s.amount)}</text>`;
   });
   destLayout.forEach(d => {
     const pct = (d.amount / totalIncome * 100).toFixed(1);
-    const tt = `${d.name}: ${fmt(d.amount)} (${pct}% of income)`;
-    svg += `<rect x="${d.x}" y="${d.y}" width="${NODE_W}" height="${d.height}" fill="${d.color}" rx="2" title="${esc(tt)}" style="cursor:default;"/>`;
-    svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-label" title="${esc(tt)}" style="cursor:default;">${esc(d.name)}</text>`;
+    const tt = `${d.name}|${pct}% of income`;
+    svg += `<rect x="${d.x}" y="${d.y}" width="${NODE_W}" height="${d.height}" fill="${d.color}" rx="2" data-mftt="${esc(tt)}"/>`;
+    svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2 - 6}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-label" data-mftt="${esc(tt)}">${esc(d.name)}</text>`;
+    svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2 + 9}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-amount" data-mftt="${esc(tt)}">${fmt(d.amount)}</text>`;
   });
   svg += '</svg>';
   container.innerHTML = svg;
+  attachMoneyflowTooltips(container);
+}
+
+// Cursor-tracking tooltip for the Money flow SVG. One shared bubble (singleton
+// on document.body), positioned above-right of the pointer and flipped when
+// it would overshoot the viewport. Skips touch devices (no hover).
+function attachMoneyflowTooltips(container) {
+  if (window.matchMedia && window.matchMedia('(hover: none)').matches) return;
+  let tt = document.getElementById('_moneyflow_tt');
+  if (!tt) {
+    tt = document.createElement('div');
+    tt.id = '_moneyflow_tt';
+    tt.className = 'moneyflow-tt';
+    document.body.appendChild(tt);
+  }
+  const position = (e) => {
+    // Show above-right; flip horizontally if we'd run off the right edge, and
+    // drop below the cursor if there's no room above.
+    const OFFSET_X = 14, OFFSET_Y = 12;
+    const size = tt.getBoundingClientRect();
+    let x = e.clientX + OFFSET_X;
+    let y = e.clientY - OFFSET_Y - size.height;
+    if (x + size.width > window.innerWidth - 6) x = e.clientX - OFFSET_X - size.width;
+    if (y < 6) y = e.clientY + OFFSET_Y;
+    tt.style.left = x + 'px';
+    tt.style.top  = y + 'px';
+  };
+  container.querySelectorAll('[data-mftt]').forEach(el => {
+    el.addEventListener('mouseenter', e => {
+      const raw = (el.getAttribute('data-mftt') || '').split('|');
+      const title = esc(raw[0] || '');
+      const val   = esc(raw[1] || '');
+      tt.innerHTML = `<div class="tt-title">${title}</div><div class="tt-val">${val}</div>`;
+      tt.classList.add('show');
+      position(e);
+    });
+    el.addEventListener('mousemove', position);
+    el.addEventListener('mouseleave', () => tt.classList.remove('show'));
+  });
 }
 
 function renderDashboard() {
