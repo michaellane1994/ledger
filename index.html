@@ -268,6 +268,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:11px;margin-bottom:18px;}
 /* Money flow card (Sankey diagram: income sources -> destinations). */
 .moneyflow-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-xs);padding:var(--s-4) var(--s-5);}
+#moneyflow-svg-container{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
 .moneyflow-mode-toggle{display:inline-flex;gap:2px;background:var(--bg);padding:3px;border-radius:8px;border:1px solid var(--border);}
 .moneyflow-mode-btn{background:transparent;border:none;padding:5px 12px;font-size:12px;font-weight:500;color:var(--muted);border-radius:5px;cursor:pointer;font-family:inherit;letter-spacing:-0.005em;transition:background .12s, color .12s;}
 .moneyflow-mode-btn:hover{color:var(--ink);}
@@ -1002,7 +1003,12 @@ tbody tr:hover .row-menu-btn{opacity:1;}
             </div>
             <div class="moneyflow-mode-toggle" role="group" aria-label="Money flow view">
               <button id="moneyflow-mode-nw" class="moneyflow-mode-btn active" onclick="setMoneyflowMode('nw')" title="Group by Needs and Wants">Needs vs Wants</button>
-              <button id="moneyflow-mode-cat" class="moneyflow-mode-btn" onclick="setMoneyflowMode('cat')" title="Break down top 5 spending categories individually">By category</button>
+              <button id="moneyflow-mode-cat" class="moneyflow-mode-btn" onclick="setMoneyflowMode('cat')" title="Break down spending categories individually">By category</button>
+            </div>
+            <div class="moneyflow-mode-toggle" role="group" aria-label="How many categories" id="moneyflow-topn-group" style="display:none;">
+              <button id="moneyflow-topn-5"   class="moneyflow-mode-btn active" onclick="setMoneyflowTopN('5')"   title="Top 5 categories">Top 5</button>
+              <button id="moneyflow-topn-10"  class="moneyflow-mode-btn"        onclick="setMoneyflowTopN('10')"  title="Top 10 categories">Top 10</button>
+              <button id="moneyflow-topn-all" class="moneyflow-mode-btn"        onclick="setMoneyflowTopN('all')" title="Every category, sized proportionally">All</button>
             </div>
           </div>
         </div>
@@ -3536,6 +3542,8 @@ let moneyflowMode = localStorage.getItem('l3_moneyflow_mode') || 'nw';
 // Source aggregation: 'person' shows one node per earner; 'total' collapses
 // all incomes into a single 'Income' source for a cleaner diagram.
 let moneyflowAgg  = localStorage.getItem('l3_moneyflow_agg')  || 'person';
+// Category count in 'cat' mode: '5', '10', or 'all'.
+let moneyflowTopN = localStorage.getItem('l3_moneyflow_topn') || '5';
 
 // Palette for destinations. Keeps the warm/earthy family — sage for savings,
 // dusty terracotta for needs/wants, muted blue for excess. Category mode uses
@@ -3568,6 +3576,15 @@ function setMoneyflowAgg(mode) {
   const t = document.getElementById('moneyflow-agg-total');
   if (p) p.classList.toggle('active', mode === 'person');
   if (t) t.classList.toggle('active', mode === 'total');
+  renderMoneyflow();
+}
+function setMoneyflowTopN(n) {
+  moneyflowTopN = String(n);
+  localStorage.setItem('l3_moneyflow_topn', moneyflowTopN);
+  ['5','10','all'].forEach(v => {
+    const b = document.getElementById('moneyflow-topn-' + v);
+    if (b) b.classList.toggle('active', v === moneyflowTopN);
+  });
   renderMoneyflow();
 }
 
@@ -3630,19 +3647,22 @@ function computeMoneyflowData() {
         return { key, name: cat ? cat.label : key, amount, color: (cat && cat.color) || MONEYFLOW_COLORS.other };
       })
       .sort((a, b) => b.amount - a.amount);
-    const top = catRows.slice(0, 5);
+    const topCount = moneyflowTopN === 'all' ? catRows.length
+                   : moneyflowTopN === '10'  ? 10
+                   : 5;
+    const top = catRows.slice(0, topCount);
     const topTotal = top.reduce((s, r) => s + r.amount, 0);
     // Recompute excess so destinations still sum to income: excess absorbs both
-    // truly-unspent money AND spending on categories that didn't make the top 5.
+    // truly-unspent money AND spending on categories that didn't make the cut.
     const catExcess = Math.max(0, totalIncome - topTotal - savings);
     destinations = top.map(r => ({ name: r.name, amount: r.amount, color: r.color }));
-    if (savings > 0)   destinations.push({ name: 'Savings', amount: savings,   color: MONEYFLOW_COLORS.savings });
+    if (savings > 0)   destinations.push({ name: 'Savings contribution', amount: savings,   color: MONEYFLOW_COLORS.savings });
     if (catExcess > 0) destinations.push({ name: 'Excess',  amount: catExcess, color: MONEYFLOW_COLORS.excess });
   } else {
     destinations = [];
     if (needs > 0)   destinations.push({ name: 'Needs',   amount: needs,   color: MONEYFLOW_COLORS.needs });
     if (wants > 0)   destinations.push({ name: 'Wants',   amount: wants,   color: MONEYFLOW_COLORS.wants });
-    if (savings > 0) destinations.push({ name: 'Savings', amount: savings, color: MONEYFLOW_COLORS.savings });
+    if (savings > 0) destinations.push({ name: 'Savings contribution', amount: savings, color: MONEYFLOW_COLORS.savings });
     if (excess > 0)  destinations.push({ name: 'Excess',  amount: excess,  color: MONEYFLOW_COLORS.excess });
   }
 
@@ -3676,18 +3696,30 @@ function renderMoneyflow() {
   const aggTotal  = document.getElementById('moneyflow-agg-total');
   if (aggPerson) aggPerson.classList.toggle('active', moneyflowAgg === 'person');
   if (aggTotal)  aggTotal.classList.toggle('active',  moneyflowAgg === 'total');
+  ['5','10','all'].forEach(v => {
+    const b = document.getElementById('moneyflow-topn-' + v);
+    if (b) b.classList.toggle('active', v === moneyflowTopN);
+  });
+  // Show top-N pills only in cat mode
+  const topnGroup = document.getElementById('moneyflow-topn-group');
+  if (topnGroup) topnGroup.style.display = moneyflowMode === 'cat' ? '' : 'none';
 
   const data = computeMoneyflowData();
   const { sources, destinations, flows, totalIncome } = data;
 
   if (sub) {
     let periodLabel;
-    if (dashPeriod === 'ytd') periodLabel = 'Year to date';
-    else if (dashPeriod === 'year') periodLabel = `Year ${selYear}`;
-    else if (dashPeriod === 'p3m') periodLabel = 'Last 3 months';
-    else if (selMonth) periodLabel = fmtMonth(selMonth);
-    else periodLabel = 'All time';
-    sub.textContent = `Every dollar of income traced to its destination — ${periodLabel.toLowerCase()}.`;
+    if (dashPeriod === 'ytd') periodLabel = 'year to date';
+    else if (dashPeriod === 'year') periodLabel = `year ${selYear}`;
+    else if (dashPeriod === 'p3m') periodLabel = 'last 3 months';
+    else if (selMonth) {
+      // Month-Year with capitalized month, e.g. "July-2026"
+      const [y, mo] = selMonth.split('-');
+      const monthName = new Date(+y, +mo - 1).toLocaleString('default', { month: 'long' });
+      periodLabel = `${monthName}-${y}`;
+    }
+    else periodLabel = 'all time';
+    sub.textContent = `Every dollar of income traced to its destination — ${periodLabel}.`;
   }
 
   if (totalIncome === 0 || sources.length === 0 || destinations.length === 0) {
@@ -3698,8 +3730,14 @@ function renderMoneyflow() {
   container.style.display = 'block';
   if (empty) empty.style.display = 'none';
 
-  const W = Math.max(600, container.clientWidth || 800);
-  const H = Math.max(280, Math.min(420, destinations.length * 60 + 80));
+  // Use explicit pixel width so labels stay legible. On narrow viewports the
+  // container's overflow-x lets the diagram scroll horizontally instead of
+  // scaling down (which shrunk everything to unreadable).
+  const viewportW = container.clientWidth || 800;
+  const W = Math.max(720, viewportW);
+  // Give more vertical room the more destinations we have — prevents label
+  // overlap when top-10 or all is selected.
+  const H = Math.max(320, destinations.length * 56 + 90);
   const NODE_W = 12;
   const NODE_GAP_PX = 8;
   const LABEL_PAD_LEFT = 110;
@@ -3752,7 +3790,7 @@ function renderMoneyflow() {
     });
   });
 
-  let svg = `<svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">`;
+  let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;">`;
   ribbons.forEach(r => {
     svg += `<path d="${r.d}" fill="${r.color}" fill-opacity="0.32" stroke="none" class="moneyflow-ribbon"><title>${esc(r.color)}</title></path>`;
   });
