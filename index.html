@@ -266,6 +266,16 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 
 /* Category grid – 7 cols, 2 rows */
 .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:11px;margin-bottom:18px;}
+/* Money flow card (Sankey diagram: income sources -> destinations). */
+.moneyflow-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-xs);padding:var(--s-4) var(--s-5);}
+.moneyflow-mode-toggle{display:inline-flex;gap:2px;background:var(--bg);padding:3px;border-radius:8px;border:1px solid var(--border);}
+.moneyflow-mode-btn{background:transparent;border:none;padding:5px 12px;font-size:12px;font-weight:500;color:var(--muted);border-radius:5px;cursor:pointer;font-family:inherit;letter-spacing:-0.005em;transition:background .12s, color .12s;}
+.moneyflow-mode-btn:hover{color:var(--ink);}
+.moneyflow-mode-btn.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06);}
+.moneyflow-node-label{font-size:12.5px;font-weight:500;fill:var(--ink);font-family:'Inter',sans-serif;}
+.moneyflow-node-amount{font-size:11px;fill:var(--muted);font-family:'Inter',sans-serif;}
+.moneyflow-ribbon{transition:fill-opacity .15s;}
+.moneyflow-ribbon:hover{fill-opacity:0.55!important;}
 .cat-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--s-5) var(--s-5);box-shadow:var(--shadow-xs);border-top:4px solid transparent;transition:transform .15s ease, box-shadow .2s ease, border-color .15s ease;cursor:pointer;position:relative;}
 .cat-tile:hover{box-shadow:var(--shadow);transform:translateY(-2px);border-color:var(--border-2);}
 .cat-tile::after{content:"";position:absolute;top:18px;right:18px;width:10px;height:10px;border-radius:50%;background:currentColor;color:var(--cat-c, transparent);opacity:.85;}
@@ -975,6 +985,29 @@ tbody tr:hover .row-menu-btn{opacity:1;}
           </div>
         </div>
         <div class="cat-grid" id="cat-grid"></div>
+      </section>
+
+      <!-- MONEY FLOW SANKEY (income → destinations) -->
+      <section class="dash-section" id="moneyflow-section">
+        <div class="dash-section-head">
+          <div class="dash-section-head-text">
+            <div class="dash-section-eyebrow">Where the money went</div>
+            <div class="dash-section-title">Money flow</div>
+            <div class="dash-section-sub" id="moneyflow-sub">Every dollar of income traced to its destination.</div>
+          </div>
+          <div class="dash-section-actions">
+            <div class="moneyflow-mode-toggle" role="group" aria-label="Money flow view">
+              <button id="moneyflow-mode-nw" class="moneyflow-mode-btn active" onclick="setMoneyflowMode('nw')" title="Group by Needs and Wants">Needs vs Wants</button>
+              <button id="moneyflow-mode-cat" class="moneyflow-mode-btn" onclick="setMoneyflowMode('cat')" title="Break down top spending categories individually">By category</button>
+            </div>
+          </div>
+        </div>
+        <div class="card moneyflow-card">
+          <div class="card-body" id="moneyflow-body">
+            <div id="moneyflow-svg-container" style="min-height:280px;"></div>
+            <div id="moneyflow-empty" style="display:none;padding:24px;text-align:center;color:var(--faint);font-size:13.5px;">No income tracked in this period yet — add income entries or upload a statement to see money flow.</div>
+          </div>
+        </div>
       </section>
 
       <section class="dash-section" id="commitments-section" style="display:none;">
@@ -3491,6 +3524,221 @@ function filtered() {
   return txns.filter(t => t.amount !== 0 && dashPeriodTest(t.date));
 }
 
+// ── MONEY FLOW SANKEY ────────────────────────────────────
+// Income sources (left) → destination categories (right), with proportional
+// flows connecting them. Reuses the dashboard's period filter (dashPeriodTest)
+// so the chart always reflects whatever month / year / period is selected.
+let moneyflowMode = localStorage.getItem('l3_moneyflow_mode') || 'nw';
+
+// Palette for destinations. Keeps the warm/earthy family — sage for savings,
+// dusty terracotta for needs/wants, muted blue for excess. Category mode uses
+// each category's own colour so ribbons match the tiles above.
+const MONEYFLOW_COLORS = {
+  needs: '#c8875a',
+  wants: '#8fb4a1',
+  savings: '#5a8a6f',
+  debt: '#a56a7a',
+  excess: '#7d97b8',
+  other: '#a89b8c',
+};
+
+// Colours for income source nodes — keep neutral so destinations pop.
+const MONEYFLOW_SOURCE_COLORS = ['#7ea0c4', '#a19bb8', '#c49b7a', '#7db19f', '#c47d9b'];
+
+function setMoneyflowMode(mode) {
+  moneyflowMode = mode;
+  localStorage.setItem('l3_moneyflow_mode', mode);
+  const nw  = document.getElementById('moneyflow-mode-nw');
+  const cat = document.getElementById('moneyflow-mode-cat');
+  if (nw)  nw.classList.toggle('active', mode === 'nw');
+  if (cat) cat.classList.toggle('active', mode === 'cat');
+  renderMoneyflow();
+}
+
+function computeMoneyflowData() {
+  // Income sources bucketed by person (matches the Sankey convention of "who
+  // earns" flowing into "where it goes"). If only one person has income, we
+  // fall back to a single "Income" source so the diagram doesn't degenerate.
+  const sourceMap = {};
+  incomes.forEach(inc => {
+    if (!dashPeriodTest(inc.date)) return;
+    const person = inc.person || 'Income';
+    sourceMap[person] = (sourceMap[person] || 0) + Math.abs(inc.amount || 0);
+  });
+  let sources = Object.entries(sourceMap)
+    .map(([name, amount]) => ({ name, amount }))
+    .filter(s => s.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+  sources.forEach((s, i) => { s.color = MONEYFLOW_SOURCE_COLORS[i % MONEYFLOW_SOURCE_COLORS.length]; });
+
+  const totalIncome = sources.reduce((s, x) => s + x.amount, 0);
+  if (totalIncome === 0) return { sources: [], destinations: [], flows: [], totalIncome: 0 };
+
+  // Needs vs Wants totals across expense transactions in period. A category is
+  // Needs if its `fixed` flag is true; else Wants. Refunds (amount < 0) are
+  // ignored — they reduce actual spend but Sankey shows gross flows.
+  let needs = 0;
+  let wants = 0;
+  const catTotals = {};
+  txns.forEach(t => {
+    if (!dashPeriodTest(t.date)) return;
+    if ((t.amount || 0) <= 0) return;
+    if (t.savingsAccountId) return;
+    if (t.incomeType && t.incomeType !== 'transfer') return;
+    const cat = CATS.find(c => c.key === t.category);
+    catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
+    if (cat && cat.fixed) needs += t.amount;
+    else wants += t.amount;
+  });
+
+  // Savings destination: contributions logged in the period.
+  let savings = 0;
+  (contribs || []).forEach(c => {
+    if (!dashPeriodTest(c.date)) return;
+    if ((c.type || 'contribution') === 'contribution') savings += Math.abs(c.amount || 0);
+    else savings -= Math.abs(c.amount || 0);
+  });
+  savings = Math.max(0, savings);
+
+  const outSoFar = needs + wants + savings;
+  const excess = Math.max(0, totalIncome - outSoFar);
+
+  let destinations;
+  if (moneyflowMode === 'cat') {
+    const catRows = Object.entries(catTotals)
+      .map(([key, amount]) => {
+        const cat = CATS.find(c => c.key === key);
+        return { key, name: cat ? cat.label : key, amount, color: (cat && cat.color) || MONEYFLOW_COLORS.other };
+      })
+      .sort((a, b) => b.amount - a.amount);
+    const top = catRows.slice(0, 5);
+    const otherTotal = catRows.slice(5).reduce((s, r) => s + r.amount, 0);
+    destinations = top.map(r => ({ name: r.name, amount: r.amount, color: r.color }));
+    if (otherTotal > 0) destinations.push({ name: 'Other', amount: otherTotal, color: MONEYFLOW_COLORS.other });
+    if (savings > 0)    destinations.push({ name: 'Savings', amount: savings, color: MONEYFLOW_COLORS.savings });
+    if (excess > 0)     destinations.push({ name: 'Excess', amount: excess, color: MONEYFLOW_COLORS.excess });
+  } else {
+    destinations = [];
+    if (needs > 0)   destinations.push({ name: 'Needs',   amount: needs,   color: MONEYFLOW_COLORS.needs });
+    if (wants > 0)   destinations.push({ name: 'Wants',   amount: wants,   color: MONEYFLOW_COLORS.wants });
+    if (savings > 0) destinations.push({ name: 'Savings', amount: savings, color: MONEYFLOW_COLORS.savings });
+    if (excess > 0)  destinations.push({ name: 'Excess',  amount: excess,  color: MONEYFLOW_COLORS.excess });
+  }
+
+  // Proportional flows: since we don't know which income paid for which
+  // expense, allocate each destination proportionally across sources by their
+  // income share. Standard Sankey approximation.
+  const flows = [];
+  sources.forEach(src => {
+    const share = src.amount / totalIncome;
+    destinations.forEach(dst => {
+      const value = dst.amount * share;
+      if (value > 0) flows.push({ source: src.name, target: dst.name, value });
+    });
+  });
+
+  return { sources, destinations, flows, totalIncome };
+}
+
+function renderMoneyflow() {
+  const container = document.getElementById('moneyflow-svg-container');
+  const empty     = document.getElementById('moneyflow-empty');
+  const sub       = document.getElementById('moneyflow-sub');
+  if (!container) return;
+
+  const data = computeMoneyflowData();
+  const { sources, destinations, flows, totalIncome } = data;
+
+  if (sub) {
+    let periodLabel;
+    if (dashPeriod === 'ytd') periodLabel = 'Year to date';
+    else if (dashPeriod === 'year') periodLabel = `Year ${selYear}`;
+    else if (dashPeriod === 'p3m') periodLabel = 'Last 3 months';
+    else if (selMonth) periodLabel = fmtMonth(selMonth);
+    else periodLabel = 'All time';
+    sub.textContent = `Every dollar of income traced to its destination — ${periodLabel.toLowerCase()}.`;
+  }
+
+  if (totalIncome === 0 || sources.length === 0 || destinations.length === 0) {
+    container.style.display = 'none';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  container.style.display = 'block';
+  if (empty) empty.style.display = 'none';
+
+  const W = Math.max(600, container.clientWidth || 800);
+  const H = Math.max(280, Math.min(420, destinations.length * 60 + 80));
+  const NODE_W = 12;
+  const NODE_GAP_PX = 8;
+  const LABEL_PAD_LEFT = 110;
+  const LABEL_PAD_RIGHT = 130;
+
+  const chartH = H - 24;
+  const topPad = 12;
+
+  const totalGapsSrc = Math.max(0, sources.length - 1) * NODE_GAP_PX;
+  const availSrc = chartH - totalGapsSrc;
+  let ySrc = topPad;
+  const sourceLayout = sources.map(s => {
+    const height = Math.max(2, (s.amount / totalIncome) * availSrc);
+    const layout = { ...s, x: LABEL_PAD_LEFT, y: ySrc, height };
+    ySrc += height + NODE_GAP_PX;
+    return layout;
+  });
+
+  const totalOut = destinations.reduce((s, x) => s + x.amount, 0);
+  const totalGapsDst = Math.max(0, destinations.length - 1) * NODE_GAP_PX;
+  const availDst = chartH - totalGapsDst;
+  let yDst = topPad;
+  const destLayout = destinations.map(d => {
+    const height = Math.max(2, (d.amount / totalOut) * availDst);
+    const layout = { ...d, x: W - LABEL_PAD_RIGHT, y: yDst, height };
+    yDst += height + NODE_GAP_PX;
+    return layout;
+  });
+
+  const srcCursor = sourceLayout.map(() => 0);
+  const dstCursor = destLayout.map(() => 0);
+  const ribbons = [];
+  sourceLayout.forEach((src, sIdx) => {
+    destLayout.forEach((dst, dIdx) => {
+      const flow = flows.find(f => f.source === src.name && f.target === dst.name);
+      if (!flow || flow.value <= 0) return;
+      const srcRibH = (flow.value / src.amount) * src.height;
+      const dstRibH = (flow.value / dst.amount) * dst.height;
+      const y1a = src.y + srcCursor[sIdx];
+      const y1b = y1a + srcRibH;
+      const y2a = dst.y + dstCursor[dIdx];
+      const y2b = y2a + dstRibH;
+      srcCursor[sIdx] += srcRibH;
+      dstCursor[dIdx] += dstRibH;
+      const x1 = src.x + NODE_W;
+      const x2 = dst.x;
+      const midX = (x1 + x2) / 2;
+      const d = `M ${x1} ${y1a} C ${midX} ${y1a}, ${midX} ${y2a}, ${x2} ${y2a} L ${x2} ${y2b} C ${midX} ${y2b}, ${midX} ${y1b}, ${x1} ${y1b} Z`;
+      ribbons.push({ d, color: dst.color });
+    });
+  });
+
+  let svg = `<svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">`;
+  ribbons.forEach(r => {
+    svg += `<path d="${r.d}" fill="${r.color}" fill-opacity="0.32" stroke="none" class="moneyflow-ribbon"><title>${esc(r.color)}</title></path>`;
+  });
+  sourceLayout.forEach(s => {
+    svg += `<rect x="${s.x}" y="${s.y}" width="${NODE_W}" height="${s.height}" fill="${s.color}" rx="2"/>`;
+    svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-label">${esc(s.name)}</text>`;
+    svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2 + 14}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-amount">${fmt(s.amount)}</text>`;
+  });
+  destLayout.forEach(d => {
+    svg += `<rect x="${d.x}" y="${d.y}" width="${NODE_W}" height="${d.height}" fill="${d.color}" rx="2"/>`;
+    svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-label">${esc(d.name)}</text>`;
+    svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2 + 14}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-amount">${fmt(d.amount)}</text>`;
+  });
+  svg += '</svg>';
+  container.innerHTML = svg;
+}
+
 function renderDashboard() {
   renderPills();
   if (typeof renderCurrencyDropdown === 'function') renderCurrencyDropdown();
@@ -3872,6 +4120,7 @@ function renderDashboard() {
   // Charts
   renderChartSection();
   renderCashflowChart();
+  renderMoneyflow();
 
   // Recent 5 — positive-amount expenses only (excludes transfers and refunds)
   const recent = [...expenses].filter(t => effectiveAmt(t) > 0).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
@@ -8303,7 +8552,7 @@ function renderMortgages() {
                   const dStr = p.date.toISOString().slice(0,10);
                   const eVal = mortExtrasMap[dStr] || 0;
                   const isPast = p.date <= today;
-                  return `<tr class="mort-pmt-row${isPast ? ' mort-past-pmt' : ''}" id="mp-${yi}-${pi}">
+                  return `<tr class="mort-pmt-row${isPast ? ' mort-past-pmt' : ''}${mortExpandedYears.has(yi) ? ' vis' : ''}" id="mp-${yi}-${pi}">
                     <td style="padding-left:22px;color:var(--faint);">Pmt ${p.p}</td>
                     <td style="font-size:12px;color:var(--muted);">${fmtMortDateFull(p.date)}</td>
                     <td style="text-align:right;">${fmt(p.pmt)}</td>
@@ -8505,6 +8754,7 @@ function saveMortVoluntary(mortId, dateStr, rawVal) {
 
 function selectMort(id) {
   selectedMortId = id;
+  mortExpandedYears = new Set();
   renderMortgages();
 }
 
@@ -8659,10 +8909,15 @@ function deleteMortgage(id) {
   });
 }
 
+// Track which year groups are expanded so re-renders (e.g. after deleting a
+// voluntary payment) don't collapse everything. Keyed by year index, cleared
+// when switching mortgages.
+let mortExpandedYears = new Set();
 function toggleMortYear(yi) {
+  if (mortExpandedYears.has(yi)) mortExpandedYears.delete(yi);
+  else mortExpandedYears.add(yi);
   const rows = document.querySelectorAll(`[id^="mp-${yi}-"]`);
-  const isOpen = rows.length && rows[0].classList.contains('vis');
-  rows.forEach(r => r.classList.toggle('vis', !isOpen));
+  rows.forEach(r => r.classList.toggle('vis', mortExpandedYears.has(yi)));
 }
 
 // ── INIT ─────────────────────────────────────────────────
