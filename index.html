@@ -3679,13 +3679,17 @@ function computeMoneyflowData() {
                      : 5;
       top = catRows.slice(0, topCount);
     }
+    const shownKeys = new Set(top.map(r => r.key));
+    const remainingTotal = catRows.filter(r => !shownKeys.has(r.key)).reduce((s, r) => s + r.amount, 0);
     const topTotal = top.reduce((s, r) => s + r.amount, 0);
-    // Recompute excess so destinations still sum to income: excess absorbs both
-    // truly-unspent money AND spending on categories that didn't make the cut.
-    const catExcess = Math.max(0, totalIncome - topTotal - savings);
+    // Excess now = truly unspent (income minus everything routed to a
+    // destination). "Remaining categories" is its own line so users see the
+    // spending they hid from the top-N without conflating it with excess.
+    const catExcess = Math.max(0, totalIncome - topTotal - remainingTotal - savings);
     destinations = top.map(r => ({ name: r.name, amount: r.amount, color: r.color }));
-    if (savings > 0)   destinations.push({ name: 'Savings contribution', amount: savings,   color: MONEYFLOW_COLORS.savings });
-    if (catExcess > 0) destinations.push({ name: 'Excess',  amount: catExcess, color: MONEYFLOW_COLORS.excess });
+    if (remainingTotal > 0) destinations.push({ name: 'Remaining expense categories', amount: remainingTotal, color: MONEYFLOW_COLORS.other });
+    if (savings > 0)        destinations.push({ name: 'Savings contribution', amount: savings,        color: MONEYFLOW_COLORS.savings });
+    if (catExcess > 0)      destinations.push({ name: 'Excess',                amount: catExcess,      color: MONEYFLOW_COLORS.excess });
   } else {
     destinations = [];
     if (needs > 0)   destinations.push({ name: 'Needs',   amount: needs,   color: MONEYFLOW_COLORS.needs });
@@ -3772,36 +3776,44 @@ function renderMoneyflow() {
   // container's overflow-x lets the diagram scroll horizontally instead of
   // scaling down (which shrunk everything to unreadable).
   const viewportW = container.clientWidth || 800;
-  const W = Math.max(780, viewportW);
-  // Give more vertical room the more destinations we have — prevents label
-  // overlap when top-10 or all is selected.
-  const H = Math.max(320, destinations.length * 56 + 90);
+  const W = Math.max(820, viewportW);
+  // Give more vertical room the more destinations we have. 60px per node covers
+  // a comfortable single-line label at 12.5px font plus gap breathing room.
+  const H = Math.max(340, destinations.length * 60 + 100);
   const NODE_W = 12;
-  const NODE_GAP_PX = 8;
+  const NODE_GAP_PX = 14;
   const LABEL_PAD_LEFT = 110;
-  // Wider right padding fits multi-word destination labels like "Savings
-  // contribution" without clipping off the edge.
-  const LABEL_PAD_RIGHT = 190;
+  // Wider right padding fits the longest destination labels ("Remaining
+  // expense categories", "Savings contribution") without clipping.
+  const LABEL_PAD_RIGHT = 230;
 
   const chartH = H - 24;
   const topPad = 12;
 
-  const totalGapsSrc = Math.max(0, sources.length - 1) * NODE_GAP_PX;
-  const availSrc = chartH - totalGapsSrc;
-  let ySrc = topPad;
+  // Use the SAME bar-height budget on both sides so ribbon thickness stays
+  // consistent across the diagram (fixes the "aggregate income bar longer than
+  // destinations" mismatch). Each column then gets vertically centered within
+  // chartH so a 1-source aggregate view still reads well.
+  const nGapSrc = Math.max(0, sources.length - 1);
+  const nGapDst = Math.max(0, destinations.length - 1);
+  const avail = chartH - Math.max(nGapSrc, nGapDst) * NODE_GAP_PX;
+  const srcTotalH = avail + nGapSrc * NODE_GAP_PX;
+  const dstTotalH = avail + nGapDst * NODE_GAP_PX;
+  const srcOffsetY = topPad + Math.max(0, (chartH - srcTotalH) / 2);
+  const dstOffsetY = topPad + Math.max(0, (chartH - dstTotalH) / 2);
+
+  let ySrc = srcOffsetY;
   const sourceLayout = sources.map(s => {
-    const height = Math.max(2, (s.amount / totalIncome) * availSrc);
+    const height = Math.max(2, (s.amount / totalIncome) * avail);
     const layout = { ...s, x: LABEL_PAD_LEFT, y: ySrc, height };
     ySrc += height + NODE_GAP_PX;
     return layout;
   });
 
   const totalOut = destinations.reduce((s, x) => s + x.amount, 0);
-  const totalGapsDst = Math.max(0, destinations.length - 1) * NODE_GAP_PX;
-  const availDst = chartH - totalGapsDst;
-  let yDst = topPad;
+  let yDst = dstOffsetY;
   const destLayout = destinations.map(d => {
-    const height = Math.max(2, (d.amount / totalOut) * availDst);
+    const height = Math.max(2, (d.amount / totalOut) * avail);
     const layout = { ...d, x: W - LABEL_PAD_RIGHT, y: yDst, height };
     yDst += height + NODE_GAP_PX;
     return layout;
@@ -3831,21 +3843,24 @@ function renderMoneyflow() {
     });
   });
 
+  // Tooltip note: we use the `title` attribute (not SVG's <title> child) so the
+  // app's custom tooltip system (delegated listener that reads getAttribute('title'))
+  // catches these on hover. The native SVG <title> element is invisible to it.
   let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;">`;
   ribbons.forEach(r => {
-    svg += `<path d="${r.d}" fill="${r.color}" fill-opacity="0.32" stroke="none" class="moneyflow-ribbon"><title>${esc(r.title)}</title></path>`;
+    svg += `<path d="${r.d}" fill="${r.color}" fill-opacity="0.32" stroke="none" class="moneyflow-ribbon" title="${esc(r.title)}"/>`;
   });
   sourceLayout.forEach(s => {
     const pct = (s.amount / totalIncome * 100).toFixed(1);
-    svg += `<rect x="${s.x}" y="${s.y}" width="${NODE_W}" height="${s.height}" fill="${s.color}" rx="2"><title>${esc(s.name)}: ${fmt(s.amount)} (${pct}% of income)</title></rect>`;
-    svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-label">${esc(s.name)}</text>`;
-    svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2 + 14}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-amount">${fmt(s.amount)}</text>`;
+    const tt = `${s.name}: ${fmt(s.amount)} (${pct}% of income)`;
+    svg += `<rect x="${s.x}" y="${s.y}" width="${NODE_W}" height="${s.height}" fill="${s.color}" rx="2" title="${esc(tt)}" style="cursor:default;"/>`;
+    svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-label" title="${esc(tt)}" style="cursor:default;">${esc(s.name)}</text>`;
   });
   destLayout.forEach(d => {
     const pct = (d.amount / totalIncome * 100).toFixed(1);
-    svg += `<rect x="${d.x}" y="${d.y}" width="${NODE_W}" height="${d.height}" fill="${d.color}" rx="2"><title>${esc(d.name)}: ${fmt(d.amount)} (${pct}% of income)</title></rect>`;
-    svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-label">${esc(d.name)}</text>`;
-    svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2 + 14}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-amount">${fmt(d.amount)}</text>`;
+    const tt = `${d.name}: ${fmt(d.amount)} (${pct}% of income)`;
+    svg += `<rect x="${d.x}" y="${d.y}" width="${NODE_W}" height="${d.height}" fill="${d.color}" rx="2" title="${esc(tt)}" style="cursor:default;"/>`;
+    svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-label" title="${esc(tt)}" style="cursor:default;">${esc(d.name)}</text>`;
   });
   svg += '</svg>';
   container.innerHTML = svg;
