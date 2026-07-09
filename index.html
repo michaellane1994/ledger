@@ -3880,9 +3880,15 @@ function renderMoneyflow() {
   ribbons.forEach(r => {
     svg += `<path d="${r.d}" fill="${r.color}" fill-opacity="0.32" stroke="none" class="moneyflow-ribbon" data-mftt="${esc(r.tt)}"/>`;
   });
+  // When the label is hidden due to overlap, include the $ amount in the
+  // tooltip too — otherwise the user can't see it anywhere. When the label
+  // IS shown, keep the tooltip lean (just %) since $ is already on-chart.
+  const tipLine = (amount, pct, hidden) =>
+    hidden ? `${fmt(amount)} · ${pct}% of income` : `${pct}% of income`;
+
   sourceLayout.forEach(s => {
     const pct = (s.amount / totalIncome * 100).toFixed(1);
-    const tt = `${s.name}|${pct}% of income`;
+    const tt = `${s.name}|${tipLine(s.amount, pct, s.hideLabel)}`;
     // Invisible hit rect extends into the label area so the whole row is
     // hoverable — critical when the label itself is hidden due to overlap.
     svg += `<rect x="0" y="${s.y}" width="${s.x + NODE_W}" height="${s.height}" fill="transparent" data-mftt="${esc(tt)}" style="pointer-events:all;"/>`;
@@ -3894,7 +3900,7 @@ function renderMoneyflow() {
   });
   destLayout.forEach(d => {
     const pct = (d.amount / totalIncome * 100).toFixed(1);
-    const tt = `${d.name}|${pct}% of income`;
+    const tt = `${d.name}|${tipLine(d.amount, pct, d.hideLabel)}`;
     svg += `<rect x="${d.x}" y="${d.y}" width="${W - d.x}" height="${d.height}" fill="transparent" data-mftt="${esc(tt)}" style="pointer-events:all;"/>`;
     svg += `<rect x="${d.x}" y="${d.y}" width="${NODE_W}" height="${d.height}" fill="${d.color}" rx="2" data-mftt="${esc(tt)}"/>`;
     if (!d.hideLabel) {
