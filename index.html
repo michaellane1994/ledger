@@ -3826,6 +3826,29 @@ function renderMoneyflow() {
   const availDst = chartH - totalGapsDst;
   const destLayout = layoutColumn(destinations, d => d.amount / totalOut, W - LABEL_PAD_RIGHT, availDst);
 
+  // Hide labels that would visually overlap their neighbour. Each label group
+  // (name + $amount) is about 30px tall vertically. Iterate top→bottom keeping
+  // the last shown label's bottom edge; skip any whose top would encroach on
+  // that. Hidden labels are still hoverable via the invisible hit rect.
+  const LABEL_HALF_H = 15;
+  const LABEL_MIN_GAP = 3;
+  const markVisibility = (items) => {
+    let lastBottom = -Infinity;
+    items.forEach(it => {
+      const center = it.y + it.height / 2;
+      const top = center - LABEL_HALF_H;
+      const bottom = center + LABEL_HALF_H;
+      if (top < lastBottom + LABEL_MIN_GAP) {
+        it.hideLabel = true;
+      } else {
+        it.hideLabel = false;
+        lastBottom = bottom;
+      }
+    });
+  };
+  markVisibility(sourceLayout);
+  markVisibility(destLayout);
+
   const srcCursor = sourceLayout.map(() => 0);
   const dstCursor = destLayout.map(() => 0);
   const ribbons = [];
@@ -3860,16 +3883,24 @@ function renderMoneyflow() {
   sourceLayout.forEach(s => {
     const pct = (s.amount / totalIncome * 100).toFixed(1);
     const tt = `${s.name}|${pct}% of income`;
+    // Invisible hit rect extends into the label area so the whole row is
+    // hoverable — critical when the label itself is hidden due to overlap.
+    svg += `<rect x="0" y="${s.y}" width="${s.x + NODE_W}" height="${s.height}" fill="transparent" data-mftt="${esc(tt)}" style="pointer-events:all;"/>`;
     svg += `<rect x="${s.x}" y="${s.y}" width="${NODE_W}" height="${s.height}" fill="${s.color}" rx="2" data-mftt="${esc(tt)}"/>`;
-    svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2 - 6}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-label" data-mftt="${esc(tt)}">${esc(s.name)}</text>`;
-    svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2 + 9}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-amount" data-mftt="${esc(tt)}">${fmt(s.amount)}</text>`;
+    if (!s.hideLabel) {
+      svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2 - 6}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-label" data-mftt="${esc(tt)}">${esc(s.name)}</text>`;
+      svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2 + 9}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-amount" data-mftt="${esc(tt)}">${fmt(s.amount)}</text>`;
+    }
   });
   destLayout.forEach(d => {
     const pct = (d.amount / totalIncome * 100).toFixed(1);
     const tt = `${d.name}|${pct}% of income`;
+    svg += `<rect x="${d.x}" y="${d.y}" width="${W - d.x}" height="${d.height}" fill="transparent" data-mftt="${esc(tt)}" style="pointer-events:all;"/>`;
     svg += `<rect x="${d.x}" y="${d.y}" width="${NODE_W}" height="${d.height}" fill="${d.color}" rx="2" data-mftt="${esc(tt)}"/>`;
-    svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2 - 6}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-label" data-mftt="${esc(tt)}">${esc(d.name)}</text>`;
-    svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2 + 9}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-amount" data-mftt="${esc(tt)}">${fmt(d.amount)}</text>`;
+    if (!d.hideLabel) {
+      svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2 - 6}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-label" data-mftt="${esc(tt)}">${esc(d.name)}</text>`;
+      svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2 + 9}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-amount" data-mftt="${esc(tt)}">${fmt(d.amount)}</text>`;
+    }
   });
   svg += '</svg>';
   container.innerHTML = svg;
