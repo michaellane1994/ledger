@@ -5121,9 +5121,30 @@ function updateImportPreview() {
     _pendingImportRows = null;
     return;
   }
-  _pendingImportRows = valid.map(r => ({ ...r }));
+  // Preserve isIncome / _catManual edits across re-parses. Changing the bank/credit
+  // radio or a column mapping used to blow these away, silently sending flagged
+  // rows through as expense refunds. Match by date+merchant since sign can flip
+  // when stmt-type changes.
+  const prevEdits = new Map();
+  if (_pendingImportRows) {
+    _pendingImportRows.forEach(r => {
+      if (r.isIncome || r._catManual) {
+        prevEdits.set(`${r.date}|${r.merchant}`, { isIncome: !!r.isIncome, category: r._catManual ? r.category : null, _catManual: !!r._catManual });
+      }
+    });
+  }
+  _pendingImportRows = valid.map(r => {
+    const copy = { ...r };
+    const prev = prevEdits.get(`${r.date}|${r.merchant}`);
+    if (prev) {
+      if (prev.isIncome) { copy.isIncome = true; copy.category = null; }
+      else if (prev._catManual && prev.category) { copy.category = prev.category; }
+      copy._catManual = prev._catManual;
+    }
+    return copy;
+  });
   _pendingImportInvalid = invalid;
-  _pendingImportEdited = false;
+  if (prevEdits.size === 0) _pendingImportEdited = false;
   renderImportPreview();
 }
 function renderImportPreview() {
