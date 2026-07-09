@@ -3963,6 +3963,8 @@ function renderMoneyflow() {
 // zoom (CSS transform on the SVG) and scroll for detail — especially useful
 // on mobile where the inline chart requires awkward horizontal scrolling.
 let mfZoom = 1;
+const MF_ZOOM_MIN = 0.3;
+const MF_ZOOM_MAX = 5;
 function openMoneyflowFullscreen() {
   const modal = document.getElementById('moneyflow-fullscreen');
   const body  = document.getElementById('moneyflow-fs-body');
@@ -3973,10 +3975,10 @@ function openMoneyflowFullscreen() {
   const svgEl = body.querySelector('svg');
   if (svgEl) svgEl.style.transform = 'scale(1)';
   attachMoneyflowTooltips(body);
+  attachMoneyflowPinch(body);
   modal.classList.add('open');
   // Prevent background scroll leak on mobile while the modal is open.
   document.body.style.overflow = 'hidden';
-  // Escape to close
   document.addEventListener('keydown', _mfEscHandler);
 }
 function closeMoneyflowFullscreen(e) {
@@ -3993,9 +3995,43 @@ function closeMoneyflowFullscreen(e) {
 }
 function _mfEscHandler(e) { if (e.key === 'Escape') closeMoneyflowFullscreen(); }
 function mfSetZoom(z) {
-  mfZoom = Math.max(0.5, Math.min(3, +z || 1));
+  mfZoom = Math.max(MF_ZOOM_MIN, Math.min(MF_ZOOM_MAX, +z || 1));
   const svg = document.querySelector('#moneyflow-fs-body svg');
   if (svg) svg.style.transform = `scale(${mfZoom})`;
+}
+
+// Pinch-to-zoom for the fullscreen chart on touch devices. Two-finger pinch
+// scales the SVG via CSS transform (not the whole page — the browser's native
+// pinch would zoom the modal chrome too, which is jarring). Single-finger
+// touches fall through to the container's native scroll so panning still
+// works with one finger and pinching zooms with two.
+function attachMoneyflowPinch(container) {
+  if (!container) return;
+  let startDist = 0;
+  let startZoom = 1;
+  const distance = (touches) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+  container.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      startDist = distance(e.touches);
+      startZoom = mfZoom;
+    } else {
+      startDist = 0;
+    }
+  }, { passive: true });
+  container.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 2 || !startDist) return;
+    // preventDefault on 2-finger gesture stops the browser's own page-zoom
+    // from also firing (which would zoom the modal chrome + double the SVG).
+    e.preventDefault();
+    const curDist = distance(e.touches);
+    mfSetZoom(startZoom * (curDist / startDist));
+  }, { passive: false });
+  container.addEventListener('touchend', () => { startDist = 0; }, { passive: true });
+  container.addEventListener('touchcancel', () => { startDist = 0; }, { passive: true });
 }
 
 // Cursor-tracking tooltip for the Money flow SVG. One shared bubble (singleton
