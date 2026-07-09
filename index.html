@@ -269,6 +269,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 /* Money flow card (Sankey diagram: income sources -> destinations). */
 .moneyflow-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-xs);padding:var(--s-4) var(--s-5);}
 #moneyflow-svg-container{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
+.moneyflow-cat-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;font-size:11.5px;border:1px solid var(--border);border-radius:100px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;transition:background .12s,color .12s,border-color .12s;}
+.moneyflow-cat-chip:hover{border-color:var(--border-2);color:var(--ink);}
+.moneyflow-cat-chip.on{background:var(--ink);color:var(--surface);border-color:var(--ink);}
+.moneyflow-cat-chip .chip-dot{width:8px;height:8px;border-radius:50%;background:var(--cat-c, var(--muted));}
 .moneyflow-mode-toggle{display:inline-flex;gap:2px;background:var(--bg);padding:3px;border-radius:8px;border:1px solid var(--border);}
 .moneyflow-mode-btn{background:transparent;border:none;padding:5px 12px;font-size:12px;font-weight:500;color:var(--muted);border-radius:5px;cursor:pointer;font-family:inherit;letter-spacing:-0.005em;transition:background .12s, color .12s;}
 .moneyflow-mode-btn:hover{color:var(--ink);}
@@ -1006,14 +1010,20 @@ tbody tr:hover .row-menu-btn{opacity:1;}
               <button id="moneyflow-mode-cat" class="moneyflow-mode-btn" onclick="setMoneyflowMode('cat')" title="Break down spending categories individually">By category</button>
             </div>
             <div class="moneyflow-mode-toggle" role="group" aria-label="How many categories" id="moneyflow-topn-group" style="display:none;">
-              <button id="moneyflow-topn-5"   class="moneyflow-mode-btn active" onclick="setMoneyflowTopN('5')"   title="Top 5 categories">Top 5</button>
-              <button id="moneyflow-topn-10"  class="moneyflow-mode-btn"        onclick="setMoneyflowTopN('10')"  title="Top 10 categories">Top 10</button>
-              <button id="moneyflow-topn-all" class="moneyflow-mode-btn"        onclick="setMoneyflowTopN('all')" title="Every category, sized proportionally">All</button>
+              <button id="moneyflow-topn-3"      class="moneyflow-mode-btn"        onclick="setMoneyflowTopN('3')"      title="Top 3 categories">Top 3</button>
+              <button id="moneyflow-topn-5"      class="moneyflow-mode-btn active" onclick="setMoneyflowTopN('5')"      title="Top 5 categories">Top 5</button>
+              <button id="moneyflow-topn-10"     class="moneyflow-mode-btn"        onclick="setMoneyflowTopN('10')"     title="Top 10 categories">Top 10</button>
+              <button id="moneyflow-topn-all"    class="moneyflow-mode-btn"        onclick="setMoneyflowTopN('all')"    title="Every category, sized proportionally">All</button>
+              <button id="moneyflow-topn-custom" class="moneyflow-mode-btn"        onclick="setMoneyflowTopN('custom')" title="Pick which categories to break out individually">Custom</button>
             </div>
           </div>
         </div>
         <div class="card moneyflow-card">
           <div class="card-body" id="moneyflow-body">
+            <div id="moneyflow-custom-picker" style="display:none;padding:8px 12px 4px;border-bottom:1px solid var(--border);margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;">Categories to show individually</div>
+              <div id="moneyflow-custom-chips" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+            </div>
             <div id="moneyflow-svg-container" style="min-height:280px;"></div>
             <div id="moneyflow-empty" style="display:none;padding:24px;text-align:center;color:var(--faint);font-size:13.5px;">No income tracked in this period yet — add income entries or upload a statement to see money flow.</div>
           </div>
@@ -3542,8 +3552,10 @@ let moneyflowMode = localStorage.getItem('l3_moneyflow_mode') || 'nw';
 // Source aggregation: 'person' shows one node per earner; 'total' collapses
 // all incomes into a single 'Income' source for a cleaner diagram.
 let moneyflowAgg  = localStorage.getItem('l3_moneyflow_agg')  || 'person';
-// Category count in 'cat' mode: '5', '10', or 'all'.
+// Category count in 'cat' mode: '3', '5', '10', 'all', or 'custom'.
 let moneyflowTopN = localStorage.getItem('l3_moneyflow_topn') || '5';
+// Custom category selection (array of category keys). Only used when topN='custom'.
+let moneyflowCustomCats = JSON.parse(localStorage.getItem('l3_moneyflow_custom_cats') || '[]');
 
 // Palette for destinations. Keeps the warm/earthy family — sage for savings,
 // dusty terracotta for needs/wants, muted blue for excess. Category mode uses
@@ -3581,10 +3593,17 @@ function setMoneyflowAgg(mode) {
 function setMoneyflowTopN(n) {
   moneyflowTopN = String(n);
   localStorage.setItem('l3_moneyflow_topn', moneyflowTopN);
-  ['5','10','all'].forEach(v => {
+  ['3','5','10','all','custom'].forEach(v => {
     const b = document.getElementById('moneyflow-topn-' + v);
     if (b) b.classList.toggle('active', v === moneyflowTopN);
   });
+  renderMoneyflow();
+}
+function toggleMoneyflowCustomCat(key) {
+  const idx = moneyflowCustomCats.indexOf(key);
+  if (idx >= 0) moneyflowCustomCats.splice(idx, 1);
+  else moneyflowCustomCats.push(key);
+  localStorage.setItem('l3_moneyflow_custom_cats', JSON.stringify(moneyflowCustomCats));
   renderMoneyflow();
 }
 
@@ -3647,10 +3666,19 @@ function computeMoneyflowData() {
         return { key, name: cat ? cat.label : key, amount, color: (cat && cat.color) || MONEYFLOW_COLORS.other };
       })
       .sort((a, b) => b.amount - a.amount);
-    const topCount = moneyflowTopN === 'all' ? catRows.length
-                   : moneyflowTopN === '10'  ? 10
-                   : 5;
-    const top = catRows.slice(0, topCount);
+    let top;
+    if (moneyflowTopN === 'custom') {
+      const picked = new Set(moneyflowCustomCats);
+      // If user hasn't picked anything yet, fall back to top 5 so the chart
+      // isn't blank while they're configuring.
+      top = picked.size > 0 ? catRows.filter(r => picked.has(r.key)) : catRows.slice(0, 5);
+    } else {
+      const topCount = moneyflowTopN === 'all' ? catRows.length
+                     : moneyflowTopN === '10'  ? 10
+                     : moneyflowTopN === '3'   ? 3
+                     : 5;
+      top = catRows.slice(0, topCount);
+    }
     const topTotal = top.reduce((s, r) => s + r.amount, 0);
     // Recompute excess so destinations still sum to income: excess absorbs both
     // truly-unspent money AND spending on categories that didn't make the cut.
@@ -3696,13 +3724,23 @@ function renderMoneyflow() {
   const aggTotal  = document.getElementById('moneyflow-agg-total');
   if (aggPerson) aggPerson.classList.toggle('active', moneyflowAgg === 'person');
   if (aggTotal)  aggTotal.classList.toggle('active',  moneyflowAgg === 'total');
-  ['5','10','all'].forEach(v => {
+  ['3','5','10','all','custom'].forEach(v => {
     const b = document.getElementById('moneyflow-topn-' + v);
     if (b) b.classList.toggle('active', v === moneyflowTopN);
   });
   // Show top-N pills only in cat mode
   const topnGroup = document.getElementById('moneyflow-topn-group');
   if (topnGroup) topnGroup.style.display = moneyflowMode === 'cat' ? '' : 'none';
+  // Custom category picker: visible only when cat + custom mode is active
+  const picker = document.getElementById('moneyflow-custom-picker');
+  const chipsEl = document.getElementById('moneyflow-custom-chips');
+  if (picker) picker.style.display = (moneyflowMode === 'cat' && moneyflowTopN === 'custom') ? '' : 'none';
+  if (chipsEl && moneyflowMode === 'cat' && moneyflowTopN === 'custom') {
+    chipsEl.innerHTML = CATS.map(c => {
+      const on = moneyflowCustomCats.includes(c.key);
+      return `<button type="button" class="moneyflow-cat-chip${on ? ' on' : ''}" style="--cat-c:${c.color};" onclick="toggleMoneyflowCustomCat('${c.key}')" title="${on ? 'Hide' : 'Show'} ${esc(c.label)}"><span class="chip-dot"></span>${esc(c.label)}</button>`;
+    }).join('');
+  }
 
   const data = computeMoneyflowData();
   const { sources, destinations, flows, totalIncome } = data;
@@ -3734,14 +3772,16 @@ function renderMoneyflow() {
   // container's overflow-x lets the diagram scroll horizontally instead of
   // scaling down (which shrunk everything to unreadable).
   const viewportW = container.clientWidth || 800;
-  const W = Math.max(720, viewportW);
+  const W = Math.max(780, viewportW);
   // Give more vertical room the more destinations we have — prevents label
   // overlap when top-10 or all is selected.
   const H = Math.max(320, destinations.length * 56 + 90);
   const NODE_W = 12;
   const NODE_GAP_PX = 8;
   const LABEL_PAD_LEFT = 110;
-  const LABEL_PAD_RIGHT = 130;
+  // Wider right padding fits multi-word destination labels like "Savings
+  // contribution" without clipping off the edge.
+  const LABEL_PAD_RIGHT = 190;
 
   const chartH = H - 24;
   const topPad = 12;
@@ -3786,21 +3826,24 @@ function renderMoneyflow() {
       const x2 = dst.x;
       const midX = (x1 + x2) / 2;
       const d = `M ${x1} ${y1a} C ${midX} ${y1a}, ${midX} ${y2a}, ${x2} ${y2a} L ${x2} ${y2b} C ${midX} ${y2b}, ${midX} ${y1b}, ${x1} ${y1b} Z`;
-      ribbons.push({ d, color: dst.color });
+      const pct = (flow.value / totalIncome * 100).toFixed(1);
+      ribbons.push({ d, color: dst.color, title: `${src.name} → ${dst.name}: ${fmt(flow.value)} (${pct}% of income)` });
     });
   });
 
   let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;">`;
   ribbons.forEach(r => {
-    svg += `<path d="${r.d}" fill="${r.color}" fill-opacity="0.32" stroke="none" class="moneyflow-ribbon"><title>${esc(r.color)}</title></path>`;
+    svg += `<path d="${r.d}" fill="${r.color}" fill-opacity="0.32" stroke="none" class="moneyflow-ribbon"><title>${esc(r.title)}</title></path>`;
   });
   sourceLayout.forEach(s => {
-    svg += `<rect x="${s.x}" y="${s.y}" width="${NODE_W}" height="${s.height}" fill="${s.color}" rx="2"/>`;
+    const pct = (s.amount / totalIncome * 100).toFixed(1);
+    svg += `<rect x="${s.x}" y="${s.y}" width="${NODE_W}" height="${s.height}" fill="${s.color}" rx="2"><title>${esc(s.name)}: ${fmt(s.amount)} (${pct}% of income)</title></rect>`;
     svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-label">${esc(s.name)}</text>`;
     svg += `<text x="${s.x - 8}" y="${s.y + s.height / 2 + 14}" text-anchor="end" dominant-baseline="middle" class="moneyflow-node-amount">${fmt(s.amount)}</text>`;
   });
   destLayout.forEach(d => {
-    svg += `<rect x="${d.x}" y="${d.y}" width="${NODE_W}" height="${d.height}" fill="${d.color}" rx="2"/>`;
+    const pct = (d.amount / totalIncome * 100).toFixed(1);
+    svg += `<rect x="${d.x}" y="${d.y}" width="${NODE_W}" height="${d.height}" fill="${d.color}" rx="2"><title>${esc(d.name)}: ${fmt(d.amount)} (${pct}% of income)</title></rect>`;
     svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-label">${esc(d.name)}</text>`;
     svg += `<text x="${d.x + NODE_W + 8}" y="${d.y + d.height / 2 + 14}" text-anchor="start" dominant-baseline="middle" class="moneyflow-node-amount">${fmt(d.amount)}</text>`;
   });
