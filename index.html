@@ -3785,12 +3785,11 @@ function renderMoneyflow() {
   // scaling down (which shrunk everything to unreadable).
   const viewportW = container.clientWidth || 800;
   const W = Math.max(820, viewportW);
-  const H = Math.max(340, destinations.length * 60 + 100);
+  // Cap chart height so All-categories mode doesn't stretch far below the
+  // fold. Beyond ~10 destinations bars will compress; users can hover for
+  // exact values.
+  const H = Math.max(340, Math.min(620, destinations.length * 52 + 90));
   const NODE_W = 12;
-  // Small gap so the destination column doesn't accumulate a visibly-taller
-  // total than the (0-gap) aggregate income column. At 5px * 6 gaps = 30px
-  // total accumulated gap-space, ribbons narrow only ~6% from source to
-  // destination side — barely perceptible.
   const NODE_GAP_PX = 5;
   const LABEL_PAD_LEFT = 110;
   // Wider right padding fits the longest destination labels ("Remaining
@@ -3800,30 +3799,32 @@ function renderMoneyflow() {
   const chartH = H - 24;
   const topPad = 12;
 
-  // Both columns start at topPad and end at topPad + chartH — this is what
-  // makes the aggregate Income bar visually line up with the destination
-  // column at both the top and the bottom. Each side's bars sum to
-  // chartH - own_gap_total, so the small gap (5px) keeps the two totals close.
+  // Both columns start at topPad; heights are proportional to value share of
+  // total on each side. A per-bar minimum (2px) keeps tiny cats visible, but
+  // that push can make the column total exceed availDst — we scale everything
+  // back down to fit so the aggregate Income column and the destination
+  // column reach the exact same bottom pixel.
+  const layoutColumn = (items, share, xPos, avail) => {
+    const raw = items.map(it => Math.max(2, share(it) * avail));
+    const total = raw.reduce((s, h) => s + h, 0);
+    const scale = total > avail ? avail / total : 1;
+    const heights = raw.map(h => h * scale);
+    let y = topPad;
+    return items.map((it, i) => {
+      const height = heights[i];
+      const layout = { ...it, x: xPos, y, height };
+      y += height + NODE_GAP_PX;
+      return layout;
+    });
+  };
   const totalGapsSrc = Math.max(0, sources.length - 1) * NODE_GAP_PX;
   const availSrc = chartH - totalGapsSrc;
-  let ySrc = topPad;
-  const sourceLayout = sources.map(s => {
-    const height = Math.max(2, (s.amount / totalIncome) * availSrc);
-    const layout = { ...s, x: LABEL_PAD_LEFT, y: ySrc, height };
-    ySrc += height + NODE_GAP_PX;
-    return layout;
-  });
+  const sourceLayout = layoutColumn(sources, s => s.amount / totalIncome, LABEL_PAD_LEFT, availSrc);
 
   const totalOut = destinations.reduce((s, x) => s + x.amount, 0);
   const totalGapsDst = Math.max(0, destinations.length - 1) * NODE_GAP_PX;
   const availDst = chartH - totalGapsDst;
-  let yDst = topPad;
-  const destLayout = destinations.map(d => {
-    const height = Math.max(2, (d.amount / totalOut) * availDst);
-    const layout = { ...d, x: W - LABEL_PAD_RIGHT, y: yDst, height };
-    yDst += height + NODE_GAP_PX;
-    return layout;
-  });
+  const destLayout = layoutColumn(destinations, d => d.amount / totalOut, W - LABEL_PAD_RIGHT, availDst);
 
   const srcCursor = sourceLayout.map(() => 0);
   const dstCursor = destLayout.map(() => 0);
