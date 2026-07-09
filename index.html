@@ -995,10 +995,14 @@ tbody tr:hover .row-menu-btn{opacity:1;}
             <div class="dash-section-title">Money flow</div>
             <div class="dash-section-sub" id="moneyflow-sub">Every dollar of income traced to its destination.</div>
           </div>
-          <div class="dash-section-actions">
+          <div class="dash-section-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div class="moneyflow-mode-toggle" role="group" aria-label="Income sources">
+              <button id="moneyflow-agg-person" class="moneyflow-mode-btn active" onclick="setMoneyflowAgg('person')" title="One node per earner">By person</button>
+              <button id="moneyflow-agg-total"  class="moneyflow-mode-btn"        onclick="setMoneyflowAgg('total')"  title="Collapse all income into a single source">Aggregate</button>
+            </div>
             <div class="moneyflow-mode-toggle" role="group" aria-label="Money flow view">
               <button id="moneyflow-mode-nw" class="moneyflow-mode-btn active" onclick="setMoneyflowMode('nw')" title="Group by Needs and Wants">Needs vs Wants</button>
-              <button id="moneyflow-mode-cat" class="moneyflow-mode-btn" onclick="setMoneyflowMode('cat')" title="Break down top spending categories individually">By category</button>
+              <button id="moneyflow-mode-cat" class="moneyflow-mode-btn" onclick="setMoneyflowMode('cat')" title="Break down top 5 spending categories individually">By category</button>
             </div>
           </div>
         </div>
@@ -3529,6 +3533,9 @@ function filtered() {
 // flows connecting them. Reuses the dashboard's period filter (dashPeriodTest)
 // so the chart always reflects whatever month / year / period is selected.
 let moneyflowMode = localStorage.getItem('l3_moneyflow_mode') || 'nw';
+// Source aggregation: 'person' shows one node per earner; 'total' collapses
+// all incomes into a single 'Income' source for a cleaner diagram.
+let moneyflowAgg  = localStorage.getItem('l3_moneyflow_agg')  || 'person';
 
 // Palette for destinations. Keeps the warm/earthy family — sage for savings,
 // dusty terracotta for needs/wants, muted blue for excess. Category mode uses
@@ -3554,16 +3561,25 @@ function setMoneyflowMode(mode) {
   if (cat) cat.classList.toggle('active', mode === 'cat');
   renderMoneyflow();
 }
+function setMoneyflowAgg(mode) {
+  moneyflowAgg = mode;
+  localStorage.setItem('l3_moneyflow_agg', mode);
+  const p = document.getElementById('moneyflow-agg-person');
+  const t = document.getElementById('moneyflow-agg-total');
+  if (p) p.classList.toggle('active', mode === 'person');
+  if (t) t.classList.toggle('active', mode === 'total');
+  renderMoneyflow();
+}
 
 function computeMoneyflowData() {
-  // Income sources bucketed by person (matches the Sankey convention of "who
-  // earns" flowing into "where it goes"). If only one person has income, we
-  // fall back to a single "Income" source so the diagram doesn't degenerate.
+  // Income sources — bucketed by person (default) or aggregated into a single
+  // 'Income' node. Aggregate mode gives a cleaner diagram when the source
+  // decomposition doesn't matter.
   const sourceMap = {};
   incomes.forEach(inc => {
     if (!dashPeriodTest(inc.date)) return;
-    const person = inc.person || 'Income';
-    sourceMap[person] = (sourceMap[person] || 0) + Math.abs(inc.amount || 0);
+    const bucket = moneyflowAgg === 'total' ? 'Income' : (inc.person || 'Income');
+    sourceMap[bucket] = (sourceMap[bucket] || 0) + Math.abs(inc.amount || 0);
   });
   let sources = Object.entries(sourceMap)
     .map(([name, amount]) => ({ name, amount }))
@@ -3605,6 +3621,9 @@ function computeMoneyflowData() {
 
   let destinations;
   if (moneyflowMode === 'cat') {
+    // Show ONLY the top 5 individually — no separate 'Other' bucket. The small
+    // categories' spend rolls into Excess so the diagram stays balanced without
+    // adding a 6th generic node that made the chart feel cluttered.
     const catRows = Object.entries(catTotals)
       .map(([key, amount]) => {
         const cat = CATS.find(c => c.key === key);
@@ -3612,11 +3631,13 @@ function computeMoneyflowData() {
       })
       .sort((a, b) => b.amount - a.amount);
     const top = catRows.slice(0, 5);
-    const otherTotal = catRows.slice(5).reduce((s, r) => s + r.amount, 0);
+    const topTotal = top.reduce((s, r) => s + r.amount, 0);
+    // Recompute excess so destinations still sum to income: excess absorbs both
+    // truly-unspent money AND spending on categories that didn't make the top 5.
+    const catExcess = Math.max(0, totalIncome - topTotal - savings);
     destinations = top.map(r => ({ name: r.name, amount: r.amount, color: r.color }));
-    if (otherTotal > 0) destinations.push({ name: 'Other', amount: otherTotal, color: MONEYFLOW_COLORS.other });
-    if (savings > 0)    destinations.push({ name: 'Savings', amount: savings, color: MONEYFLOW_COLORS.savings });
-    if (excess > 0)     destinations.push({ name: 'Excess', amount: excess, color: MONEYFLOW_COLORS.excess });
+    if (savings > 0)   destinations.push({ name: 'Savings', amount: savings,   color: MONEYFLOW_COLORS.savings });
+    if (catExcess > 0) destinations.push({ name: 'Excess',  amount: catExcess, color: MONEYFLOW_COLORS.excess });
   } else {
     destinations = [];
     if (needs > 0)   destinations.push({ name: 'Needs',   amount: needs,   color: MONEYFLOW_COLORS.needs });
@@ -3645,6 +3666,16 @@ function renderMoneyflow() {
   const empty     = document.getElementById('moneyflow-empty');
   const sub       = document.getElementById('moneyflow-sub');
   if (!container) return;
+
+  // Sync toggle button active states so first paint respects localStorage.
+  const nwBtn  = document.getElementById('moneyflow-mode-nw');
+  const catBtn = document.getElementById('moneyflow-mode-cat');
+  if (nwBtn)  nwBtn.classList.toggle('active',  moneyflowMode === 'nw');
+  if (catBtn) catBtn.classList.toggle('active', moneyflowMode === 'cat');
+  const aggPerson = document.getElementById('moneyflow-agg-person');
+  const aggTotal  = document.getElementById('moneyflow-agg-total');
+  if (aggPerson) aggPerson.classList.toggle('active', moneyflowAgg === 'person');
+  if (aggTotal)  aggTotal.classList.toggle('active',  moneyflowAgg === 'total');
 
   const data = computeMoneyflowData();
   const { sources, destinations, flows, totalIncome } = data;
@@ -5379,29 +5410,51 @@ async function doImport() {
     txns     = [...txns, ...fresh];
   }
 
-  // Income rows: dedup against existing incomes, then append as standalone
-  // records (positive amount, type 'income', no fromTxnId).
+  // Income rows: push a linked (txn + income) pair so the row shows up in BOTH
+  // the Transactions tab (with income badge) AND the Income tab. Matches the
+  // behaviour when you flag a row as income from the Transactions tab via
+  // applyIncomeFlag(). Dedup against existing incomes only — the paired txn
+  // gets a fresh ID each time so it won't collide.
   const freshIncomeIds = [];
+  const freshIncomeLinkedTxnIds = [];
   if (incomeRows.length) {
     const existingIncomeKeys = new Set(incomes.map(i => incomeDedupKey(i)));
     const freshIncomes = incomeRows.filter(t => !existingIncomeKeys.has(incomeDedupKey(t)));
     freshIncomes.forEach(t => {
-      const id = uid();
-      freshIncomeIds.push(id);
+      const txnId = uid();
+      const incId = uid();
+      freshIncomeIds.push(incId);
+      freshIncomeLinkedTxnIds.push(txnId);
+      // Linked expense-side row: positive amount + incomeType 'income' means
+      // dashboards/filters exclude it from expense totals but it stays visible
+      // as a row in the Transactions tab.
+      txns.push({
+        id: txnId,
+        date: t.date,
+        merchant: t.merchant,
+        amount: Math.abs(t.amount),
+        category: t.category || 'misc',
+        person: t.person,
+        card: t.card,
+        note: '',
+        incomeType: 'income',
+        refund: false,
+      });
       incomes.push({
-        id: id,
+        id: incId,
         date: t.date,
         amount: Math.abs(t.amount),
         type: 'income',
         person: t.person,
         desc: t.merchant,
         note: '',
+        fromTxnId: txnId,
       });
     });
   }
 
   const modeNote = importMode === 'replace' ? ` (replaced ${removedCount} existing)` : '';
-  const freshTxnIds = fresh.map(t => t.id);
+  const freshTxnIds = [...fresh.map(t => t.id), ...freshIncomeLinkedTxnIds];
   uploads.unshift({ name: pFile.name, count: fresh.length, skipped, person, card: cardName, date: new Date().toLocaleDateString('en-CA'), mode: importMode });
   persist();
 
@@ -7176,29 +7229,46 @@ async function importPdfTransactions() {
     txns    = [...txns, ...fresh];
   }
 
-  // Income rows: dedup against existing incomes, then append. Standalone income
-  // records with no fromTxnId, positive amounts, default type 'income' — user
-  // can retype/recategorize on the Income page.
+  // Income rows: push a linked (txn + income) pair so the row shows up in BOTH
+  // the Transactions tab (with income badge) AND the Income tab. Matches the
+  // behaviour when you flag a row as income from the Transactions tab via
+  // applyIncomeFlag().
+  const freshIncomeLinkedTxnIds = [];
   if (incomeRows.length) {
     const existingIncomeKeys = new Set(incomes.map(i => incomeDedupKey(i)));
     const freshIncomes = incomeRows.filter(t => !existingIncomeKeys.has(incomeDedupKey(t)));
     freshIncomes.forEach(t => {
-      const id = uid();
-      freshIncomeIds.push(id);
+      const txnId = uid();
+      const incId = uid();
+      freshIncomeIds.push(incId);
+      freshIncomeLinkedTxnIds.push(txnId);
+      txns.push({
+        id: txnId,
+        date: t.date,
+        merchant: t.merchant,
+        amount: Math.abs(t.amount),
+        category: t.category || 'misc',
+        person: t.person,
+        card: t.card,
+        note: '',
+        incomeType: 'income',
+        refund: false,
+      });
       incomes.push({
-        id: id,
+        id: incId,
         date: t.date,
         amount: Math.abs(t.amount),
         type: 'income',
         person: t.person,
         desc: t.merchant,
         note: '',
+        fromTxnId: txnId,
       });
     });
   }
 
   const uploadName = pdfFile ? pdfFile.name : 'PDF Statement';
-  const freshTxnIds = fresh.map(t => t.id);
+  const freshTxnIds = [...fresh.map(t => t.id), ...freshIncomeLinkedTxnIds];
   uploads.unshift({
     name: uploadName,
     count: fresh.length, skipped, person, card: cardName,
