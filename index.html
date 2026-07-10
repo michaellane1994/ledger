@@ -303,6 +303,66 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
   .mf-modal-title{font-size:16px;}
   #moneyflow-fs-body{padding:8px;}
 }
+
+/* ── Mobile Money flow card (< 640px). Replaces the Sankey inline; the
+     Sankey is still reachable via the ⤢ fullscreen button. Design mirrors
+     Monarch/Copilot patterns: total header, source pills, stacked bar,
+     tappable destination list. Every tappable row is ≥ 44px for touch. */
+.mf-mob{padding:4px 2px 6px;}
+.mf-mob-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
+.mf-mob-total-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
+.mf-mob-total{font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);letter-spacing:-0.01em;}
+.mf-mob-sources{display:flex;flex-wrap:wrap;gap:10px 16px;margin-bottom:14px;padding:10px 12px;background:var(--bg);border-radius:8px;}
+.mf-mob-src{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;}
+.mf-mob-src-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.mf-mob-src-name{color:var(--ink);font-weight:500;}
+.mf-mob-src-amt{color:var(--muted);font-variant-numeric:tabular-nums;}
+.mf-mob-bar{display:flex;width:100%;height:40px;border-radius:8px;overflow:hidden;background:var(--bg);margin-bottom:18px;box-shadow:inset 0 0 0 1px var(--border);}
+.mf-mob-seg{border:0;padding:0;cursor:pointer;transition:filter .12s;position:relative;flex-shrink:1;min-width:2px;}
+.mf-mob-seg + .mf-mob-seg{box-shadow:inset 1px 0 0 rgba(255,255,255,.35);}
+.mf-mob-seg:active,.mf-mob-seg:focus-visible{filter:brightness(1.12);outline:none;}
+.mf-mob-rows-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;padding:0 2px;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
+.mf-mob-rows-hint{text-transform:none;letter-spacing:0;font-weight:500;font-size:11px;color:var(--faint);}
+.mf-mob-rows{display:flex;flex-direction:column;}
+.mf-mob-row{display:flex;align-items:center;gap:12px;padding:12px 8px;border:0;background:transparent;border-radius:8px;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,.06);min-height:44px;font-family:inherit;text-align:left;color:var(--ink);transition:background .12s;}
+.mf-mob-row:hover,.mf-mob-row:active{background:var(--bg);}
+.mf-mob-row + .mf-mob-row{border-top:1px solid var(--border);}
+.mf-mob-row-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.mf-mob-row-name{flex:1;font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mf-mob-row-amt{font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;}
+.mf-mob-row-pct{font-size:12px;color:var(--muted);text-align:right;margin-left:6px;min-width:44px;font-variant-numeric:tabular-nums;}
+.mf-mob-row-chev{color:var(--faint);font-size:16px;line-height:1;flex-shrink:0;}
+
+/* ── Mobile drill-down bottom sheet. */
+.mf-sheet{position:fixed;inset:0;z-index:9997;display:none;}
+.mf-sheet.open{display:flex;align-items:flex-end;}
+.mf-sheet-backdrop{position:absolute;inset:0;background:rgba(20,17,12,.42);animation:mf-fade-in .18s ease-out;}
+.mf-sheet-card{position:relative;background:var(--surface);width:100%;max-height:85vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column;box-shadow:0 -8px 32px rgba(0,0,0,.18);animation:mf-sheet-in .22s cubic-bezier(.2,.9,.25,1);}
+@keyframes mf-fade-in{from{opacity:0;}to{opacity:1;}}
+@keyframes mf-sheet-in{from{transform:translateY(24%);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.mf-sheet-grip{width:40px;height:4px;background:var(--border);border-radius:4px;margin:8px auto 4px;flex-shrink:0;}
+.mf-sheet-head{padding:6px 16px 12px;display:flex;align-items:flex-start;gap:12px;border-bottom:1px solid var(--border);}
+.mf-sheet-title-block{flex:1;min-width:0;}
+.mf-sheet-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);line-height:1.2;letter-spacing:-0.005em;overflow:hidden;text-overflow:ellipsis;}
+.mf-sheet-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
+.mf-sheet-total-block{text-align:right;flex-shrink:0;}
+.mf-sheet-total-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
+.mf-sheet-total{font-size:16px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;}
+.mf-sheet-close{background:transparent;border:0;font-size:20px;cursor:pointer;padding:4px 8px;color:var(--muted);line-height:1;margin-left:4px;align-self:flex-start;}
+.mf-sheet-close:active{color:var(--ink);}
+.mf-sheet-body{flex:1;overflow-y:auto;padding:0 8px 16px;-webkit-overflow-scrolling:touch;}
+.mf-sheet-txn{display:flex;align-items:center;gap:12px;padding:11px 6px;border-bottom:1px solid var(--border);}
+.mf-sheet-txn-left{flex:1;min-width:0;}
+.mf-sheet-txn-desc{font-size:14px;color:var(--ink);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mf-sheet-txn-date{font-size:11.5px;color:var(--muted);margin-top:1px;}
+.mf-sheet-txn-amt{font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;flex-shrink:0;}
+.mf-sheet-empty{padding:40px 24px;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.5;}
+/* Hide the fullscreen-expand button on desktop — the mobile card is what
+   really benefits from the fullscreen viewer. Desktop already has plenty of
+   room for the Sankey inline. */
+@media (min-width: 641px){
+  #moneyflow-expand-btn{display:none;}
+}
 .moneyflow-cat-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;font-size:11.5px;border:1px solid var(--border);border-radius:100px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;transition:background .12s,color .12s,border-color .12s;}
 .moneyflow-cat-chip:hover{border-color:var(--border-2);color:var(--ink);}
 .moneyflow-cat-chip.on{background:var(--ink);color:var(--surface);border-color:var(--ink);}
@@ -1080,6 +1140,29 @@ tbody tr:hover .row-menu-btn{opacity:1;}
             </div>
           </div>
           <div id="moneyflow-fs-body"></div>
+        </div>
+      </div>
+
+      <!-- Mobile drill-down bottom sheet. Opens when the user taps any row
+           or segment in the mobile Money flow card. Lists the underlying
+           transactions for the tapped bucket (category / Needs / Wants /
+           Savings / Remaining). -->
+      <div id="mf-detail-sheet" class="mf-sheet" onclick="closeMoneyflowDetail(event)">
+        <div class="mf-sheet-backdrop"></div>
+        <div class="mf-sheet-card" onclick="event.stopPropagation()">
+          <div class="mf-sheet-grip" aria-hidden="true"></div>
+          <div class="mf-sheet-head">
+            <div class="mf-sheet-title-block">
+              <div id="mf-sheet-title" class="mf-sheet-title"></div>
+              <div id="mf-sheet-meta" class="mf-sheet-meta"></div>
+            </div>
+            <div class="mf-sheet-total-block">
+              <div class="mf-sheet-total-label">Total</div>
+              <div id="mf-sheet-total" class="mf-sheet-total"></div>
+            </div>
+            <button class="mf-sheet-close" onclick="closeMoneyflowDetail()" aria-label="Close">✕</button>
+          </div>
+          <div id="mf-sheet-body" class="mf-sheet-body"></div>
         </div>
       </div>
 
@@ -3609,6 +3692,9 @@ let moneyflowAgg  = localStorage.getItem('l3_moneyflow_agg')  || 'person';
 let moneyflowTopN = localStorage.getItem('l3_moneyflow_topn') || '5';
 // Custom category selection (array of category keys). Only used when topN='custom'.
 let moneyflowCustomCats = JSON.parse(localStorage.getItem('l3_moneyflow_custom_cats') || '[]');
+// Tracks which category keys were shown in the current cat-mode render, so the
+// mobile drill-down for "Remaining expense categories" knows what's excluded.
+let _moneyflowShownCatKeys = null;
 
 // Palette for destinations. Keeps the warm/earthy family — sage for savings,
 // dusty terracotta for needs/wants, muted blue for excess. Category mode uses
@@ -3739,16 +3825,20 @@ function computeMoneyflowData() {
     // destination). "Remaining categories" is its own line so users see the
     // spending they hid from the top-N without conflating it with excess.
     const catExcess = Math.max(0, totalIncome - topTotal - remainingTotal - savings);
-    destinations = top.map(r => ({ name: r.name, amount: r.amount, color: r.color }));
-    if (remainingTotal > 0) destinations.push({ name: 'Remaining expense categories', amount: remainingTotal, color: MONEYFLOW_COLORS.other });
-    if (savings > 0)        destinations.push({ name: 'Savings contribution', amount: savings,        color: MONEYFLOW_COLORS.savings });
-    if (catExcess > 0)      destinations.push({ name: 'Excess',                amount: catExcess,      color: MONEYFLOW_COLORS.excess });
+    // Track which cat keys were shown so the mobile drill-down for the
+    // "Remaining" bucket can list everything that wasn't in the top-N.
+    _moneyflowShownCatKeys = new Set(top.map(r => r.key));
+    destinations = top.map(r => ({ key: r.key, name: r.name, amount: r.amount, color: r.color }));
+    if (remainingTotal > 0) destinations.push({ key: '__remaining__', name: 'Remaining expense categories', amount: remainingTotal, color: MONEYFLOW_COLORS.other });
+    if (savings > 0)        destinations.push({ key: '__savings__',  name: 'Savings contribution',         amount: savings,        color: MONEYFLOW_COLORS.savings });
+    if (catExcess > 0)      destinations.push({ key: '__excess__',   name: 'Excess',                        amount: catExcess,      color: MONEYFLOW_COLORS.excess });
   } else {
+    _moneyflowShownCatKeys = null;
     destinations = [];
-    if (needs > 0)   destinations.push({ name: 'Needs',   amount: needs,   color: MONEYFLOW_COLORS.needs });
-    if (wants > 0)   destinations.push({ name: 'Wants',   amount: wants,   color: MONEYFLOW_COLORS.wants });
-    if (savings > 0) destinations.push({ name: 'Savings contribution', amount: savings, color: MONEYFLOW_COLORS.savings });
-    if (excess > 0)  destinations.push({ name: 'Excess',  amount: excess,  color: MONEYFLOW_COLORS.excess });
+    if (needs > 0)   destinations.push({ key: '__needs__',   name: 'Needs',                 amount: needs,   color: MONEYFLOW_COLORS.needs });
+    if (wants > 0)   destinations.push({ key: '__wants__',   name: 'Wants',                 amount: wants,   color: MONEYFLOW_COLORS.wants });
+    if (savings > 0) destinations.push({ key: '__savings__', name: 'Savings contribution',  amount: savings, color: MONEYFLOW_COLORS.savings });
+    if (excess > 0)  destinations.push({ key: '__excess__',  name: 'Excess',                amount: excess,  color: MONEYFLOW_COLORS.excess });
   }
 
   // Proportional flows: since we don't know which income paid for which
@@ -3825,6 +3915,23 @@ function renderMoneyflow() {
   container.style.display = 'block';
   if (empty) empty.style.display = 'none';
 
+  // Route: on narrow viewports render a compact HTML card (stacked bar +
+  // tappable destination list, with bottom-sheet drill-down). On wider
+  // viewports render the full Sankey below. The Sankey is still available
+  // on mobile via the ⤢ fullscreen button (which calls renderMoneyflowSankey
+  // directly into the fullscreen body).
+  if (window.matchMedia && window.matchMedia('(max-width: 640px)').matches) {
+    renderMoneyflowMobile(container, data);
+    return;
+  }
+  renderMoneyflowSankey(container, data);
+}
+
+// Renders the SVG Sankey into the given container. Extracted from
+// renderMoneyflow so the mobile fullscreen viewer can call it directly
+// (bypassing the mobile-viewport branch).
+function renderMoneyflowSankey(container, data) {
+  const { sources, destinations, flows, totalIncome } = data;
   // Use explicit pixel width so labels stay legible. On narrow viewports the
   // container's overflow-x lets the diagram scroll horizontally instead of
   // scaling down (which shrunk everything to unreadable).
@@ -3958,6 +4065,183 @@ function renderMoneyflow() {
   attachMoneyflowTooltips(container);
 }
 
+// ── MOBILE MONEY FLOW CARD ───────────────────────────────
+// Compact HTML alternative to the Sankey for phones (< 640px). Shows a
+// horizontal stacked bar (income → destinations) with tappable rows below
+// that open a bottom sheet listing the underlying transactions.
+function renderMoneyflowMobile(container, data) {
+  const { sources, destinations, totalIncome } = data;
+  const pctFmt = (v) => (v / totalIncome * 100).toFixed(1);
+
+  const sourcesRow = sources.length > 1
+    ? `<div class="mf-mob-sources">${sources.map(s => `
+        <span class="mf-mob-src">
+          <span class="mf-mob-src-dot" style="background:${s.color};"></span>
+          <span class="mf-mob-src-name">${esc(s.name)}</span>
+          <span class="mf-mob-src-amt">${fmt(s.amount)}</span>
+        </span>`).join('')}</div>`
+    : '';
+
+  // Stacked bar: rounded outer via overflow:hidden. Each segment tappable.
+  const barSegs = destinations.map(d => {
+    const pct = (d.amount / totalIncome * 100).toFixed(2);
+    return `<button type="button" class="mf-mob-seg" style="background:${d.color};flex:${pct};" data-mfkey="${esc(d.key)}" data-mfname="${esc(d.name)}" aria-label="${esc(d.name)}: ${pctFmt(d.amount)}% of income"></button>`;
+  }).join('');
+
+  const rows = destinations.map(d => `
+    <button type="button" class="mf-mob-row" data-mfkey="${esc(d.key)}" data-mfname="${esc(d.name)}">
+      <span class="mf-mob-row-dot" style="background:${d.color};"></span>
+      <span class="mf-mob-row-name">${esc(d.name)}</span>
+      <span class="mf-mob-row-amt">${fmt(d.amount)}</span>
+      <span class="mf-mob-row-pct">${pctFmt(d.amount)}%</span>
+      <span class="mf-mob-row-chev" aria-hidden="true">›</span>
+    </button>`).join('');
+
+  container.innerHTML = `
+    <div class="mf-mob">
+      <div class="mf-mob-head">
+        <div class="mf-mob-total-label">Income</div>
+        <div class="mf-mob-total">${fmt(totalIncome)}</div>
+      </div>
+      ${sourcesRow}
+      <div class="mf-mob-bar">${barSegs}</div>
+      <div class="mf-mob-rows-head">Where it went <span class="mf-mob-rows-hint">tap for detail</span></div>
+      <div class="mf-mob-rows">${rows}</div>
+    </div>
+  `;
+
+  // Tap handlers — one delegated listener for both bar and row taps.
+  container.querySelectorAll('[data-mfkey]').forEach(el => {
+    el.addEventListener('click', () => openMoneyflowDetail(el.dataset.mfkey, el.dataset.mfname));
+  });
+}
+
+// Bottom-sheet drill-down: shows the underlying transactions for a category
+// (or Needs / Wants / Savings / Excess / Remaining bucket), biggest first.
+function openMoneyflowDetail(key, name) {
+  const sheet = document.getElementById('mf-detail-sheet');
+  const title = document.getElementById('mf-sheet-title');
+  const total = document.getElementById('mf-sheet-total');
+  const meta  = document.getElementById('mf-sheet-meta');
+  const body  = document.getElementById('mf-sheet-body');
+  if (!sheet || !body) return;
+
+  const items = getMoneyflowDetailItems(key);
+  const sum   = items.reduce((s, i) => s + i.amount, 0);
+  if (title) title.textContent = name;
+  if (total) total.textContent = fmt(sum);
+  if (meta)  meta.textContent  = `${items.length} ${items.length === 1 ? 'entry' : 'entries'}`;
+
+  const empty = getMoneyflowDetailEmptyText(key);
+  if (!items.length) {
+    body.innerHTML = `<div class="mf-sheet-empty">${esc(empty)}</div>`;
+  } else {
+    body.innerHTML = items
+      .slice()
+      .sort((a, b) => b.amount - a.amount)
+      .map(t => `
+        <div class="mf-sheet-txn">
+          <div class="mf-sheet-txn-left">
+            <div class="mf-sheet-txn-desc">${esc(t.desc || '(untitled)')}</div>
+            <div class="mf-sheet-txn-date">${esc(fmtSheetDate(t.date))}</div>
+          </div>
+          <div class="mf-sheet-txn-amt">${fmt(t.amount)}</div>
+        </div>`).join('');
+  }
+
+  sheet.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.addEventListener('keydown', _mfSheetEscHandler);
+}
+function closeMoneyflowDetail(e) {
+  if (e && e.type === 'click') {
+    const t = e.target;
+    if (t !== e.currentTarget && !(t.classList && t.classList.contains('mf-sheet-close'))) return;
+  }
+  const sheet = document.getElementById('mf-detail-sheet');
+  if (sheet) sheet.classList.remove('open');
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', _mfSheetEscHandler);
+}
+function _mfSheetEscHandler(e) { if (e.key === 'Escape') closeMoneyflowDetail(); }
+function fmtSheetDate(iso) {
+  if (!iso) return '';
+  const [y, mo, d] = String(iso).split('-');
+  if (!y || !mo || !d) return iso;
+  const dt = new Date(+y, +mo - 1, +d);
+  return dt.toLocaleString('default', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function getMoneyflowDetailEmptyText(key) {
+  if (key === '__excess__') return 'This is unspent, unallocated income for the period — no transactions to show.';
+  if (key === '__savings__') return 'No savings contributions logged in this period.';
+  return 'No transactions in this bucket for the selected period.';
+}
+function getMoneyflowDetailItems(key) {
+  const inPeriod = (d) => dashPeriodTest(d);
+  // Savings: contributions in period (skip withdrawals)
+  if (key === '__savings__') {
+    return (typeof contribs !== 'undefined' ? contribs : [])
+      .filter(c => inPeriod(c.date))
+      .filter(c => (c.type || 'contribution') === 'contribution')
+      .map(c => {
+        const acct = (typeof savAccts !== 'undefined' ? savAccts : []).find(a => a.id === c.accountId);
+        return { desc: (acct ? acct.name : (c.note || 'Contribution')), date: c.date, amount: Math.abs(c.amount || 0) };
+      });
+  }
+  // Excess has no underlying rows — it's income minus everything else routed.
+  if (key === '__excess__') return [];
+  // Needs / Wants: expense txns whose category is fixed vs not
+  if (key === '__needs__' || key === '__wants__') {
+    const wantNeeds = key === '__needs__';
+    return txns
+      .filter(t => inPeriod(t.date))
+      .filter(t => (t.amount || 0) > 0)
+      .filter(t => !t.savingsAccountId)
+      .filter(t => !t.incomeType || t.incomeType === 'transfer')
+      .filter(t => {
+        const cat = CATS.find(c => c.key === t.category);
+        return !!(cat && cat.fixed) === wantNeeds;
+      })
+      .map(t => ({ desc: t.merchant, date: t.date, amount: t.amount }));
+  }
+  // Remaining bucket in cat mode: everything not in the shown top-N
+  if (key === '__remaining__') {
+    const shown = _moneyflowShownCatKeys || new Set();
+    return txns
+      .filter(t => inPeriod(t.date))
+      .filter(t => (t.amount || 0) > 0)
+      .filter(t => !t.savingsAccountId)
+      .filter(t => !t.incomeType || t.incomeType === 'transfer')
+      .filter(t => !shown.has(t.category))
+      .map(t => ({ desc: t.merchant, date: t.date, amount: t.amount }));
+  }
+  // Otherwise treat as a category key
+  return txns
+    .filter(t => inPeriod(t.date))
+    .filter(t => (t.amount || 0) > 0)
+    .filter(t => !t.savingsAccountId)
+    .filter(t => !t.incomeType || t.incomeType === 'transfer')
+    .filter(t => t.category === key)
+    .map(t => ({ desc: t.merchant, date: t.date, amount: t.amount }));
+}
+
+// Re-render the Money flow if the viewport crosses the mobile/desktop
+// threshold so we swap between the mobile card and the Sankey.
+(function initMoneyflowResize() {
+  if (!window.matchMedia) return;
+  let lastMobile = window.matchMedia('(max-width: 640px)').matches;
+  const mq = window.matchMedia('(max-width: 640px)');
+  const listener = () => {
+    const nowMobile = mq.matches;
+    if (nowMobile !== lastMobile) {
+      lastMobile = nowMobile;
+      if (typeof renderMoneyflow === 'function') renderMoneyflow();
+    }
+  };
+  if (mq.addEventListener) mq.addEventListener('change', listener);
+  else if (mq.addListener) mq.addListener(listener); // Safari < 14
+})();
+
 // ── MONEY FLOW FULLSCREEN VIEWER ─────────────────────────
 // Clones the currently-rendered chart into a fullscreen modal so users can
 // zoom (CSS transform on the SVG) and scroll for detail — especially useful
@@ -3968,13 +4252,19 @@ const MF_ZOOM_MAX = 5;
 function openMoneyflowFullscreen() {
   const modal = document.getElementById('moneyflow-fullscreen');
   const body  = document.getElementById('moneyflow-fs-body');
-  const src   = document.querySelector('#moneyflow-svg-container svg');
-  if (!src || !modal || !body) return;
-  body.innerHTML = src.outerHTML;
+  if (!modal || !body) return;
+  // Render the Sankey directly into the fullscreen body using current data.
+  // This works whether the inline chart is currently the Sankey (desktop) or
+  // the mobile HTML card — the fullscreen viewer always shows the Sankey.
+  const data = computeMoneyflowData();
+  if (data.totalIncome === 0 || data.destinations.length === 0) {
+    body.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13.5px;">No income tracked in this period.</div>`;
+  } else {
+    renderMoneyflowSankey(body, data);
+  }
   mfZoom = 1;
   const svgEl = body.querySelector('svg');
   if (svgEl) svgEl.style.transform = 'scale(1)';
-  attachMoneyflowTooltips(body);
   attachMoneyflowPinch(body);
   modal.classList.add('open');
   // Prevent background scroll leak on mobile while the modal is open.
