@@ -8862,13 +8862,27 @@ function calcMortWithExtras(balance, annualRate, paymentAmt, frequency, firstDat
   return { schedule, totalInterest, periods: p, ppy };
 }
 
+// Chart-friendly mortgage dates. Manual formatting instead of
+// toLocaleDateString('en-CA', ...) — some browsers render that as
+// "2036 Jan." with a year-first order and trailing period, which
+// looked weird next to the trajectory chart. This always produces
+// "Jan 2036" / "Jan 15, 2036" regardless of browser locale.
+const _MORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function _mortToDate(d) {
+  if (!d) return null;
+  if (d instanceof Date) return d;
+  const s = String(d);
+  return new Date(s + (s.includes('T') ? '' : 'T12:00:00'));
+}
 function fmtMortDate(d) {
-  return d.toLocaleDateString('en-CA', { year:'numeric', month:'short' });
+  const dt = _mortToDate(d);
+  if (!dt || isNaN(dt)) return '—';
+  return _MORT_MONTHS[dt.getMonth()] + ' ' + dt.getFullYear();
 }
 function fmtMortDateFull(d) {
-  return d instanceof Date
-    ? d.toLocaleDateString('en-CA', { year:'numeric', month:'short', day:'numeric' })
-    : d;
+  const dt = _mortToDate(d);
+  if (!dt || isNaN(dt)) return '—';
+  return _MORT_MONTHS[dt.getMonth()] + ' ' + dt.getDate() + ', ' + dt.getFullYear();
 }
 function fmtYrs(periods, ppy) {
   const months = Math.round(periods / ppy * 12);
