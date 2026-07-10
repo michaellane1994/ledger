@@ -9437,15 +9437,33 @@ function _drawTrajChart(baseSched, adjSched, startBalance, accent) {
     return `<text x="${padL - 6}" y="${y + 3}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="Inter">${shortFmt}</text>`;
   }).join('');
   const baseEnd = baseSched.length ? baseSched[baseSched.length - 1].date : null;
+  const stroke = accent || '#3b82f6';
+  // Adjusted payoff marker: when extra payments shorten the timeline, drop a
+  // dashed vertical rule + accent-coloured date at the x position where the
+  // solid line lands. If that would collide with the base end-of-schedule
+  // label at the right edge, we hide the base label so we're not double-
+  // stacking dates on top of each other.
+  const adjEnd = adjSched.length ? adjSched[adjSched.length - 1].date : null;
+  const adjPct = adjSched.length && baseSched.length ? adjSched.length / baseSched.length : 1;
+  const adjXEnd = padL + adjPct * plotW;
+  const adjIsShorter = adjSched.length && baseSched.length && adjSched.length < baseSched.length;
+  // Approx collision zone: hide the base label if the adjusted label would sit
+  // within ~72 px of the right edge (Inter at 10px + fmtMortDate = ~54px wide).
+  const wouldCollide = adjIsShorter && (W - padR - adjXEnd) < 72;
+  const adjMarker = adjIsShorter && adjEnd ? `
+    <line x1="${adjXEnd.toFixed(1)}" y1="${padT}" x2="${adjXEnd.toFixed(1)}" y2="${(H - padB).toFixed(1)}" stroke="${stroke}" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>
+    <text x="${adjXEnd.toFixed(1)}" y="${H - 12}" text-anchor="middle" font-size="10" fill="${stroke}" font-family="Inter" font-weight="600">${fmtMortDate(adjEnd)}</text>
+  ` : '';
+  const showBaseEndLabel = baseEnd && !wouldCollide;
   const xLabels = `
     <text x="${padL}" y="${H - 12}" text-anchor="start" font-size="10" fill="var(--muted)" font-family="Inter">Now</text>
-    ${baseEnd ? `<text x="${W - padR}" y="${H - 12}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="Inter">${fmtMortDate(baseEnd)}</text>` : ''}
+    ${showBaseEndLabel ? `<text x="${W - padR}" y="${H - 12}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="Inter">${fmtMortDate(baseEnd)}</text>` : ''}
   `;
-  const stroke = accent || '#3b82f6';
   svg.innerHTML = `
     ${grid}
     ${yLabels}
     ${xLabels}
+    ${adjMarker}
     <path d="${pathFor(baseSched)}" stroke="var(--muted)" stroke-width="1.5" fill="none" stroke-dasharray="4 3" opacity="0.85"/>
     <path d="${pathFor(adjSched)}" stroke="${stroke}" stroke-width="2" fill="none"/>
   `;
