@@ -775,10 +775,27 @@ tbody tr:hover .row-menu-btn{opacity:1;}
   .income-table-wrap .cat-badge{font-size:10px;padding:2px 5px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:inline-block;}
   .dark-label{display:none;}
   .hide-mobile{display:none !important;}
-  .modal-overlay{align-items:flex-start;padding:16px 0;overflow-y:auto;}
+  .modal-overlay{align-items:flex-start;padding:16px 0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
   .modal{max-height:none;}
-  #pdf-raw-text{height:140px !important;}
-  #pdf-step-2 > div[style*="max-height:280px"]{max-height:200px;}
+  /* iOS auto-zooms text inputs / selects that render below 16px. Bumping to
+     16px keeps the visual weight roughly the same while stopping the zoom
+     that made the upload / import mapper unusable on phones. */
+  .mapper-field select,
+  .mapper-field input,
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="date"],
+  input[type="search"],
+  textarea,
+  select{font-size:16px !important;}
+  /* Import preview: kill the nested max-height scroll region on mobile —
+     it competes with the modal / overlay scroll and confuses the touch
+     dispatcher. Let the preview flow inline; the whole modal scrolls. */
+  #import-preview > div[style*="max-height:320px"],
+  #import-preview > div[style*="overflow:auto"]{max-height:none !important;overflow:visible !important;}
+  #pdf-raw-text{height:140px !important;font-size:16px;}
+  #pdf-step-2 > div[style*="max-height:280px"]{max-height:none;overflow:visible;}
 }
 
 /* ── MORTGAGES PAGE ── */
@@ -5706,6 +5723,10 @@ function openMapper(file) {
     const cardGuess = fn.includes('cibc') ? 'CIBC' : fn.includes('chequing') ? 'RBC Chequing' : fn.includes('saving') ? 'RBC Savings' : fn.includes('amex') ? 'Amex' : fn.includes('scotia') ? 'Scotiabank' : '';
     document.getElementById('col-cardname').value = cardGuess;
     document.getElementById('map-modal').classList.add('open');
+    // Lock background scroll so a touch drag inside the modal doesn't leak
+    // through and scroll the dashboard behind it — was making the mobile
+    // upload flow feel like the whole page was jumping around.
+    document.body.style.overflow = 'hidden';
     updateImportPreview();
   };
   reader.readAsText(file);
@@ -5716,6 +5737,7 @@ function guess(id, hints) {
 }
 function closeMap() {
   document.getElementById('map-modal').classList.remove('open');
+  document.body.style.overflow = '';
   _pendingImportRows = null;
   _pendingImportInvalid = [];
   _pendingImportEdited = false;
@@ -7619,6 +7641,7 @@ async function openPdfParser(file) {
   document.getElementById('pdf-raw-text').value = 'Extracting text...';
   document.getElementById('pdf-bank-detected').style.display = 'none';
   document.getElementById('pdf-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
 
   // Pre-fill card name from filename
   const fn = file.name.toLowerCase();
@@ -7668,6 +7691,7 @@ async function openPdfParser(file) {
 
 function closePdfModal() {
   document.getElementById('pdf-modal').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 function detectPdfBank(text) {
