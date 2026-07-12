@@ -2194,6 +2194,7 @@ function doGet(e) {
             <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Merchant</th>
             <th style="padding:7px 10px;text-align:right;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Amount</th>
             <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Category</th>
+            <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Person</th>
             <th style="padding:7px 6px;text-align:center;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);width:36px;"></th>
           </tr></thead>
           <tbody id="import-preview-body"></tbody>
@@ -5813,7 +5814,7 @@ function updateImportPreview() {
   if (mappingIncomplete) {
     panel.style.display = 'block';
     document.getElementById('import-preview-body').innerHTML =
-      '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--faint);font-size:12px;">Map Date, Merchant, and Amount columns above to see a preview.</td></tr>';
+      '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--faint);font-size:12px;">Map Date, Merchant, and Amount columns above to see a preview.</td></tr>';
     document.getElementById('import-preview-footer').innerHTML = '';
     _pendingImportRows = null;
     return;
@@ -5851,7 +5852,7 @@ function renderImportPreview() {
   const rows = _pendingImportRows || [];
   const invalid = _pendingImportInvalid || [];
   if (!rows.length && !invalid.length) {
-    body.innerHTML = '<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--faint);font-size:12px;">No rows detected. Check your file has data below the header.</td></tr>';
+    body.innerHTML = '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--faint);font-size:12px;">No rows detected. Check your file has data below the header.</td></tr>';
     document.getElementById('import-preview-footer').innerHTML = '';
     return;
   }
@@ -5879,7 +5880,8 @@ function renderImportPreview() {
       <td style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editImportRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td style="padding:3px 6px;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><select onchange="editImportRow(${i},'category',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:140px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${catSelect}</select>${personCell}</div></td>
+      <td style="padding:3px 6px;"><select onchange="editImportRow(${i},'category',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:140px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${catSelect}</select></td>
+      <td style="padding:3px 6px;">${personCell || '<span style="color:var(--faint);font-size:11px;">—</span>'}</td>
       <td style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#c15c1e';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
   }).join('');
