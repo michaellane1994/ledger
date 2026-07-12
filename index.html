@@ -668,6 +668,11 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .modal-title{font-family:'Playfair Display',serif;font-size:22px;margin-bottom:6px;letter-spacing:-0.015em;}
 .modal-sub{color:var(--muted);font-size:13px;margin-bottom:22px;line-height:1.5;}
 .mapper{background:var(--bg);border-radius:var(--radius);padding:16px;margin-bottom:16px;}
+/* Import preview: hide the Person column (header + cells) until at least
+   one row is flagged as income. Avoids showing a distracting em-dash
+   column under a mysterious "Person" header that hasn't done anything yet.
+   .has-income-col is toggled on the table by renderImportPreview(). */
+#import-preview-table:not(.has-income-col) .import-preview-person-cell{display:none;}
 .mapper h3{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:12px;}
 .mapper-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .mapper-field label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;}
@@ -2194,7 +2199,7 @@ function doGet(e) {
             <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Merchant</th>
             <th style="padding:7px 10px;text-align:right;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Amount</th>
             <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Category</th>
-            <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Person</th>
+            <th class="import-preview-person-cell" style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Person</th>
             <th style="padding:7px 6px;text-align:center;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);width:36px;"></th>
           </tr></thead>
           <tbody id="import-preview-body"></tbody>
@@ -5881,10 +5886,15 @@ function renderImportPreview() {
       <td style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;"><select onchange="editImportRow(${i},'category',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:140px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${catSelect}</select></td>
-      <td style="padding:3px 6px;">${personCell || '<span style="color:var(--faint);font-size:11px;">—</span>'}</td>
+      <td class="import-preview-person-cell" style="padding:3px 6px;">${personCell || '<span style="color:var(--faint);font-size:11px;">—</span>'}</td>
       <td style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#c15c1e';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
   }).join('');
+  // Only show the Person column header + cells when at least one row is
+  // flagged as income. Otherwise the column is a distracting sea of em-dashes
+  // under a mysterious "Person" header that hasn't done anything yet.
+  const table = document.getElementById('import-preview-table');
+  if (table) table.classList.toggle('has-income-col', rows.some(r => r.isIncome));
   renderImportPreviewFooter();
   const resetBtn = document.getElementById('reset-edits-btn');
   if (resetBtn) resetBtn.style.display = _pendingImportEdited ? '' : 'none';
