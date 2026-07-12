@@ -671,8 +671,16 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .mapper h3{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:12px;}
 .mapper-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .mapper-field label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;}
-.mapper-field select{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;}
+.mapper-field select{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;}
 .mapper-field select:focus{border-color:var(--accent);}
+/* Force ink color + a global color-scheme hint so dark-mode form controls
+   don't fall back to browser-default black-on-dark. color-scheme also
+   fixes the native dropdown menu (Safari/Chrome) — a separate render layer
+   from the CSS background. */
+input[type="text"],input[type="email"],input[type="number"],
+input[type="date"],input[type="search"],input[type="password"],
+textarea,select{color:var(--ink);}
+[data-theme="dark"]{color-scheme:dark;}
 .person-row{display:flex;gap:12px;margin-top:10px;}
 .person-row label{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;}
 .person-row input{accent-color:var(--accent);}
