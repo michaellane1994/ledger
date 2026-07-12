@@ -5960,7 +5960,7 @@ async function doImport() {
   const ai = parseInt(document.getElementById('col-amount').value);
   const ci = document.getElementById('col-credit').value !== '' ? parseInt(document.getElementById('col-credit').value) : -1;
   const person   = document.querySelector('input[name="person"]:checked').value;
-  const cardName = document.getElementById('col-cardname').value.trim() || person;
+  const cardName = document.getElementById('col-cardname').value.trim() || 'No card details';
   const isBank   = document.querySelector('input[name="stmt-type"]:checked').value === 'bank';
   if (isNaN(di) || isNaN(mi) || isNaN(ai)) { alert('Please map Date, Merchant, and Amount columns.'); return; }
   // Snapshot the user-edited preview rows BEFORE closeMap() — closeMap nulls _pendingImportRows,
@@ -6297,7 +6297,7 @@ function confirmAdd() {
   const amount   = parseFloat(document.getElementById('add-amount').value);
   const category = document.getElementById('add-cat').value;
   const person   = document.getElementById('add-person').value;
-  const card     = document.getElementById('add-card').value.trim() || person;
+  const card     = document.getElementById('add-card').value.trim() || 'No card details';
   const note     = document.getElementById('add-note').value.trim();
 
   if (!date)              { alert('Please enter a date.'); return; }
@@ -6330,7 +6330,7 @@ function saveEditTxn() {
   const amount   = parseFloat(document.getElementById('add-amount').value);
   const category = document.getElementById('add-cat').value;
   const person   = document.getElementById('add-person').value;
-  const card     = document.getElementById('add-card').value.trim() || person;
+  const card     = document.getElementById('add-card').value.trim() || 'No card details';
   const note     = document.getElementById('add-note').value.trim();
 
   if (!date)              { alert('Please enter a date.'); return; }
@@ -7748,7 +7748,7 @@ function parsePdfTransactions() {
   const rawText = document.getElementById('pdf-raw-text').value;
   const bank    = detectPdfBank(rawText);
   const person  = document.getElementById('pdf-person').value;
-  const card    = document.getElementById('pdf-cardname').value.trim() || person;
+  const card    = document.getElementById('pdf-cardname').value.trim() || 'No card details';
 
   let txns = [];
   if (bank === 'RBC')        txns = parseRBC(rawText);
