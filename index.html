@@ -733,7 +733,7 @@ textarea,select{color:var(--ink);}
   .sidebar{transform:translateX(-100%);transition:transform .25s ease;z-index:100;}
   .sidebar.open{transform:translateX(0);}
   .sidebar-overlay.open{display:block;}
-  .main{margin-left:0;max-width:100vw;padding-top:58px;}
+  .main{margin-left:0;max-width:100vw;padding-top:64px;}
   .hamburger{display:flex;align-items:center;justify-content:center;}
   .topbar{padding:0 16px;left:0;}
   .topbar .month-pills{display:none;}
@@ -745,9 +745,21 @@ textarea,select{color:var(--ink);}
   /* Currency menu: cap to dynamic viewport so it doesn't extend behind iOS Safari URL bar. */
   #dash-currency-menu{max-height:50dvh!important;}
   #dash-push-btn .push-label{display:none;}
-  /* On dashboard, mobile-month-pills (fixed below topbar) gets populated and covers the
-     period bar — bump padding so the bar (with currency pill) sits below it on phones. */
-  .main.dash-bar-visible{padding-top:104px;}
+  /* On mobile the pills row is position:static (flows below the fixed topbar
+     in normal document order), so .main padding only needs to clear the
+     topbar itself — the pills row and period bar contribute their own height
+     in flow. The dash-bar-visible padding on desktop reserves the fixed-
+     pills-row space; on mobile that padding creates a visible gap between
+     the topbar and the pills row. Override to match the topbar height only. */
+  .main.dash-bar-visible{padding-top:64px;}
+  /* Year / month selectors in the mobile pills row: previous generic
+     select{font-size:16px !important} rule (added to stop iOS focus-zoom on
+     the CSV mapper) was inflating the year dropdown next to the tighter
+     11.5px month pills. Scope the 16px override to the actual inputs and
+     to selects INSIDE modals only, so the topbar selects stay compact. */
+  .topbar-pills-row select,
+  #dash-period-bar select,
+  .year-select{font-size:12px !important;}
   .content{padding:16px;}
   .month-hero{flex-direction:column;align-items:flex-start;gap:16px;padding:20px;}
   .hero-total{font-size:38px;}
@@ -5854,11 +5866,20 @@ function renderImportPreview() {
     const rowStyle = isIncome
       ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
       : 'border-bottom:1px solid var(--border);';
+    // For income rows, show a person picker so each paycheque row can be
+    // attributed to the actual earner even when the whole file was imported
+    // under a single card owner. Options sourced from the mapper's radio
+    // buttons so the list stays in sync with the household setup.
+    const _personOptions = Array.from(document.querySelectorAll('input[name="person"]'))
+      .map(r => r.value);
+    const personCell = isIncome
+      ? `<select onchange="editImportRow(${i},'person',this.value)" title="Whose income" aria-label="Whose income" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:110px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${_personOptions.map(p => `<option value="${esc(p)}"${(t.person || '') === p ? ' selected' : ''}>${esc(p)}</option>`).join('')}</select>`
+      : '';
     return `<tr data-row-idx="${i}" style="${rowStyle}">
       <td style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editImportRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td style="padding:3px 6px;"><select onchange="editImportRow(${i},'category',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:140px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${catSelect}</select></td>
+      <td style="padding:3px 6px;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><select onchange="editImportRow(${i},'category',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:140px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${catSelect}</select>${personCell}</div></td>
       <td style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#c15c1e';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
   }).join('');
@@ -5898,6 +5919,12 @@ function editImportRow(idx, field, value) {
     if (value === '__income__') {
       row.isIncome = true;
       row.category = null;
+      // Seed per-row person from the mapper's global picker when a row first
+      // becomes income, so the picker in the preview has a sensible default.
+      if (!row.person) {
+        const globalPerson = document.querySelector('input[name="person"]:checked');
+        if (globalPerson) row.person = globalPerson.value;
+      }
     } else {
       row.isIncome = false;
       row.category = value;
@@ -5905,6 +5932,8 @@ function editImportRow(idx, field, value) {
     row._catManual = true;
   } else if (field === 'date') {
     row.date = value;
+  } else if (field === 'person') {
+    row.person = value;
   }
   _pendingImportEdited = true;
   renderImportPreview();
@@ -5954,7 +5983,10 @@ async function doImport() {
       merchant: r.merchant,
       amount: r.amount,
       category: r.category || null,
-      person,
+      // Per-row person override (editable on income rows in the preview)
+      // takes precedence over the mapper's global person. Falls back to
+      // the mapper's person for every expense row.
+      person: r.person || person,
       card: cardName,
       note: '',
       refund: !!r.refund,
