@@ -3898,11 +3898,18 @@ function computeMoneyflowData() {
   // Income sources — bucketed by person (default) or aggregated into a single
   // 'Income' node. Aggregate mode gives a cleaner diagram when the source
   // decomposition doesn't matter.
+  //
+  // Match the Dashboard's income calc exactly (see renderDashboard):
+  // - Exclude transfer-type entries (movements between accounts, not new income)
+  // - Sum signed amount, not Math.abs, so a negative correction actually
+  //   subtracts. Money flow's total income must equal the dashboard's total
+  //   income, otherwise the ribbons' 100% base doesn't match the hero stat.
   const sourceMap = {};
   incomes.forEach(inc => {
+    if (inc.type === 'transfer') return;
     if (!dashPeriodTest(inc.date)) return;
     const bucket = moneyflowAgg === 'total' ? 'Income' : (inc.person || 'Income');
-    sourceMap[bucket] = (sourceMap[bucket] || 0) + Math.abs(inc.amount || 0);
+    sourceMap[bucket] = (sourceMap[bucket] || 0) + (inc.amount || 0);
   });
   let sources = Object.entries(sourceMap)
     .map(([name, amount]) => ({ name, amount }))
