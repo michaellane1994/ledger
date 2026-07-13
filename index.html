@@ -769,7 +769,8 @@ textarea,select{color:var(--ink);}
      to selects INSIDE modals only, so the topbar selects stay compact. */
   .topbar-pills-row select,
   #dash-period-bar select,
-  .year-select{font-size:12px !important;}
+  .year-select,
+  #moneyflow-period-picker{font-size:12px !important;}
   /* Cashflow forecast card-head controls: From/To month pickers, Avg from,
      Start balance, Exclude categories, Bonus toggle — designed at 11px so
      they sit compactly on one row. Same carve-out as year picker above. */
@@ -2658,9 +2659,14 @@ function goNav(name) {
   }
   if (name === 'dashboard') renderDashboard();
   if (name === 'transactions') {
-    // Only auto-sync from the dashboard's selMonth when the caller hasn't
-    // already set txnMonthFilter (e.g. heatmap drill-through, chart click).
-    if (selMonth && txnMonthFilter.size === 0) txnMonthFilter = new Set([selMonth]);
+    // Only auto-sync from the dashboard's current period when the caller
+    // hasn't already set txnMonthFilter (e.g. heatmap drill-through, chart
+    // click). Uses currentDashboardMonths() so Latest/3M/YTD/Year inherit
+    // the full window rather than a stale selMonth.
+    if (txnMonthFilter.size === 0) {
+      const months = (typeof currentDashboardMonths === 'function') ? currentDashboardMonths() : (selMonth ? [selMonth] : []);
+      if (months.length) txnMonthFilter = new Set(months);
+    }
     renderTxns();
   }
   if (name === 'upload')    renderUploads();
@@ -4954,12 +4960,39 @@ function setTxnCatPill(key) {
   else txnCatFilter = new Set([key]);
   renderTxns();
 }
+// Returns the months currently visible on the dashboard, matching
+// dashPeriodTest() so drill-through into Transactions inherits the same
+// window (fixes: on Latest/3M/YTD/Year, selMonth can be a stale value
+// from a prior single-month view).
+function currentDashboardMonths() {
+  const pad = n => String(n).padStart(2, '0');
+  const now = new Date();
+  if (dashPeriod === 'latest') {
+    const m = getMonths()[0];
+    return m ? [m] : [];
+  }
+  if (dashPeriod === '3m') {
+    const out = [];
+    for (let i = 0; i <= 2; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      out.push(`${d.getFullYear()}-${pad(d.getMonth() + 1)}`);
+    }
+    return out;
+  }
+  if (dashPeriod === 'ytd') {
+    return getMonths().filter(m => m.startsWith(`${now.getFullYear()}-`));
+  }
+  if (dashPeriod === 'year') {
+    return getMonths().filter(m => m.startsWith(`${selYear}-`));
+  }
+  return selMonth ? [selMonth] : [];
+}
 function goToCatFilter(catKey) {
   txnTypeFilter  = '';
   txnNeedsFilter = '';
   txnCatFilter   = new Set([catKey]);
   txnCardFilter  = new Set();
-  txnMonthFilter = new Set();
+  txnMonthFilter = new Set(currentDashboardMonths());
   const s = document.getElementById('f-search'); if (s) s.value = '';
   const p = document.getElementById('f-person'); if (p) p.value = '';
   goNav('transactions');
@@ -4970,7 +5003,7 @@ function filterTxnsByKind(kind) {
   txnNeedsFilter = kind;
   txnCatFilter   = new Set();
   txnCardFilter  = new Set();
-  txnMonthFilter = selMonth ? new Set([selMonth]) : new Set();
+  txnMonthFilter = new Set(currentDashboardMonths());
   const s = document.getElementById('f-search'); if (s) s.value = '';
   const p = document.getElementById('f-person'); if (p) p.value = '';
   goNav('transactions');
