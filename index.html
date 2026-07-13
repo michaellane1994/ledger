@@ -1792,7 +1792,7 @@ function doPost(e) {
     }
 
     if (data.action === 'pull') {
-      const txns     = readSheet(ss, SHEET_NAME,   r => ({id:r.id,date:r.date,merchant:r.merchant,amount:parseFloat(r.amount)||0,category:r.category,person:r.person,card:r.card||'',note:r.note,refund:r.refund==='true',manual:r.manual==='true',incomeType:r.incomeType||undefined,savingsAccountId:r.savingsAccountId||undefined,incomeCategory:r.incomeCategory||undefined,needs:r.needs==='true'?true:r.needs==='false'?false:undefined,rental:r.rental==='true'?true:undefined}));
+      const txns     = readSheet(ss, SHEET_NAME,   r => ({id:r.id,date:r.date,merchant:r.merchant,amount:parseFloat(r.amount)||0,category:r.category,person:r.person,card:r.card||'',note:r.note,refund:r.refund===true||r.refund==='true',manual:r.manual===true||r.manual==='true',incomeType:r.incomeType||undefined,savingsAccountId:r.savingsAccountId||undefined,incomeCategory:r.incomeCategory||undefined,needs:(r.needs===true||r.needs==='true')?true:(r.needs===false||r.needs==='false')?false:undefined,rental:(r.rental===true||r.rental==='true')?true:undefined}));
       const learned  = {}; readSheet(ss, LEARNED_SHEET, r => r).forEach(r => { if(r.merchant) learned[r.merchant]=r.category; });
       const incomes  = readSheet(ss, INCOME_SHEET,  r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,type:r.type,person:r.person,desc:r.desc,note:r.note,fromTxnId:r.fromTxnId||undefined,category:r.category||undefined}));
       const savAccts = readSheet(ss, SAVINGS_SHEET, r => ({id:r.id,name:r.name,type:r.type,person:r.person,balance:parseFloat(r.balance)||0,baseBalance:parseFloat(r.baseBalance)||0,goal:r.goal?parseFloat(r.goal):null,currency:r.currency||'',balanceEquiv:r.balanceEquiv?parseFloat(r.balanceEquiv):null}));
