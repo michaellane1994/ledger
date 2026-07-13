@@ -282,6 +282,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
    as one control group. */
 .moneyflow-icon-btn{width:30px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;font-size:15px;line-height:1;transition:background .12s,color .12s,border-color .12s;}
 .moneyflow-icon-btn:hover{color:var(--ink);border-color:var(--border-2);}
+/* Inline period picker in the Money flow section header. Matches the mode-
+   toggle pill visual weight; changing it re-renders the whole dashboard. */
+.moneyflow-period-picker{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--ink);cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;letter-spacing:-0.005em;padding:5px 26px 5px 12px;height:28px;line-height:1;outline:none;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg, transparent 50%, currentColor 50%),linear-gradient(135deg, currentColor 50%, transparent 50%);background-position:calc(100% - 12px) 12px, calc(100% - 7px) 12px;background-size:5px 5px, 5px 5px;background-repeat:no-repeat;transition:border-color .12s;}
+.moneyflow-period-picker:hover{border-color:var(--border-2);}
+.moneyflow-period-picker:focus-visible{border-color:var(--accent);}
 /* Money flow fullscreen viewer. Overlays the whole viewport, contains a
    scrollable SVG that can be scaled with the zoom controls (or pinched on
    mobile via the browser's native gesture). */
@@ -1146,6 +1151,7 @@ textarea,select{color:var(--ink);}
             <div class="dash-section-sub" id="moneyflow-sub">Every dollar of income traced to its destination.</div>
           </div>
           <div class="dash-section-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="moneyflow-period-picker" class="moneyflow-period-picker" onchange="setMoneyflowPeriod(this.value)" title="Period · syncs the whole dashboard" aria-label="Period"></select>
             <div class="moneyflow-mode-toggle" role="group" aria-label="Income sources">
               <button id="moneyflow-agg-person" class="moneyflow-mode-btn active" onclick="setMoneyflowAgg('person')" title="One node per earner">By person</button>
               <button id="moneyflow-agg-total"  class="moneyflow-mode-btn"        onclick="setMoneyflowAgg('total')"  title="Collapse all income into a single source">Aggregate</button>
@@ -3817,6 +3823,72 @@ function toggleMoneyflowCustomCat(key) {
   renderMoneyflow();
 }
 
+// Money flow period picker: single dropdown that mirrors and drives the
+// dashboard's period state. Users can jump straight to a month or a quick
+// view (Latest / 3M / YTD / a specific year) from within the Money flow
+// section, and the whole dashboard follows.
+function renderMoneyflowPeriodPicker() {
+  const sel = document.getElementById('moneyflow-period-picker');
+  if (!sel) return;
+  const months = (typeof getMonths === 'function') ? getMonths() : [];
+  const years = [...new Set(months.map(m => m.substring(0, 4)))].sort().reverse();
+  const monthLabel = (m) => {
+    const [y, mo] = m.split('-');
+    return new Date(+y, +mo - 1).toLocaleString('default', { month: 'long' }) + ' ' + y;
+  };
+  const currentValue = (() => {
+    if (dashPeriod === 'latest') return 'latest';
+    if (dashPeriod === '3m')     return '3m';
+    if (dashPeriod === 'ytd')    return 'ytd';
+    if (dashPeriod === 'year')   return `year:${selYear}`;
+    if (selMonth)                return `month:${selMonth}`;
+    return 'all';
+  })();
+  let html = '';
+  html += `<optgroup label="Quick views">`;
+  html += `<option value="all">All time</option>`;
+  if (months.length) {
+    html += `<option value="latest">Latest month</option>`;
+    html += `<option value="3m">Last 3 months</option>`;
+    html += `<option value="ytd">Year to date</option>`;
+  }
+  html += `</optgroup>`;
+  if (years.length) {
+    html += `<optgroup label="Year">`;
+    years.forEach(y => { html += `<option value="year:${y}">Year ${y}</option>`; });
+    html += `</optgroup>`;
+  }
+  if (months.length) {
+    html += `<optgroup label="Month">`;
+    months.slice(0, 36).forEach(m => {
+      html += `<option value="month:${m}">${esc(monthLabel(m))}</option>`;
+    });
+    html += `</optgroup>`;
+  }
+  sel.innerHTML = html;
+  sel.value = currentValue;
+}
+function setMoneyflowPeriod(v) {
+  if (!v) return;
+  if (v === 'all') {
+    dashPeriod = '';
+    selMonth = '';
+  } else if (v === 'latest' || v === '3m' || v === 'ytd') {
+    dashPeriod = v;
+  } else if (v.startsWith('year:')) {
+    dashPeriod = 'year';
+    selYear = v.slice(5);
+  } else if (v.startsWith('month:')) {
+    dashPeriod = '';
+    selMonth = v.slice(6);
+    selYear  = selMonth.substring(0, 4);
+    if (typeof txnMonthFilter !== 'undefined') txnMonthFilter = new Set([selMonth]);
+  }
+  if (typeof renderPills === 'function') renderPills();
+  if (typeof renderDashboard === 'function') renderDashboard();
+  if (typeof renderTxns === 'function') renderTxns();
+}
+
 function computeMoneyflowData() {
   // Income sources — bucketed by person (default) or aggregated into a single
   // 'Income' node. Aggregate mode gives a cleaner diagram when the source
@@ -3949,6 +4021,9 @@ function renderMoneyflow() {
   // Show top-N pills only in cat mode
   const topnGroup = document.getElementById('moneyflow-topn-group');
   if (topnGroup) topnGroup.style.display = moneyflowMode === 'cat' ? '' : 'none';
+  // Period picker: mirror the dashboard's current period state so it acts as
+  // a live view of what the whole dashboard is filtered by.
+  renderMoneyflowPeriodPicker();
   // Custom category picker: visible only when cat + custom mode is active
   const picker = document.getElementById('moneyflow-custom-picker');
   const chipsEl = document.getElementById('moneyflow-custom-chips');
@@ -3967,7 +4042,8 @@ function renderMoneyflow() {
     let periodLabel;
     if (dashPeriod === 'ytd') periodLabel = 'year to date';
     else if (dashPeriod === 'year') periodLabel = `year ${selYear}`;
-    else if (dashPeriod === 'p3m') periodLabel = 'last 3 months';
+    else if (dashPeriod === '3m') periodLabel = 'last 3 months';
+    else if (dashPeriod === 'latest') periodLabel = 'latest month';
     else if (selMonth) {
       // Month Year with capitalized month, e.g. "July 2026"
       const [y, mo] = selMonth.split('-');
