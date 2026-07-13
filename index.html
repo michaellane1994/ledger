@@ -3851,14 +3851,13 @@ function renderMoneyflowPeriodPicker() {
     return 'all';
   })();
   let html = '';
-  html += `<optgroup label="Quick views">`;
-  html += `<option value="all">All time</option>`;
   if (months.length) {
+    html += `<optgroup label="Quick views">`;
     html += `<option value="latest">Latest month</option>`;
     html += `<option value="3m">Last 3 months</option>`;
     html += `<option value="ytd">Year to date</option>`;
+    html += `</optgroup>`;
   }
-  html += `</optgroup>`;
   if (years.length) {
     html += `<optgroup label="Year">`;
     years.forEach(y => { html += `<option value="year:${y}">Year ${y}</option>`; });
