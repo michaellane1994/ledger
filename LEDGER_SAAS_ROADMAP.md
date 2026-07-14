@@ -7,28 +7,41 @@ Budget: **~20 hrs of focused work, ~$10 to start.**
 
 ---
 
-## Current status (2026-05-21)
+## Current status (2026-07-13)
 
 Shipped:
 - Brand + domain locked in: Trove on `householdtrove.com`
 - Cloudflare Worker live, custom domain wired, SSL provisioned
 - Supabase auth with both magic link AND email/password sign-in; forgot-password + inline change-password flows
-- Stripe Checkout + Customer Portal + webhooks operating in test mode (32 invocations / 0 errors verified end-to-end on new domain)
+- Stripe Checkout + Customer Portal + webhooks operating in test mode (end-to-end verified on production domain)
 - Google Drive sync working (user-owned `ledger-data.json`)
 - Privacy + Terms pages at `/privacy.html` and `/terms.html`, linked from sidebar foot and demo hero
-- Mobile UX polish (topbar overflow fix, sidebar close-on-tap, larger logo + topbar title)
 - "Manage My Trove" Settings page with Account section (subscription status badge + billing controls + inline set/change password)
 - Sample-data warning banner on Upload page (prevents mixing demo data with real imports)
 - Welcome hero consolidated (one banner, not two) — adapts CTAs based on signed-in vs demo state
+- **Marketing landing page live** at `householdtrove.com/` (631 lines, full sales page: hero, why-Trove, features, pricing, FAQ)
+- **Phase 5 shipped** — Resend transactional email operating end-to-end: welcome email, trial-ending-3d, feedback endpoint, silent-failure webhook with signature verification
+- **Cloudflare Email Routing** for `support@householdtrove.com` configured; delivery verified end-to-end via `bounced@resend.dev` test send
+- **Resend bounce/complaint/failed webhook** verified live at `/api/resend-webhook` with signing secret in Cloudflare, alerts route to trovehousehold@gmail.com
+- **Money flow feature** — Sankey visualisation (income sources → destination categories), mobile-native stacked-bar card, fullscreen viewer with pinch-zoom, drill-through bottom sheet, inline period picker
+- **Feedback pill + modal** wired to `/api/feedback` with auth token, auto-captures URL/viewport/UA
+- **FAB cluster** (bottom-right feedback pill + help circle), safe-area aware
+- **Mobile polish across the app** — sticky mort-schedule column, 44x44 touch targets, dark-mode form-control fix, iOS auto-zoom carve-outs
+- **Demo data folder** at `trove-demo-data/`: 5 CSVs (3 credit-card months + 2 per-person bank statements), README, "spend = negative" flow demonstrated
+- **Onboarding video assets ready** — `trove-video-script.md` + `trove-guidde-recording-guide.md` written, dark-mode PDFs generated, Magic Mic flow documented, two-uploads-on-camera pattern specified
+- Supabase config verified (Email provider enabled, reset-password URL whitelisted)
 
 Active near-term:
-- Phase 5 (Resend transactional email) — not started
-- Cloudflare Email Routing for `support@householdtrove.com` — pending user action
-- Supabase config verification (Email provider enabled, reset-password URL whitelisted) — pending user action
-- Stripe Public Business Info page (legal URLs + statement descriptor) — partially started, pending user action
+- **Family alpha** — dummy Gmail creation + invites to 5-8 family testers (in flight)
+- **Guidde video capture** — record 10 chapters via Magic Mic, merge, publish (script ready)
+- **Stripe live mode flip** — Public Business Info + identity + bank verification + live products + live webhook secret swap
+- **Design polish pass** — remove color gradients, em-dashes from visible copy, professionalize welcome banner colors (in flight, main branch)
+- `redesign` branch — separate rebrand exploration (Champagne Light + Charcoal Dark, Cormorant + Inter, house+chest logo); do NOT merge to main without explicit decision
 
 Deferred:
 - Dashboard hero Needs/Wants discrepancy (math doesn't quite reconcile with heatmap totals)
+- Backend scaling: pagination + email batching (trigger at 1000 trialing users or 100+ emails per cron run)
+- Auth hardening options B + C (dual-account bug; option A shipped 2026-07-06)
 
 ---
 
@@ -232,11 +245,14 @@ Stripe Checkout + Customer Portal + webhooks fully operational on `householdtrov
 - Recreate products in live mode (new price IDs)
 - Live-mode webhook endpoint + signing secret swap
 
-### Phase 5 — Email *(2 hrs)*
+### ✅ Phase 5 — Email (DONE)
 
-- [ ] Resend account, verify domain DNS
-- [ ] 3 templates: welcome, trial-ending-3d, payment-failed
-- [ ] Triggered from Supabase hooks or Worker
+- [x] Resend account, verify domain DNS (SPF/DKIM live on householdtrove.com)
+- [x] Welcome email on signup
+- [x] Trial-ending-3d email (Cloudflare Cron triggers daily 10:00 UTC scan)
+- [x] Feedback endpoint at `/api/feedback` (auth-token attached, auto-captures URL/viewport/UA/IP)
+- [x] Silent-failure webhook at `/api/resend-webhook` — bounced / complained / delivery_delayed / failed events route to trovehousehold@gmail.com with signature verification (svix `whsec_` format supported)
+- [x] End-to-end tested: `bounced@resend.dev` send → hard bounce → webhook fires → ops alert lands
 
 ### Phase 6 — Monitoring *(1 hr, optional)*
 
