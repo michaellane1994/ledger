@@ -782,7 +782,13 @@ textarea,select{color:var(--ink);}
      Start balance, Exclude categories, Bonus toggle — designed at 11px so
      they sit compactly on one row. Same carve-out as year picker above. */
   #cf-from-month, #cf-to-month, #cf-avg-from,
-  #cf-start-bal, #ms-cf-excl-btn, #cf-bonus-btn{font-size:11px !important;}
+  #cf-start-bal, #ms-cf-excl-btn, #cf-bonus-btn,
+  #chart-from, #chart-to{font-size:11px !important;}
+  /* Needs vs Wants over time date pickers: pad slightly + let them
+     grow so labels don't collide with the select value on mobile. */
+  .chart-range{gap:6px;}
+  .chart-range label{font-size:9.5px;}
+  .chart-range select{padding:5px 8px;min-height:28px;}
   .content{padding:16px;}
   .month-hero{flex-direction:column;align-items:flex-start;gap:16px;padding:20px;}
   .hero-total{font-size:38px;}
