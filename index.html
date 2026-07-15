@@ -29,11 +29,11 @@
   --accent:        #2f5a44;
   --accent-hover:  #234936;
   --accent-soft:   #e6efe9;
-  --accent-2:      #e8804a;
+  --accent-2:      #5ba07a;
   --sidebar-bg:       #0a0a0d;
   --row-hover:        rgba(15,15,20,.025);
   --nav-active-bg:    rgba(216,108,40,.18);
-  --nav-active-color: #ed965a;
+  --nav-active-color: #3a7d5a;
   --topbar-bg:        color-mix(in srgb, var(--bg) 85%, transparent);
   --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
   --s-5: 20px; --s-6: 24px; --s-7: 28px; --s-8: 32px;
@@ -98,15 +98,15 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .sidebar-foot{padding:14px 22px;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:rgba(255,255,255,.2);}
 .sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;background:#71717a;}
 .sync-dot.ok{background:#16a34a;}
-.sync-dot.busy{background:#c15c1e;animation:pulse .8s ease-in-out infinite;}
+.sync-dot.busy{background:var(--accent);animation:pulse .8s ease-in-out infinite;}
 .sync-dot.err{background:#dc2626;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 .sync-label{font-size:10px;color:rgba(255,255,255,.25);}
 .setup-banner{background:#fef3e8;border:1px solid #f5c07a;border-radius:var(--radius);padding:16px 20px;margin-bottom:18px;display:flex;align-items:flex-start;gap:12px;}
-.setup-banner svg{flex-shrink:0;color:#c15c1e;margin-top:1px;}
+.setup-banner svg{flex-shrink:0;color:var(--accent);margin-top:1px;}
 .setup-banner-text{font-size:13px;color:#7c3d12;line-height:1.6;}
 .setup-banner-text strong{font-weight:600;}
-.setup-banner-text a{color:#c15c1e;text-decoration:underline;cursor:pointer;}
+.setup-banner-text a{color:var(--accent);text-decoration:underline;cursor:pointer;}
 
 /* ── DARK MODE ── */
 [data-theme="dark"]{
@@ -114,7 +114,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
   --bg:#15130d;--bg-2:#1c1a14;--surface:#211e16;--surface-2:#272319;
   --border:#332f27;--border-2:#28251e;
   --muted:#a39a8c;--faint:#6b6358;
-  --accent:#d4703a;--accent-hover:#e08148;--accent-soft:#2a1508;--accent-2:#e8804a;
+  --accent:#5ba07a;--accent-hover:#7cc294;--accent-soft:#12271c;--accent-2:#7cc294;
   --sidebar-bg:#0a0805;--row-hover:rgba(255,255,255,.035);
   --topbar-bg:color-mix(in srgb, var(--bg) 85%, transparent);
   --shadow-xs:0 1px 2px rgba(0,0,0,.4);
@@ -478,7 +478,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .commit-row:last-child{border-bottom:none;}
 .commit-row .commit-dismiss{opacity:0;transition:opacity .12s;background:transparent;border:0;color:var(--faint);cursor:pointer;padding:2px 6px;border-radius:4px;font-size:14px;line-height:1;flex-shrink:0;font-family:inherit;}
 .commit-row:hover .commit-dismiss,.commit-row .commit-dismiss:focus-visible{opacity:1;}
-.commit-row .commit-dismiss:hover{color:#c15c1e;background:var(--bg);}
+.commit-row .commit-dismiss:hover{color:#b91c1c;background:var(--bg);}
 @media (hover: none){.commit-row .commit-dismiss{opacity:.6;}}
 .commit-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .commit-name{flex:1;color:var(--ink);}
@@ -883,7 +883,7 @@ textarea,select{color:var(--ink);}
 .mort-card-footer{display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid var(--border);padding-top:12px;}
 .mort-card-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);}
 .mort-card-stat-value{font-size:13px;font-weight:600;margin-top:2px;}
-.mort-term-badge{position:absolute;top:12px;right:12px;font-size:10px;background:#fef3e8;color:#c15c1e;border:1px solid #f5c07a;padding:2px 8px;border-radius:100px;font-weight:600;}
+.mort-term-badge{position:absolute;top:12px;right:12px;font-size:10px;background:var(--accent-soft);color:var(--accent);border:1px solid #c8dbcf;padding:2px 8px;border-radius:100px;font-weight:600;}
 [data-theme="dark"] .mort-term-badge{background:#2a1f08;border-color:#7c4e1a;color:#e8a060;}
 .mort-rate-type-badge{position:absolute;top:36px;right:12px;font-size:10px;padding:2px 8px;border-radius:100px;font-weight:600;}
 .mort-rate-type-badge.fixed{background:#e8f0fe;color:#2a4da8;border:1px solid #a8c0f0;}
@@ -2480,13 +2480,13 @@ function doGet(e) {
       </div>
       <div class="add-field">
         <label>Colour</label>
-        <input type="color" id="new-cat-color" value="#c15c1e"
+        <input type="color" id="new-cat-color" value="#3a7d5a"
           style="width:100%;height:38px;padding:2px 4px;border:1px solid var(--border);border-radius:6px;cursor:pointer;">
       </div>
       <div class="add-field">
         <label>Preview</label>
-        <div id="cat-preview" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;font-size:13px;font-weight:500;background:#fdf0e8;color:#c15c1e;">
-          <span id="cat-preview-dot" style="width:8px;height:8px;border-radius:50%;background:#c15c1e;"></span>
+        <div id="cat-preview" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;font-size:13px;font-weight:500;background:#ecf5ef;color:#3a7d5a;">
+          <span id="cat-preview-dot" style="width:8px;height:8px;border-radius:50%;background:#3a7d5a;"></span>
           <span id="cat-preview-label">Category</span>
         </div>
       </div>
@@ -5924,7 +5924,7 @@ function renderUploads() {
               onmouseout="if(document.activeElement!==this)this.style.borderBottomColor='transparent'"
               onfocus="this.style.borderBottomColor='var(--accent)'"
             >${esc(u.name)}</span>
-            ${isDupe ? '<span style="font-size:10.5px;background:#fef3e8;color:#c15c1e;padding:2px 7px;border-radius:100px;font-weight:600;">Uploaded again</span>' : ''}
+            ${isDupe ? '<span style="font-size:10.5px;background:#fef3e8;color:#c97f17;padding:2px 7px;border-radius:100px;font-weight:600;">Uploaded again</span>' : ''}
           </div>
           <div class="ui-meta">${u.person} · ${u.date}${newNote}${skippedNote}${u.mode === 'replace' ? ' · <strong>replaced</strong>' : ''}</div>
         </div>
@@ -6209,7 +6209,7 @@ function renderImportPreview() {
       <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;"><select onchange="editImportRow(${i},'category',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:140px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${catSelect}</select></td>
       <td class="import-preview-person-cell" style="padding:3px 6px;">${personCell || '<span style="color:var(--faint);font-size:11px;">—</span>'}</td>
-      <td style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#c15c1e';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
+      <td style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
   }).join('');
   // Only show the Person column header + cells when at least one row is
@@ -6236,7 +6236,7 @@ function renderImportPreviewFooter() {
     ${refundTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Refunds / Credits</div><div style="font-size:14px;font-weight:600;color:#16a34a;">-${fmt(refundTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${expenseRows.filter(t=>t.refund).length} transaction${expenseRows.filter(t=>t.refund).length===1?'':'s'}</div></div>` : ''}
     ${incomeTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Income</div><div style="font-size:14px;font-weight:600;color:#16a34a;">+${fmt(incomeTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${incomeRows.length} row${incomeRows.length===1?'':'s'} → Income</div></div>` : ''}
     <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Net</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(net)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${rows.length} row${rows.length===1?'':'s'} to import</div></div>
-    ${invalid.length ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:#c15c1e;font-weight:600;margin-bottom:3px;">Skipped</div><div style="font-size:14px;font-weight:600;color:#c15c1e;">${invalid.length}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;" title="${esc(invalid.slice(0,5).map(r=>r.reason).join(' · '))}">${esc(invalid[0].reason)}${invalid.length>1?' + others':''}</div></div>` : ''}
+    ${invalid.length ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:#b91c1c;font-weight:600;margin-bottom:3px;">Skipped</div><div style="font-size:14px;font-weight:600;color:#b91c1c;">${invalid.length}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;" title="${esc(invalid.slice(0,5).map(r=>r.reason).join(' · '))}">${esc(invalid[0].reason)}${invalid.length>1?' + others':''}</div></div>` : ''}
   `;
 }
 function editImportRow(idx, field, value) {
@@ -7466,7 +7466,7 @@ function moveCat(idx, dir) {
 function openAddCat() {
   document.getElementById('cat-modal-title').textContent = 'Add Category';
   document.getElementById('new-cat-label').value = '';
-  document.getElementById('new-cat-color').value = '#c15c1e';
+  document.getElementById('new-cat-color').value = '#3a7d5a';
   document.getElementById('new-cat-keywords').value = '';
   document.getElementById('add-cat-modal').dataset.editKey = '';
   updateCatPreview();
@@ -8085,7 +8085,7 @@ function setSyncLabel(text) {
 function showConnStatus(msg, type) {
   const el = document.getElementById('conn-status');
   if (!el) return;
-  const colors = { ok: '#2d6a4f', err: '#dc2626', busy: '#c15c1e' };
+  const colors = { ok: '#2d6a4f', err: '#dc2626', busy: '#2f5a44' };
   el.style.color = colors[type] || 'var(--muted)';
   el.textContent = msg;
 }
@@ -8267,7 +8267,7 @@ function renderPdfPreview() {
       <td style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editPdfRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editPdfRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;"><select onchange="editPdfRow(${i},'category',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:140px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${catSelect}</select></td>
-      <td style="padding:3px 4px;text-align:center;"><button onclick="deletePdfRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#c15c1e';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
+      <td style="padding:3px 4px;text-align:center;"><button onclick="deletePdfRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
   }).join('');
 
@@ -9072,9 +9072,9 @@ document.querySelectorAll('.nav-item').forEach(el => {
 
 // ── THEMES ───────────────────────────────────────────────
 const THEMES = {
-  'light':         { dark:false, label:'Default',  bg:'#f4f1ec', surface:'#ffffff',  border:'#e8e2d8', ink:'#18181b',  muted:'#71717a', faint:'#a1a1aa', accent:'#c15c1e', sidebarBg:'#1c1c1f', rowHover:'rgba(0,0,0,.03)', navActiveBg:'rgba(193,92,30,.22)',  navActiveColor:'#e8804a', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
-  'cream':         { dark:false, label:'Cream',    bg:'#f0ebe0', surface:'#faf7f0',  border:'#e0d8c8', ink:'#2a1e0e',  muted:'#8c7c6a', faint:'#b0a090', accent:'#b05a28', sidebarBg:'#2a1a08', rowHover:'rgba(0,0,0,.03)', navActiveBg:'rgba(176,90,40,.22)',  navActiveColor:'#d87848', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
-  'dark-warm':     { dark:true,  label:'Warm',     bg:'#19170f', surface:'#242018',  border:'#38342c', ink:'#ede8e1',  muted:'#9c9488', faint:'#6b6358', accent:'#d4703a', sidebarBg:'#2a1e0a', rowHover:'#2c2820',        navActiveBg:'rgba(212,112,58,.25)', navActiveColor:'#f09060', shadow:'0 1px 3px rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.2)', shadowLg:'0 8px 32px rgba(0,0,0,.45)' },
+  'light':         { dark:false, label:'Default',  bg:'#f4f1ec', surface:'#ffffff',  border:'#e8e2d8', ink:'#18181b',  muted:'#71717a', faint:'#a1a1aa', accent:'#2f5a44', sidebarBg:'#1c1c1f', rowHover:'rgba(0,0,0,.03)', navActiveBg:'rgba(47,90,68,.22)',  navActiveColor:'#3a7d5a', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
+  'cream':         { dark:false, label:'Cream',    bg:'#f0ebe0', surface:'#faf7f0',  border:'#e0d8c8', ink:'#2a1e0e',  muted:'#8c7c6a', faint:'#b0a090', accent:'#2f5a44', sidebarBg:'#2a1a08', rowHover:'rgba(0,0,0,.03)', navActiveBg:'rgba(47,90,68,.22)',  navActiveColor:'#3a7d5a', shadow:'0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)', shadowLg:'0 8px 32px rgba(0,0,0,.12)' },
+  'dark-warm':     { dark:true,  label:'Warm',     bg:'#19170f', surface:'#242018',  border:'#38342c', ink:'#ede8e1',  muted:'#9c9488', faint:'#6b6358', accent:'#5ba07a', sidebarBg:'#2a1e0a', rowHover:'#2c2820',        navActiveBg:'rgba(91,160,122,.25)', navActiveColor:'#7cc294', shadow:'0 1px 3px rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.2)', shadowLg:'0 8px 32px rgba(0,0,0,.45)' },
   'dark-midnight': { dark:true,  label:'Midnight', bg:'#0f0f12', surface:'#1a1a20',  border:'#2e2e3a', ink:'#e8e8f2',  muted:'#8888a4', faint:'#55556a', accent:'#7090e0', sidebarBg:'#16162a', rowHover:'#252530',        navActiveBg:'rgba(112,144,224,.25)',navActiveColor:'#a0b8f4', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
   'dark-ocean':    { dark:true,  label:'Ocean',    bg:'#091420', surface:'#0e1e30',  border:'#1a3048', ink:'#d0e4f8',  muted:'#6080a8', faint:'#385870', accent:'#4090d8', sidebarBg:'#0a2040', rowHover:'#152538',        navActiveBg:'rgba(64,144,216,.25)', navActiveColor:'#80b8ee', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
   'dark-forest':   { dark:true,  label:'Forest',   bg:'#091410', surface:'#0e1e18',  border:'#183028', ink:'#d0e8dc',  muted:'#508870', faint:'#305848', accent:'#3ab870', sidebarBg:'#0a2215', rowHover:'#132018',        navActiveBg:'rgba(58,184,112,.25)', navActiveColor:'#70d898', shadow:'0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25)', shadowLg:'0 8px 32px rgba(0,0,0,.5)' },
