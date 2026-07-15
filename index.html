@@ -24,9 +24,11 @@
   --border-2:   #f4efe1;
   --muted:      #6a6a72;
   --faint:      #aeaeb4;
-  --accent:        #b85416;
-  --accent-hover:  #a04812;
-  --accent-soft:   #fdf0e8;
+  /* Rust accent muted from a saturated orange to a deeper copper.
+     Reads more editorial and less "energy drink" startup. */
+  --accent:        #9a4a1e;
+  --accent-hover:  #7d3c18;
+  --accent-soft:   #f7ecdf;
   --accent-2:      #e8804a;
   --sidebar-bg:       #0a0a0d;
   --row-hover:        rgba(15,15,20,.025);
@@ -2764,7 +2766,11 @@ function renderPills() {
   // Snap selMonth to the current year when switching years
   if (!yearMonths.includes(selMonth)) selMonth = yearMonths[0] || '';
 
-  if (mel) mel.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+  if (mel) {
+    const mainEl = document.querySelector('.main');
+    const dashActive = mainEl && mainEl.classList.contains('dash-bar-visible');
+    mel.style.display = (dashActive && window.innerWidth <= 768) ? 'flex' : 'none';
+  }
 
   function buildPills(container) {
     // Year is a dropdown so the period bar stays a fixed width even as multiple years
@@ -2833,7 +2839,10 @@ function setSelYear(year) {
 // Re-check mobile pill visibility on resize
 window.addEventListener('resize', () => {
   const mel = document.getElementById('mobile-month-pills');
-  if (mel && mel.children.length) mel.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+  if (!mel || !mel.children.length) return;
+  const mainEl = document.querySelector('.main');
+  const dashActive = mainEl && mainEl.classList.contains('dash-bar-visible');
+  mel.style.display = (dashActive && window.innerWidth <= 768) ? 'flex' : 'none';
 });
 
 // ── DASHBOARD ────────────────────────────────────────────
@@ -4423,9 +4432,13 @@ function closeMoneyflowDetail(e) {
 function _mfSheetEscHandler(e) { if (e.key === 'Escape') closeMoneyflowDetail(); }
 function fmtSheetDate(iso) {
   if (!iso) return '';
-  const [y, mo, d] = String(iso).split('-');
-  if (!y || !mo || !d) return iso;
+  // Trim any time suffix before splitting so full ISO datetimes
+  // (2026-06-15T12:00:00Z) don't slip through as "Invalid Date".
+  const dateOnly = String(iso).substring(0, 10);
+  const [y, mo, d] = dateOnly.split('-');
+  if (!y || !mo || !d) return String(iso);
   const dt = new Date(+y, +mo - 1, +d);
+  if (isNaN(dt.getTime())) return dateOnly;
   return dt.toLocaleString('default', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 function getMoneyflowDetailEmptyText(key) {
@@ -4473,16 +4486,23 @@ function getMoneyflowDetailItems(key) {
       })
       .map(t => ({ desc: t.merchant, date: t.date, amount: t.amount }));
   }
-  // Remaining bucket in cat mode: everything not in the shown top-N
+  // Remaining bucket in cat mode: everything not in the shown top-N.
+  // Aggregated per category so the drill shows the category-level breakdown
+  // rather than a wall of individual transactions.
   if (key === '__remaining__') {
     const shown = _moneyflowShownCatKeys || new Set();
-    return txns
+    const byCat = {};
+    txns
       .filter(t => inPeriod(t.date))
       .filter(t => (t.amount || 0) > 0)
       .filter(t => !t.savingsAccountId)
       .filter(t => !t.incomeType || t.incomeType === 'transfer')
       .filter(t => !shown.has(t.category))
-      .map(t => ({ desc: t.merchant, date: t.date, amount: t.amount }));
+      .forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + t.amount; });
+    return Object.entries(byCat).map(([catKey, amount]) => {
+      const cat = CATS.find(c => c.key === catKey);
+      return { desc: cat ? cat.label : (catKey || 'Uncategorised'), date: '', amount };
+    });
   }
   // Otherwise treat as a category key
   return txns
@@ -5911,6 +5931,8 @@ function onFileSelect(e) { const f = e.target.files[0]; e.target.value = ''; if 
 function routeFile(f) { f.name.toLowerCase().endsWith('.pdf') ? openPdfParser(f) : openMapper(f); }
 
 // ── CSV MAPPER: CARD TYPE DROPDOWN ─────────────────────────
+// Picking "+ Add new..." fires a native prompt() - reliable on mobile,
+// where iOS wouldn't focus the keyboard into a dynamically-shown input.
 function populateCardTypeDropdown(preselect) {
   const sel = document.getElementById('col-cardname-select');
   const inp = document.getElementById('col-cardname');
@@ -5925,32 +5947,26 @@ function populateCardTypeDropdown(preselect) {
 }
 function onCardNameSelectChange() {
   const sel = document.getElementById('col-cardname-select');
-  const inp = document.getElementById('col-cardname');
-  if (!sel || !inp) return;
-  if (sel.value === '__new__') {
-    inp.style.display = '';
-    inp.value = '';
-    setTimeout(() => inp.focus(), 30);
-  } else {
-    inp.style.display = 'none';
-    inp.value = '';
+  if (!sel || sel.value !== '__new__') return;
+  const raw = prompt('New card type (e.g. "Amex Gold", "TD Chequing"):', '');
+  const trimmed = (raw || '').trim();
+  if (!trimmed) {
+    sel.value = '';
+    return;
   }
+  const existing = cardTypes.find(c => c.toLowerCase() === trimmed.toLowerCase());
+  const finalName = existing || trimmed;
+  if (!existing) {
+    cardTypes.push(trimmed);
+    cardTypes.sort((a, b) => a.localeCompare(b));
+    persist();
+  }
+  populateCardTypeDropdown(finalName);
 }
 function getSelectedCardName() {
   const sel = document.getElementById('col-cardname-select');
-  const inp = document.getElementById('col-cardname');
   if (!sel) return 'No card details';
-  if (sel.value === '__new__') {
-    const raw = (inp && inp.value || '').trim();
-    if (!raw) return 'No card details';
-    if (!cardTypes.some(c => c.toLowerCase() === raw.toLowerCase())) {
-      cardTypes.push(raw);
-      cardTypes.sort((a, b) => a.localeCompare(b));
-      persist();
-    }
-    return raw;
-  }
-  return sel.value || 'No card details';
+  return sel.value === '__new__' ? 'No card details' : (sel.value || 'No card details');
 }
 
 // ── COLUMN MAPPER ────────────────────────────────────────
@@ -7905,7 +7921,10 @@ async function syncFromSheets() {
       learned  = data.learned  || {};
       incomes  = (data.incomes  || []).map(i => ({...i, date: i.date ? String(i.date).substring(0,10) : undefined}));
       savAccts = data.savAccts || [];
-      contribs = data.contribs || [];
+      // Normalise contribs date to YYYY-MM-DD to match txns / incomes,
+      // otherwise Money flow's date formatter reads full ISO datetimes
+      // and renders "Invalid Date" in the drill-down.
+      contribs = (data.contribs || []).map(c => ({ ...c, date: c.date ? String(c.date).substring(0,10) : c.date }));
       recalcAllBalances(); // recalculate from contributions after pull
       uploads  = data.uploads  || [];
       trash    = data.trash    || [];
