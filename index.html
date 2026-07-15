@@ -2311,8 +2311,12 @@ function doGet(e) {
           </select>
         </div>
         <div class="add-field">
-          <label>Card name</label>
-          <input type="text" id="pdf-cardname" placeholder="e.g. RBC Visa, Amex" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
+          <label>Card</label>
+          <select id="pdf-cardname-select" onchange="onPdfCardNameSelectChange()" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;">
+            <option value="">No card details</option>
+          </select>
+          <div id="pdf-cardname-hint" style="display:none;margin-top:6px;font-size:11px;color:var(--muted);line-height:1.45;">Pick <strong>+ Type a new card name...</strong> above to save one (e.g. "Amex Gold"). It'll appear here next time you upload.</div>
+          <input type="text" id="pdf-cardname" placeholder="e.g. RBC Visa, Amex" style="display:none;width:100%;margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
         </div>
       </div>
       <div style="margin-top:10px;">
@@ -6000,6 +6004,43 @@ function getSelectedCardName() {
   return sel.value === '__new__' ? 'No card details' : (sel.value || 'No card details');
 }
 
+// PDF parser mirror of the Card dropdown - same saved list, same
+// prompt() flow, separate DOM ids so both modals coexist.
+function populatePdfCardTypeDropdown(preselect) {
+  const sel = document.getElementById('pdf-cardname-select');
+  const inp = document.getElementById('pdf-cardname');
+  const hint = document.getElementById('pdf-cardname-hint');
+  if (!sel) return;
+  const opts = ['<option value="">No card details</option>']
+    .concat(cardTypes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`))
+    .concat(['<option value="__new__">+ Type a new card name...</option>']);
+  sel.innerHTML = opts.join('');
+  const hasPreselect = preselect && cardTypes.includes(preselect);
+  sel.value = hasPreselect ? preselect : '';
+  if (hint) hint.style.display = cardTypes.length ? 'none' : 'block';
+  if (inp) { inp.value = ''; inp.style.display = 'none'; }
+}
+function onPdfCardNameSelectChange() {
+  const sel = document.getElementById('pdf-cardname-select');
+  if (!sel || sel.value !== '__new__') return;
+  const raw = prompt('New card type (e.g. "Amex Gold", "TD Chequing"):', '');
+  const trimmed = (raw || '').trim();
+  if (!trimmed) { sel.value = ''; return; }
+  const existing = cardTypes.find(c => c.toLowerCase() === trimmed.toLowerCase());
+  const finalName = existing || trimmed;
+  if (!existing) {
+    cardTypes.push(trimmed);
+    cardTypes.sort((a, b) => a.localeCompare(b));
+    persist();
+  }
+  populatePdfCardTypeDropdown(finalName);
+}
+function getSelectedPdfCardName() {
+  const sel = document.getElementById('pdf-cardname-select');
+  if (!sel) return 'No card details';
+  return sel.value === '__new__' ? 'No card details' : (sel.value || 'No card details');
+}
+
 // ── COLUMN MAPPER ────────────────────────────────────────
 let pFile = null, pHeaders = [], pRows = [], pHasHeaders = true;
 
@@ -8141,12 +8182,12 @@ async function openPdfParser(file) {
   document.getElementById('pdf-modal').classList.add('open');
   document.body.style.overflow = 'hidden';
 
-  // Pre-fill card name from filename
+  // Pre-fill Card dropdown from filename.
   const fn = file.name.toLowerCase();
   const cardGuess = fn.includes('rbc') ? 'RBC' : fn.includes('amex') ? 'Amex' :
     fn.includes('scotia') ? 'Scotiabank' : fn.includes('cibc') ? 'CIBC' :
     fn.includes('td') ? 'TD' : '';
-  document.getElementById('pdf-cardname').value = cardGuess;
+  populatePdfCardTypeDropdown(cardGuess);
 
   try {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -8178,9 +8219,9 @@ async function openPdfParser(file) {
       const el = document.getElementById('pdf-bank-detected');
       el.textContent = '✓ Detected: ' + bank;
       el.style.display = 'inline-block';
-      if (!document.getElementById('pdf-cardname').value) {
-        document.getElementById('pdf-cardname').value = bank;
-      }
+      // Only auto-select the detected bank when it matches a saved type.
+      const sel = document.getElementById('pdf-cardname-select');
+      if (sel && !sel.value && cardTypes.includes(bank)) sel.value = bank;
     }
   } catch (err) {
     document.getElementById('pdf-raw-text').value = 'Error reading PDF: ' + err.message + '\n\nMake sure this is a valid PDF file.';
@@ -8206,7 +8247,7 @@ function parsePdfTransactions() {
   const rawText = document.getElementById('pdf-raw-text').value;
   const bank    = detectPdfBank(rawText);
   const person  = document.getElementById('pdf-person').value;
-  const card    = document.getElementById('pdf-cardname').value.trim() || 'No card details';
+  const card    = getSelectedPdfCardName();
 
   let txns = [];
   if (bank === 'RBC')        txns = parseRBC(rawText);
