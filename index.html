@@ -317,10 +317,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .mf-mob-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
 .mf-mob-total-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
 .mf-mob-total{font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);letter-spacing:-0.01em;}
-.mf-mob-sources{display:flex;flex-wrap:wrap;gap:10px 16px;margin-bottom:14px;padding:10px 12px;background:var(--bg);border-radius:8px;}
-.mf-mob-src{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;}
+.mf-mob-sources-head{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px;padding:0 4px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;}
+.mf-mob-sources{display:flex;flex-direction:column;gap:0;margin-bottom:14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.mf-mob-src{display:flex;align-items:center;gap:10px;font-size:13px;padding:10px 12px;background:transparent;border:0;color:var(--ink);text-align:left;font-family:inherit;cursor:pointer;min-height:44px;transition:background .12s;-webkit-tap-highlight-color:rgba(0,0,0,.06);}
+.mf-mob-src + .mf-mob-src{border-top:1px solid var(--border);}
+.mf-mob-src:hover,.mf-mob-src:focus-visible{background:var(--bg-2);}
 .mf-mob-src-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.mf-mob-src-name{color:var(--ink);font-weight:500;}
+.mf-mob-src-name{color:var(--ink);font-weight:500;flex:1;}
 .mf-mob-src-amt{color:var(--muted);font-variant-numeric:tabular-nums;}
 .mf-mob-bar{display:flex;width:100%;height:40px;border-radius:8px;overflow:hidden;background:var(--bg);margin-bottom:18px;box-shadow:inset 0 0 0 1px var(--border);}
 .mf-mob-seg{border:0;padding:0;cursor:pointer;transition:filter .12s;position:relative;flex-shrink:1;min-width:2px;}
@@ -356,6 +359,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .mf-sheet-close{background:transparent;border:0;font-size:20px;cursor:pointer;padding:4px 8px;color:var(--muted);line-height:1;margin-left:4px;align-self:flex-start;}
 .mf-sheet-close:active{color:var(--ink);}
 .mf-sheet-body{flex:1;overflow-y:auto;padding:0 8px 16px;-webkit-overflow-scrolling:touch;}
+/* Sort row above the drill-down list. Small label + select on the right. */
+.mf-sheet-sort{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 18px 8px;border-bottom:1px solid var(--border);}
+.mf-sheet-sort-label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
+.mf-sheet-sort-select{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--ink);font-family:'Inter',sans-serif;font-size:12px;padding:5px 26px 5px 10px;height:28px;line-height:1;outline:none;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 12px) 12px,calc(100% - 7px) 12px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;cursor:pointer;transition:border-color .12s;}
+.mf-sheet-sort-select:hover{border-color:var(--border-2);}
 .mf-sheet-txn{display:flex;align-items:center;gap:12px;padding:11px 6px;border-bottom:1px solid var(--border);}
 .mf-sheet-txn-left{flex:1;min-width:0;}
 .mf-sheet-txn-desc{font-size:14px;color:var(--ink);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -1232,6 +1240,15 @@ textarea,select{color:var(--ink);}
               <div id="mf-sheet-total" class="mf-sheet-total"></div>
             </div>
             <button class="mf-sheet-close" onclick="closeMoneyflowDetail()" aria-label="Close">✕</button>
+          </div>
+          <div class="mf-sheet-sort">
+            <label for="mf-sheet-sort-select" class="mf-sheet-sort-label">Sort by</label>
+            <select id="mf-sheet-sort-select" class="mf-sheet-sort-select" onchange="setMoneyflowSheetSort(this.value)">
+              <option value="amount-desc">Amount, largest first</option>
+              <option value="amount-asc">Amount, smallest first</option>
+              <option value="date-desc">Date, newest first</option>
+              <option value="date-asc">Date, oldest first</option>
+            </select>
           </div>
           <div id="mf-sheet-body" class="mf-sheet-body"></div>
         </div>
@@ -4245,13 +4262,18 @@ function renderMoneyflowMobile(container, data) {
   const { sources, destinations, totalIncome } = data;
   const pctFmt = (v) => (v / totalIncome * 100).toFixed(1);
 
-  const sourcesRow = sources.length > 1
-    ? `<div class="mf-mob-sources">${sources.map(s => `
-        <span class="mf-mob-src">
+  // Income sources: always shown as a stacked list, each one tappable so
+  // users can drill into the underlying income entries the same way they
+  // drill into destinations. Skips render only when there's nothing to show.
+  const sourcesRow = sources.length
+    ? `<div class="mf-mob-sources-head">Income sources <span class="mf-mob-rows-hint">tap for detail</span></div>
+       <div class="mf-mob-sources">${sources.map(s => `
+        <button type="button" class="mf-mob-src mf-mob-src-btn" data-mfkey="income:${esc(s.name)}" data-mfname="${esc(s.name)}">
           <span class="mf-mob-src-dot" style="background:${s.color};"></span>
           <span class="mf-mob-src-name">${esc(s.name)}</span>
           <span class="mf-mob-src-amt">${fmt(s.amount)}</span>
-        </span>`).join('')}</div>`
+          <span class="mf-mob-row-chev" aria-hidden="true">›</span>
+        </button>`).join('')}</div>`
     : '';
 
   // Stacked bar: rounded outer via overflow:hidden. Each segment tappable.
@@ -4289,7 +4311,43 @@ function renderMoneyflowMobile(container, data) {
 }
 
 // Bottom-sheet drill-down: shows the underlying transactions for a category
-// (or Needs / Wants / Savings / Excess / Remaining bucket), biggest first.
+// (or Needs / Wants / Savings / Excess / Remaining bucket / income source),
+// sortable by amount or date via the sheet header.
+let _mfSheetKey = null;
+let _mfSheetName = '';
+let _mfSheetSort = 'amount-desc';
+function _mfSortItems(items, mode) {
+  const arr = items.slice();
+  switch (mode) {
+    case 'amount-asc':  arr.sort((a, b) => a.amount - b.amount); break;
+    case 'date-desc':   arr.sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))); break;
+    case 'date-asc':    arr.sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))); break;
+    default:            arr.sort((a, b) => b.amount - a.amount);
+  }
+  return arr;
+}
+function _mfRenderSheetBody() {
+  const body = document.getElementById('mf-sheet-body');
+  if (!body || _mfSheetKey == null) return;
+  const items = getMoneyflowDetailItems(_mfSheetKey);
+  const empty = getMoneyflowDetailEmptyText(_mfSheetKey);
+  if (!items.length) {
+    body.innerHTML = `<div class="mf-sheet-empty">${esc(empty)}</div>`;
+    return;
+  }
+  body.innerHTML = _mfSortItems(items, _mfSheetSort).map(t => `
+        <div class="mf-sheet-txn">
+          <div class="mf-sheet-txn-left">
+            <div class="mf-sheet-txn-desc">${esc(t.desc || '(untitled)')}</div>
+            <div class="mf-sheet-txn-date">${esc(fmtSheetDate(t.date))}</div>
+          </div>
+          <div class="mf-sheet-txn-amt">${fmt(t.amount)}</div>
+        </div>`).join('');
+}
+function setMoneyflowSheetSort(mode) {
+  _mfSheetSort = mode || 'amount-desc';
+  _mfRenderSheetBody();
+}
 function openMoneyflowDetail(key, name) {
   const sheet = document.getElementById('mf-detail-sheet');
   const title = document.getElementById('mf-sheet-title');
@@ -4298,28 +4356,19 @@ function openMoneyflowDetail(key, name) {
   const body  = document.getElementById('mf-sheet-body');
   if (!sheet || !body) return;
 
+  _mfSheetKey = key;
+  _mfSheetName = name;
+
   const items = getMoneyflowDetailItems(key);
   const sum   = items.reduce((s, i) => s + i.amount, 0);
   if (title) title.textContent = name;
   if (total) total.textContent = fmt(sum);
   if (meta)  meta.textContent  = `${items.length} ${items.length === 1 ? 'entry' : 'entries'}`;
 
-  const empty = getMoneyflowDetailEmptyText(key);
-  if (!items.length) {
-    body.innerHTML = `<div class="mf-sheet-empty">${esc(empty)}</div>`;
-  } else {
-    body.innerHTML = items
-      .slice()
-      .sort((a, b) => b.amount - a.amount)
-      .map(t => `
-        <div class="mf-sheet-txn">
-          <div class="mf-sheet-txn-left">
-            <div class="mf-sheet-txn-desc">${esc(t.desc || '(untitled)')}</div>
-            <div class="mf-sheet-txn-date">${esc(fmtSheetDate(t.date))}</div>
-          </div>
-          <div class="mf-sheet-txn-amt">${fmt(t.amount)}</div>
-        </div>`).join('');
-  }
+  const sortSel = document.getElementById('mf-sheet-sort-select');
+  if (sortSel) sortSel.value = _mfSheetSort;
+
+  _mfRenderSheetBody();
 
   sheet.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -4350,6 +4399,18 @@ function getMoneyflowDetailEmptyText(key) {
 }
 function getMoneyflowDetailItems(key) {
   const inPeriod = (d) => dashPeriodTest(d);
+  // Income source drill-through: key is 'income:{name}' where name matches
+  // either the person the entry is attributed to, or the aggregate label
+  // 'Income' when the diagram is in aggregate mode.
+  if (key && key.indexOf('income:') === 0) {
+    const name = key.slice(7);
+    const isAggregate = (name === 'Income');
+    return (typeof incomes !== 'undefined' ? incomes : [])
+      .filter(i => i.type !== 'transfer')
+      .filter(i => inPeriod(i.date))
+      .filter(i => isAggregate ? true : ((i.person || 'Income') === name))
+      .map(i => ({ desc: i.desc || i.type || 'Income', date: i.date, amount: i.amount || 0 }));
+  }
   // Savings: contributions in period (skip withdrawals)
   if (key === '__savings__') {
     return (typeof contribs !== 'undefined' ? contribs : [])
