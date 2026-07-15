@@ -5095,7 +5095,22 @@ function renderDashboard() {
   }).join('')}</table>`;
 }
 
-function setDashPeriod(p) { dashPeriod = dashPeriod === p ? '' : p; renderDashboard(); }
+function setDashPeriod(p) {
+  dashPeriod = dashPeriod === p ? '' : p;
+  // When a period pill activates a range that spans a different year than
+  // the currently-selected one (e.g. picking "Latest month" while on 2025),
+  // sync selYear so the year selector at the top matches the data being
+  // shown. Without this the selector reads a stale year while the numbers
+  // reflect the new period.
+  if (dashPeriod === 'latest') {
+    const latest = (typeof getMonths === 'function' && getMonths()[0]) || '';
+    if (latest) { selYear = latest.substring(0, 4); selMonth = latest; }
+  } else if (dashPeriod === '3m' || dashPeriod === 'ytd') {
+    selYear = String(new Date().getFullYear());
+  }
+  if (typeof renderPills === 'function') renderPills();
+  renderDashboard();
+}
 function onCatCheckChange(key, checked) {
   dashCatMode = 'custom';
   if (checked) dashCatFilter.delete(key); else dashCatFilter.add(key);
@@ -9306,11 +9321,14 @@ function renderAppearance() {
       <div class="theme-picker">${group(true)}</div>
     </div>`;
 }
-// Init — migrate from old l3_darkMode if needed
+// Init — default to Light. Only respect a previously-picked theme if it
+// exists in the pruned THEMES map. Ignore the legacy l3_darkMode flag
+// (dropped so returning users don't get stuck in dark from an old install
+// they never explicitly re-confirmed).
 (function() {
   const saved = localStorage.getItem('l3_theme');
   if (saved && THEMES[saved]) { applyTheme(saved); return; }
-  applyTheme(localStorage.getItem('l3_darkMode') === 'true' ? 'dark-warm' : 'light');
+  applyTheme('light');
 })();
 
 // ── MORTGAGES ────────────────────────────────────────────
