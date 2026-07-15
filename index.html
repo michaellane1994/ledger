@@ -786,6 +786,13 @@ textarea,select{color:var(--ink);}
   #dash-period-bar select,
   .year-select,
   #moneyflow-period-picker{font-size:12px !important;}
+  /* Filter bar (Transactions + Income): person / category / bulk-select
+     controls sit at 13px on desktop; without this carve-out they inflate
+     to 16px on mobile via the auto-zoom guard, towering over the search
+     input beside them. */
+  .filter-bar select,
+  .filter-bar .ms-btn{font-size:12.5px !important;}
+  .filter-bar input{font-size:13px !important;}
   /* Cashflow forecast card-head controls: From/To month pickers, Avg from,
      Start balance, Exclude categories, Bonus toggle — designed at 11px so
      they sit compactly on one row. Same carve-out as year picker above. */
@@ -1668,6 +1675,23 @@ textarea,select{color:var(--ink);}
       </div>
 
       <div class="card" style="margin-bottom:18px;">
+        <div class="card-head" onclick="toggleSettingsSec('cardtypes')" style="cursor:pointer;">
+          <div class="card-title">Card Types</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openAddCardType()">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path d="M12 4v16m-8-8h16"/></svg>
+              Add Card Type
+            </button>
+            <span class="sec-toggle" id="chev-cardtypes">▾</span>
+          </div>
+        </div>
+        <div class="card-body sec-body" id="sec-cardtypes">
+          <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px;">Save the cards and accounts you import statements from. They'll appear as a dropdown when you upload a CSV or PDF, so you don't have to retype the name each time.</p>
+          <div id="cardtypes-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
         <div class="card-head" onclick="toggleSettingsSec('cats')" style="cursor:pointer;">
           <div class="card-title">Expense Categories</div>
           <div style="display:flex;align-items:center;gap:8px;">
@@ -2205,9 +2229,13 @@ function doGet(e) {
           </div>
         </div>
         <div>
-          <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;">Card name <span style="color:var(--faint);font-weight:400;">(e.g. RBC Chequing, Amex)</span></label>
+          <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;">Card <span style="color:var(--faint);font-weight:400;">(from your saved list)</span></label>
+          <select id="col-cardname-select" onchange="onCardNameSelectChange()"
+            style="width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;">
+            <option value="">No card details</option>
+          </select>
           <input type="text" id="col-cardname" placeholder="e.g. RBC Chequing"
-            style="width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
+            style="display:none;width:100%;margin-top:6px;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
         </div>
       </div>
     </div>
@@ -2632,6 +2660,14 @@ let showJoint    = localStorage.getItem('l3_show_joint') !== 'false';
 let rentalExpenses = JSON.parse(localStorage.getItem('l3_rental') || '[]');
 let mortBalances      = JSON.parse(localStorage.getItem('l3_mort_balances') || '{}');
 let mortVoluntaryPmts = JSON.parse(localStorage.getItem('l3_mort_voluntary') || '{}');
+// User-managed list of card / account labels (e.g. "Amex Gold", "TD Chequing").
+// Populates the Card dropdown in the CSV upload mapper so labels don't have to
+// be retyped each import. Seeded from existing txn cards on first load below.
+let cardTypes = JSON.parse(localStorage.getItem('l3_card_types') || '[]');
+if (!cardTypes.length && txns.length) {
+  cardTypes = [...new Set(txns.map(t => t.card).filter(Boolean))].sort();
+  if (cardTypes.length) localStorage.setItem('l3_card_types', JSON.stringify(cardTypes));
+}
 let selMonth  = '';
 let selYear   = String(new Date().getFullYear());
 let dashPeriod    = '';        // '', 'latest', '3m', 'ytd', 'year'
@@ -2648,6 +2684,7 @@ function persist() {
   localStorage.setItem('l3_contribs',   JSON.stringify(contribs));
   if (sheetsUrl) localStorage.setItem('l3_sheets_url', sheetsUrl);
   localStorage.setItem('l3_rental', JSON.stringify(rentalExpenses));
+  localStorage.setItem('l3_card_types', JSON.stringify(cardTypes));
 }
 
 // Returns a normalised merchant key for matching
@@ -5874,6 +5911,49 @@ dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over
 function onFileSelect(e) { const f = e.target.files[0]; e.target.value = ''; if (f) routeFile(f); }
 function routeFile(f) { f.name.toLowerCase().endsWith('.pdf') ? openPdfParser(f) : openMapper(f); }
 
+// ── CSV MAPPER: CARD TYPE DROPDOWN ─────────────────────────
+function populateCardTypeDropdown(preselect) {
+  const sel = document.getElementById('col-cardname-select');
+  const inp = document.getElementById('col-cardname');
+  if (!sel) return;
+  const opts = ['<option value="">No card details</option>']
+    .concat(cardTypes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`))
+    .concat(['<option value="__new__">+ Add new card type...</option>']);
+  sel.innerHTML = opts.join('');
+  const hasPreselect = preselect && cardTypes.includes(preselect);
+  sel.value = hasPreselect ? preselect : '';
+  if (inp) { inp.value = ''; inp.style.display = 'none'; }
+}
+function onCardNameSelectChange() {
+  const sel = document.getElementById('col-cardname-select');
+  const inp = document.getElementById('col-cardname');
+  if (!sel || !inp) return;
+  if (sel.value === '__new__') {
+    inp.style.display = '';
+    inp.value = '';
+    setTimeout(() => inp.focus(), 30);
+  } else {
+    inp.style.display = 'none';
+    inp.value = '';
+  }
+}
+function getSelectedCardName() {
+  const sel = document.getElementById('col-cardname-select');
+  const inp = document.getElementById('col-cardname');
+  if (!sel) return 'No card details';
+  if (sel.value === '__new__') {
+    const raw = (inp && inp.value || '').trim();
+    if (!raw) return 'No card details';
+    if (!cardTypes.some(c => c.toLowerCase() === raw.toLowerCase())) {
+      cardTypes.push(raw);
+      cardTypes.sort((a, b) => a.localeCompare(b));
+      persist();
+    }
+    return raw;
+  }
+  return sel.value || 'No card details';
+}
+
 // ── COLUMN MAPPER ────────────────────────────────────────
 let pFile = null, pHeaders = [], pRows = [], pHasHeaders = true;
 
@@ -5940,10 +6020,10 @@ function openMapper(file) {
       guess('col-credit',   ['credit','deposit','credit amount']);
     }
 
-    // Pre-fill card name from filename
+    // Populate the Card Type dropdown from the user's saved list.
     const fn = file.name.toLowerCase();
     const cardGuess = fn.includes('cibc') ? 'CIBC' : fn.includes('chequing') ? 'RBC Chequing' : fn.includes('saving') ? 'RBC Savings' : fn.includes('amex') ? 'Amex' : fn.includes('scotia') ? 'Scotiabank' : '';
-    document.getElementById('col-cardname').value = cardGuess;
+    populateCardTypeDropdown(cardGuess);
     document.getElementById('map-modal').classList.add('open');
     // Lock background scroll so a touch drag inside the modal doesn't leak
     // through and scroll the dashboard behind it — was making the mobile
@@ -6168,7 +6248,7 @@ async function doImport() {
   const ai = parseInt(document.getElementById('col-amount').value);
   const ci = document.getElementById('col-credit').value !== '' ? parseInt(document.getElementById('col-credit').value) : -1;
   const person   = document.querySelector('input[name="person"]:checked').value;
-  const cardName = document.getElementById('col-cardname').value.trim() || 'No card details';
+  const cardName = getSelectedCardName();
   const isBank   = document.querySelector('input[name="stmt-type"]:checked').value === 'bank';
   if (isNaN(di) || isNaN(mi) || isNaN(ai)) { alert('Please map Date, Merchant, and Amount columns.'); return; }
   // Snapshot the user-edited preview rows BEFORE closeMap() — closeMap nulls _pendingImportRows,
@@ -7649,9 +7729,71 @@ function renderSettings() {
   if (jt) jt.checked = showJoint;
   initSecStates();
   renderAppearance();
+  renderCardTypesList();
   renderCatManagement();
   renderCommitExclusions();
   renderTypeManagement();
+}
+
+// ── CARD TYPES ─────────────────────────────────────────────
+function renderCardTypesList() {
+  const el = document.getElementById('cardtypes-list');
+  if (!el) return;
+  if (!cardTypes.length) {
+    el.innerHTML = `<div style="font-size:12.5px;color:var(--faint);padding:8px 0;">No card types yet. Add one above so it appears in the upload mapper.</div>`;
+    return;
+  }
+  el.innerHTML = cardTypes.map((name, idx) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">
+      <span style="font-weight:500;font-size:13px;color:var(--ink);">${esc(name)}</span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="renameCardType(${idx})">Rename</button>
+        <button class="del-btn always-on" onclick="deleteCardType(${idx})" title="Remove">✕</button>
+      </div>
+    </div>`).join('');
+}
+function openAddCardType() {
+  const name = prompt('New card type (e.g. "Amex Gold", "TD Chequing"):', '');
+  if (name == null) return;
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  if (cardTypes.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+    alert('That card type already exists.');
+    return;
+  }
+  cardTypes.push(trimmed);
+  cardTypes.sort((a, b) => a.localeCompare(b));
+  persist();
+  renderCardTypesList();
+  if (typeof autoPush === 'function') autoPush();
+}
+function renameCardType(idx) {
+  const current = cardTypes[idx];
+  if (!current) return;
+  const name = prompt('Rename card type:', current);
+  if (name == null) return;
+  const trimmed = name.trim();
+  if (!trimmed || trimmed === current) return;
+  if (cardTypes.some((c, i) => i !== idx && c.toLowerCase() === trimmed.toLowerCase())) {
+    alert('Another card type already has that name.');
+    return;
+  }
+  txns.forEach(t => { if (t.card === current) t.card = trimmed; });
+  cardTypes[idx] = trimmed;
+  cardTypes.sort((a, b) => a.localeCompare(b));
+  persist();
+  renderCardTypesList();
+  if (typeof renderTxns === 'function') renderTxns();
+  if (typeof autoPush === 'function') autoPush();
+}
+function deleteCardType(idx) {
+  const current = cardTypes[idx];
+  if (!current) return;
+  if (!confirm(`Remove "${current}" from the card types list?\n\nTransactions already tagged with this card will keep the label, but it won't appear in future upload dropdowns.`)) return;
+  cardTypes.splice(idx, 1);
+  persist();
+  renderCardTypesList();
+  if (typeof autoPush === 'function') autoPush();
 }
 
 function renderCommitExclusions() { /* no-op: exclusions now inline in renderCatManagement */ }
@@ -7727,7 +7869,7 @@ async function syncToSheets() {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData } }),
+      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -7807,6 +7949,14 @@ async function syncFromSheets() {
         mortData = data.settings.mortData;
         localStorage.setItem('l3_mort_data', JSON.stringify(mortData));
       }
+      // cardTypes falls back to derivation from pulled txns for older
+      // Sheets that don't carry the setting yet.
+      if (Array.isArray(data.settings?.cardTypes)) {
+        cardTypes = data.settings.cardTypes.slice();
+      } else {
+        cardTypes = [...new Set((data.txns || []).map(t => t.card).filter(Boolean))].sort();
+      }
+      localStorage.setItem('l3_card_types', JSON.stringify(cardTypes));
       repairIncomeDates();
       persist();
       updateSyncDot('ok');
@@ -7915,7 +8065,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData } }),
+        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
