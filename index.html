@@ -2219,24 +2219,22 @@ function doGet(e) {
           <label><input type="radio" name="stmt-type" value="bank"> Bank account <span style="font-size:10.5px;color:var(--faint);">(spend = negative)</span></label>
         </div>
       </div>
-      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <div>
-          <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Whose card is this?</label>
-          <div class="person-row">
-            <label><input type="radio" name="person" value="Michael" checked> Michael</label>
-            <label><input type="radio" name="person" value="Lili"> Lili</label>
-            <label><input type="radio" name="person" value="Joint"> Joint</label>
-          </div>
+      <div style="margin-top:10px;">
+        <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Whose card is this?</label>
+        <div class="person-row">
+          <label><input type="radio" name="person" value="Michael" checked> Michael</label>
+          <label><input type="radio" name="person" value="Lili"> Lili</label>
+          <label><input type="radio" name="person" value="Joint"> Joint</label>
         </div>
-        <div>
-          <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;">Card <span style="color:var(--faint);font-weight:400;">(from your saved list)</span></label>
-          <select id="col-cardname-select" onchange="onCardNameSelectChange()"
-            style="width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;">
-            <option value="">No card details</option>
-          </select>
-          <input type="text" id="col-cardname" placeholder="e.g. RBC Chequing"
-            style="display:none;width:100%;margin-top:6px;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
-        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Card</label>
+        <select id="col-cardname-select" onchange="onCardNameSelectChange()"
+          style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;">
+          <option value="">No card details</option>
+        </select>
+        <input type="text" id="col-cardname" placeholder="e.g. RBC Chequing, Amex Gold"
+          style="display:none;width:100%;margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
       </div>
     </div>
       <div style="margin-top:10px;">
