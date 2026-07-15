@@ -26,9 +26,9 @@
   --faint:      #aeaeb4;
   /* Rust accent muted from a saturated orange to a deeper copper.
      Reads more editorial and less "energy drink" startup. */
-  --accent:        #9a4a1e;
-  --accent-hover:  #7d3c18;
-  --accent-soft:   #f7ecdf;
+  --accent:        #2f5a44;
+  --accent-hover:  #234936;
+  --accent-soft:   #e6efe9;
   --accent-2:      #e8804a;
   --sidebar-bg:       #0a0a0d;
   --row-hover:        rgba(15,15,20,.025);
@@ -185,8 +185,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .topbar-right{display:flex;gap:8px;align-items:center;flex-shrink:0;}
 .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:var(--radius-pill);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:transform .15s ease, box-shadow .2s ease, background .15s ease, color .15s ease, border-color .15s ease;font-family:'Inter',sans-serif;letter-spacing:-0.005em;line-height:1.2;}
 .btn:active{transform:translateY(1px);}
-.btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 2px rgba(184,84,22,.30), inset 0 1px 0 rgba(255,255,255,.18);}
-.btn-primary:hover{background:var(--accent-hover);box-shadow:0 4px 12px rgba(184,84,22,.30), inset 0 1px 0 rgba(255,255,255,.18);transform:translateY(-1px);}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 2px rgba(47,90,68,.28), inset 0 1px 0 rgba(255,255,255,.18);}
+.btn-primary:hover{background:var(--accent-hover);box-shadow:0 4px 12px rgba(47,90,68,.28), inset 0 1px 0 rgba(255,255,255,.18);transform:translateY(-1px);}
 .btn-ghost{background:var(--surface);color:var(--ink-2);border:1px solid var(--border);box-shadow:var(--shadow-xs);}
 .btn-ghost:hover{background:var(--bg-2);border-color:var(--border-2);transform:translateY(-1px);}
 .btn-sm{padding:5px 11px;font-size:12px;}
@@ -521,7 +521,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
 .filter-bar input,.filter-bar select,.filter-bar .ms-btn{padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;transition:border-color .15s ease, box-shadow .15s ease;}
 .filter-bar input:hover,.filter-bar select:hover,.filter-bar .ms-btn:hover{border-color:var(--border-2);}
-.filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(184,84,22,.12);}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,90,68,.14);}
 .filter-bar input{min-width:180px;}
 .ms-wrap{position:relative;display:inline-block;}
 .ms-btn{padding-right:22px;cursor:pointer;white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis;text-align:left;position:relative;}
@@ -726,7 +726,7 @@ textarea,select{color:var(--ink);}
 .add-field label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;font-weight:500;}
 .add-field input,.add-field select,.add-field textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;transition:border-color .15s ease, box-shadow .15s ease;}
 .add-field input:hover,.add-field select:hover,.add-field textarea:hover{border-color:var(--border-2);}
-.add-field input:focus,.add-field select:focus,.add-field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(184,84,22,.12);}
+.add-field input:focus,.add-field select:focus,.add-field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,90,68,.14);}
 .add-field textarea{resize:none;height:60px;}
 .add-field.full{grid-column:1/-1;}
 
@@ -2236,6 +2236,7 @@ function doGet(e) {
           style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;">
           <option value="">No card details</option>
         </select>
+        <div id="col-cardname-hint" style="display:none;margin-top:6px;font-size:11px;color:var(--muted);line-height:1.45;">Pick <strong>+ Type a new card name...</strong> above to save one (e.g. "Amex Gold"). It'll appear here next time you upload.</div>
         <input type="text" id="col-cardname" placeholder="e.g. RBC Chequing, Amex Gold"
           style="display:none;width:100%;margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
       </div>
@@ -4393,6 +4394,15 @@ function setMoneyflowSheetSort(mode) {
   _mfSheetSort = mode || 'amount-desc';
   _mfRenderSheetBody();
 }
+// Some drill-down keys aggregate rows and don't carry meaningful dates
+// (remaining categories, aggregate income by person). For those, hide the
+// date sort options so the picker only offers Amount-based sorting.
+function _mfKeyHasDates(key) {
+  if (!key) return true;
+  if (key === '__remaining__') return false;
+  if (key === 'income:Income') return false;
+  return true;
+}
 function openMoneyflowDetail(key, name) {
   const sheet = document.getElementById('mf-detail-sheet');
   const title = document.getElementById('mf-sheet-title');
@@ -4411,7 +4421,18 @@ function openMoneyflowDetail(key, name) {
   if (meta)  meta.textContent  = `${items.length} ${items.length === 1 ? 'entry' : 'entries'}`;
 
   const sortSel = document.getElementById('mf-sheet-sort-select');
-  if (sortSel) sortSel.value = _mfSheetSort;
+  if (sortSel) {
+    const hasDates = _mfKeyHasDates(key);
+    sortSel.querySelectorAll('option').forEach(opt => {
+      const isDate = opt.value === 'date-desc' || opt.value === 'date-asc';
+      opt.hidden = isDate && !hasDates;
+      opt.disabled = isDate && !hasDates;
+    });
+    if (!hasDates && (_mfSheetSort === 'date-desc' || _mfSheetSort === 'date-asc')) {
+      _mfSheetSort = 'amount-desc';
+    }
+    sortSel.value = _mfSheetSort;
+  }
 
   _mfRenderSheetBody();
 
@@ -4448,16 +4469,24 @@ function getMoneyflowDetailEmptyText(key) {
 }
 function getMoneyflowDetailItems(key) {
   const inPeriod = (d) => dashPeriodTest(d);
-  // Income source drill-through: key is 'income:{name}' where name matches
-  // either the person the entry is attributed to, or the aggregate label
-  // 'Income' when the diagram is in aggregate mode.
+  // Income source drill-through: per-person mode lists individual entries;
+  // aggregate mode groups totals by person.
   if (key && key.indexOf('income:') === 0) {
     const name = key.slice(7);
     const isAggregate = (name === 'Income');
-    return (typeof incomes !== 'undefined' ? incomes : [])
+    const inScope = (typeof incomes !== 'undefined' ? incomes : [])
       .filter(i => i.type !== 'transfer')
-      .filter(i => inPeriod(i.date))
-      .filter(i => isAggregate ? true : ((i.person || 'Income') === name))
+      .filter(i => inPeriod(i.date));
+    if (isAggregate) {
+      const byPerson = {};
+      inScope.forEach(i => {
+        const p = i.person || 'Income';
+        byPerson[p] = (byPerson[p] || 0) + (i.amount || 0);
+      });
+      return Object.entries(byPerson).map(([p, amt]) => ({ desc: p, date: '', amount: amt }));
+    }
+    return inScope
+      .filter(i => (i.person || 'Income') === name)
       .map(i => ({ desc: i.desc || i.type || 'Income', date: i.date, amount: i.amount || 0 }));
   }
   // Savings: contributions in period (skip withdrawals)
@@ -5936,13 +5965,15 @@ function routeFile(f) { f.name.toLowerCase().endsWith('.pdf') ? openPdfParser(f)
 function populateCardTypeDropdown(preselect) {
   const sel = document.getElementById('col-cardname-select');
   const inp = document.getElementById('col-cardname');
+  const hint = document.getElementById('col-cardname-hint');
   if (!sel) return;
   const opts = ['<option value="">No card details</option>']
     .concat(cardTypes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`))
-    .concat(['<option value="__new__">+ Add new card type...</option>']);
+    .concat(['<option value="__new__">+ Type a new card name...</option>']);
   sel.innerHTML = opts.join('');
   const hasPreselect = preselect && cardTypes.includes(preselect);
   sel.value = hasPreselect ? preselect : '';
+  if (hint) hint.style.display = cardTypes.length ? 'none' : 'block';
   if (inp) { inp.value = ''; inp.style.display = 'none'; }
 }
 function onCardNameSelectChange() {
