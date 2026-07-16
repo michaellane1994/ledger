@@ -1125,7 +1125,7 @@ textarea,select{color:var(--ink);}
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
       </button>
-      <div class="topbar-title" id="topbar-title" onclick="goNav('dashboard')" title="Back to dashboard" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goNav('dashboard');}" style="cursor:pointer;">Dashboard</div>
+      <div class="topbar-title" id="topbar-title" onclick="if(document.getElementById('view-dashboard').classList.contains('active'))goNav('dashboard');" role="button" tabindex="0" onkeydown="if((event.key==='Enter'||event.key===' ')&&document.getElementById('view-dashboard').classList.contains('active')){event.preventDefault();goNav('dashboard');}">Dashboard</div>
       <div class="month-pills" id="month-pills"></div>
     </div>
     <div class="topbar-right">
@@ -2779,8 +2779,14 @@ function goNav(name) {
   document.getElementById('view-' + name).classList.add('active');
   const map = { dashboard: 0, transactions: 1, income: 2, savings: 3, upload: 4, trash: 5, rental: 6, mortgages: 7, settings: 8 };
   document.querySelectorAll('.nav-item')[map[name]].classList.add('active');
-  document.getElementById('topbar-title').textContent =
+  const _titleEl = document.getElementById('topbar-title');
+  _titleEl.textContent =
     { dashboard: 'Dashboard', transactions: 'Transactions', income: 'Income', savings: 'Savings', upload: 'Upload Data', trash: 'Bin', rental: 'Rental', mortgages: 'Mortgages', settings: 'Settings' }[name];
+  // The title only acts as a "back to top" home link while on the dashboard;
+  // on other pages it's just a label, so drop the pointer affordance.
+  const _onDash = name === 'dashboard';
+  _titleEl.style.cursor = _onDash ? 'pointer' : 'default';
+  _titleEl.title = _onDash ? 'Back to top' : '';
   const periodBar = document.getElementById('dash-period-bar');
   const mainEl    = document.querySelector('.main');
   const mobilePills  = document.getElementById('mobile-month-pills');
