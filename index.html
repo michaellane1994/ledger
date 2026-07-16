@@ -741,10 +741,12 @@ tbody tr:hover .row-menu-btn{opacity:1;}
      border) and the global 16px zoom-guard inflates them. Carve them back to
      a compact size and give every field a persistent border + surface so it
      clearly looks tappable/editable. */
-  .stmt-preview td input{font-size:14px!important;border:1px solid var(--border)!important;background:var(--bg)!important;border-radius:7px!important;padding:8px 10px!important;min-height:38px;box-sizing:border-box;color:var(--ink)!important;}
-  .stmt-preview td .imp-sel{font-size:14px!important;min-height:38px;padding:8px 26px 8px 10px!important;background-color:var(--bg)!important;max-width:100%;}
+  .stmt-preview td input{font-size:10.5px!important;border:1px solid var(--border)!important;background:var(--bg)!important;border-radius:7px!important;padding:8px 10px!important;min-height:38px;box-sizing:border-box;color:var(--ink)!important;}
+  .stmt-preview td .imp-sel{font-size:10.5px!important;min-height:38px;padding:8px 26px 8px 10px!important;background-color:var(--bg)!important;max-width:100%;}
   .stmt-preview td[data-label="Amount"] input{max-width:44%;}
   .stmt-preview td[data-label="Merchant"] input,.stmt-preview td[data-label="Category"] .imp-sel{max-width:68%;}
+  /* Date input hugs its content and sits at the right edge of the card. */
+  .stmt-preview td[data-label="Date"] input{flex:0 0 auto;width:auto!important;text-align:right;}
   /* Hint line under the "Preview & edit" header, mobile only. */
   .stmt-edit-hint{display:block!important;}
 }
@@ -1123,7 +1125,7 @@ textarea,select{color:var(--ink);}
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
       </button>
-      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="topbar-title" id="topbar-title" onclick="goNav('dashboard')" title="Back to dashboard" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goNav('dashboard');}" style="cursor:pointer;">Dashboard</div>
       <div class="month-pills" id="month-pills"></div>
     </div>
     <div class="topbar-right">
