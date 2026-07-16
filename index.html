@@ -594,6 +594,17 @@ tbody tr:hover .del-btn{opacity:1;}
 tr.rental-tagged{background:linear-gradient(90deg, rgba(45,106,79,.05), transparent 40%);}
 tr.rental-tagged .txn-td-date{border-left:2px solid #2d6a4f;}
 .cat-dropdown{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:500;min-width:200px;overflow:hidden;display:none;max-height:360px;overflow-y:auto;}
+/* Mobile: present the category picker as a bottom sheet instead of a
+   fiddly anchored-at-tap dropdown. Closes on select or backdrop tap. */
+@media (max-width:600px){
+  .cat-dd-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:499;display:none;}
+  .cat-dd-backdrop.open{display:block;}
+  .cat-dropdown{position:fixed !important;left:0 !important;right:0 !important;bottom:0 !important;top:auto !important;width:100%;min-width:0;max-width:none;max-height:70vh;border-radius:16px 16px 0 0;border-bottom:none;padding-bottom:env(safe-area-inset-bottom);}
+  .cat-dropdown.open{animation:sheetUp .2s cubic-bezier(.16,1,.3,1);}
+  .cat-dropdown .cat-opt{padding:13px 18px;font-size:15px;min-height:48px;}
+  .cat-dropdown .cat-opt-group{padding:12px 18px 5px;}
+}
+@keyframes sheetUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
 .cat-dropdown.open{display:block;animation:fadeIn .12s ease;}
 .row-menu-wrap{position:relative;display:inline-block;}
 .row-menu-btn{background:none;border:none;cursor:pointer;color:var(--faint);padding:4px 7px;border-radius:4px;font-size:16px;line-height:1;opacity:0;transition:opacity .15s;}
@@ -696,6 +707,15 @@ tbody tr:hover .row-menu-btn{opacity:1;}
    column under a mysterious "Person" header that hasn't done anything yet.
    .has-income-col is toggled on the table by renderImportPreview(). */
 #import-preview-table:not(.has-income-col) .import-preview-person-cell{display:none;}
+/* Import-preview dropdowns (Category, Person): persistent border + a caret
+   so they read as tappable selects, not plain text. */
+.imp-sel{appearance:none;-webkit-appearance:none;background-color:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 22px 5px 8px;font-size:12px;color:var(--ink);font-family:'Inter',sans-serif;cursor:pointer;outline:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 12px) 52%,calc(100% - 7px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;}
+.imp-sel:focus{border-color:var(--accent);}
+/* Mobile: let the preview table scroll horizontally instead of squishing. */
+@media (max-width:600px){
+  #import-preview-table{min-width:600px;}
+  #import-preview > div[style*="overflow:auto"]{-webkit-overflow-scrolling:touch;}
+}
 .mapper h3{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:12px;}
 .mapper-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .mapper-field label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;}
@@ -857,11 +877,12 @@ textarea,select{color:var(--ink);}
   input[type="search"],
   textarea,
   select{font-size:16px !important;}
-  /* Import preview: kill the nested max-height scroll region on mobile —
-     it competes with the modal / overlay scroll and confuses the touch
-     dispatcher. Let the preview flow inline; the whole modal scrolls. */
+  /* Import preview on mobile: drop the vertical max-height so rows flow into
+     the modal's own scroll, but keep a horizontal scroll so the 6-column
+     table can be swiped sideways instead of squishing. Height auto = only
+     the horizontal axis actually scrolls. */
   #import-preview > div[style*="max-height:320px"],
-  #import-preview > div[style*="overflow:auto"]{max-height:none !important;overflow:visible !important;}
+  #import-preview > div[style*="overflow:auto"]{max-height:none !important;overflow-x:auto !important;overflow-y:visible !important;}
   #pdf-raw-text{height:140px !important;font-size:16px;}
   #pdf-step-2 > div[style*="max-height:280px"]{max-height:none;overflow:visible;}
 }
@@ -990,6 +1011,8 @@ textarea,select{color:var(--ink);}
 .undo-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;}
 .undo-toast button{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2);padding:5px 12px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .12s;}
 .undo-toast button:hover{background:rgba(255,255,255,.22);}
+.undo-toast .undo-toast-dismiss{background:transparent;border:none;color:rgba(255,255,255,.55);font-size:20px;line-height:1;padding:2px 4px 4px;margin-left:-4px;min-width:28px;min-height:28px;display:flex;align-items:center;justify-content:center;font-weight:400;}
+.undo-toast .undo-toast-dismiss:hover{background:rgba(255,255,255,.12);color:#fff;}
 </style>
 </head>
 <body>
@@ -2067,6 +2090,7 @@ function doGet(e) {
 </div>
 
 <!-- CAT DROPDOWN -->
+<div class="cat-dd-backdrop" id="cat-dd-backdrop" onclick="closeCatDropdown()"></div>
 <div class="cat-dropdown" id="cat-dd"></div>
 
 <!-- DUPLICATES MODAL -->
@@ -5476,7 +5500,36 @@ function renderTxns() {
 
 // ── CATEGORY PICKER ──────────────────────────────────────
 const dd = document.getElementById('cat-dd');
-document.addEventListener('click', () => dd.classList.remove('open'));
+// Shared close: hides the dropdown and its mobile backdrop together.
+function closeCatDropdown() {
+  dd.classList.remove('open');
+  const bd = document.getElementById('cat-dd-backdrop');
+  if (bd) bd.classList.remove('open');
+}
+document.addEventListener('click', closeCatDropdown);
+
+// Shared positioning: bottom-sheet + backdrop on mobile, anchored dropdown
+// (flipping up near the bottom) on desktop.
+function _positionCatDropdown(e) {
+  const isMobileSheet = window.matchMedia && window.matchMedia('(max-width:600px)').matches;
+  if (isMobileSheet) {
+    dd.style.top = ''; dd.style.left = ''; dd.style.bottom = '';
+    const bd = document.getElementById('cat-dd-backdrop');
+    if (bd) bd.classList.add('open');
+  } else {
+    const r = e.target.getBoundingClientRect();
+    dd.style.top  = (r.bottom + 4) + 'px';
+    dd.style.left = r.left + 'px';
+    const spaceBelow = window.innerHeight - r.bottom;
+    if (spaceBelow < 300) {
+      dd.style.top = 'auto';
+      dd.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+    } else {
+      dd.style.bottom = 'auto';
+    }
+  }
+  dd.classList.add('open');
+}
 
 function openDD(e, id) {
   e.stopPropagation();
@@ -5494,18 +5547,7 @@ function openDD(e, id) {
       <div class="cat-opt-dot" style="background:${c.color};"></div>${c.label}
     </div>`
   ).join('');
-  const r = e.target.getBoundingClientRect();
-  dd.style.top  = (r.bottom + 4) + 'px';
-  dd.style.left = r.left + 'px';
-  // flip up if near bottom
-  const spaceBelow = window.innerHeight - r.bottom;
-  if (spaceBelow < 300) {
-    dd.style.top = 'auto';
-    dd.style.bottom = (window.innerHeight - r.top + 4) + 'px';
-  } else {
-    dd.style.bottom = 'auto';
-  }
-  dd.classList.add('open');
+  _positionCatDropdown(e);
 }
 
 function setCat(id, key) {
@@ -5516,7 +5558,7 @@ function setCat(id, key) {
     learned[merchantKey(t.merchant)] = key;
     persist();
   }
-  dd.classList.remove('open');
+  closeCatDropdown();
   renderTxns();
   renderDashboard();
 }
@@ -5525,8 +5567,8 @@ let pendingTransferTxnId = null;
 
 function flagIncome(id, type) {
   const t = txns.find(x => x.id === id);
-  if (!t) { dd.classList.remove('open'); return; }
-  dd.classList.remove('open');
+  if (!t) { closeCatDropdown(); return; }
+  closeCatDropdown();
 
   if (type === 'transfer') {
     // Show category picker first
@@ -5588,7 +5630,7 @@ function setTransferCat(id, key) {
   const inc = incomes.find(i => i.fromTxnId === id);
   if (inc) inc.category = key;
   persist();
-  dd.classList.remove('open');
+  closeCatDropdown();
   renderTxns();
   renderDashboard();
   autoPush();
@@ -5607,23 +5649,18 @@ function openIncomeDD(e, id) {
     <div class="cat-opt-group">Convert To</div>
     <div class="cat-opt" onclick="convertToRefund('${id}')"><div class="cat-opt-dot" style="background:#9b2335;"></div>↩ Refund</div>
     <div class="cat-opt" onclick="unflagIncome('${id}')"><div class="cat-opt-dot" style="background:#71717a;"></div>Remove flag (keep as expense)</div>`;
-  const r = e.target.getBoundingClientRect();
-  dd.style.top = (r.bottom + 4) + 'px';
-  dd.style.left = r.left + 'px';
-  const spaceBelow = window.innerHeight - r.bottom;
-  if (spaceBelow < 200) { dd.style.top = 'auto'; dd.style.bottom = (window.innerHeight - r.top + 4) + 'px'; } else { dd.style.bottom = 'auto'; }
-  dd.classList.add('open');
+  _positionCatDropdown(e);
 }
 
 function convertToRefund(id) {
   const t = txns.find(x => x.id === id);
-  if (!t) { dd.classList.remove('open'); return; }
+  if (!t) { closeCatDropdown(); return; }
   incomes = incomes.filter(i => i.fromTxnId !== id);
   delete t.incomeType;
   t.refund = true;
   t.amount = -Math.abs(t.amount);
   persist();
-  dd.classList.remove('open');
+  closeCatDropdown();
   renderTxns();
   renderDashboard();
   autoPush();
@@ -5635,7 +5672,7 @@ function unflagIncome(id) {
   incomes = incomes.filter(i => i.fromTxnId !== id);
   delete t.incomeType;
   persist();
-  dd.classList.remove('open');
+  closeCatDropdown();
   renderTxns();
   renderDashboard();
   autoPush();
@@ -5664,7 +5701,7 @@ function recalcAllBalances() {
 }
 function flagSavings(id, accountId) {
   const t = txns.find(x => x.id === id);
-  if (!t) { dd.classList.remove('open'); return; }
+  if (!t) { closeCatDropdown(); return; }
   // Remove any existing income flag
   if (t.incomeType) {
     incomes = incomes.filter(i => i.fromTxnId !== id);
@@ -5696,7 +5733,7 @@ function flagSavings(id, accountId) {
     }
   }
   persist();
-  dd.classList.remove('open');
+  closeCatDropdown();
   renderTxns();
   renderDashboard();
   autoPush();
@@ -5712,22 +5749,18 @@ function openSavingsDD(e, id) {
     ${opts}
     <div class="cat-opt-group">Remove Flag</div>
     <div class="cat-opt" onclick="unflagSavings('${id}')"><div class="cat-opt-dot" style="background:#71717a;"></div>Remove savings flag</div>`;
-  const r = e.target.getBoundingClientRect();
-  dd.style.top = (r.bottom + 4) + 'px'; dd.style.left = r.left + 'px';
-  const spaceBelow = window.innerHeight - r.bottom;
-  if (spaceBelow < 200) { dd.style.top = 'auto'; dd.style.bottom = (window.innerHeight - r.top + 4) + 'px'; } else { dd.style.bottom = 'auto'; }
-  dd.classList.add('open');
+  _positionCatDropdown(e);
 }
 
 function unflagSavings(id) {
   const t = txns.find(x => x.id === id);
-  if (!t) { dd.classList.remove('open'); return; }
+  if (!t) { closeCatDropdown(); return; }
   const linked = contribs.find(c => c.fromTxnId === id);
   if (linked) reverseAccountBalance(linked.accountId, linked.amount, linked.type);
   contribs = contribs.filter(c => c.fromTxnId !== id);
   delete t.savingsAccountId;
   persist();
-  dd.classList.remove('open');
+  closeCatDropdown();
   renderTxns();
   renderDashboard();
   autoPush();
@@ -5825,9 +5858,18 @@ function showUndoToast(msg, onUndo, opts) {
   const undoBtn = document.createElement('button');
   undoBtn.textContent = 'Undo';
   undoBtn.setAttribute('aria-label', 'Undo — ' + msg);
+  // Dismiss X: commits immediately and hides the toast so it doesn't sit
+  // over content the user is trying to reach (e.g. a transaction at the
+  // very bottom of the list on mobile).
+  const dismissBtn = document.createElement('button');
+  dismissBtn.className = 'undo-toast-dismiss';
+  dismissBtn.innerHTML = '&times;';
+  dismissBtn.setAttribute('aria-label', 'Dismiss');
+  dismissBtn.setAttribute('title', 'Dismiss');
   el.innerHTML = '';
   el.appendChild(msgSpan);
   el.appendChild(undoBtn);
+  el.appendChild(dismissBtn);
   _undoToastPending = { onCommit, onUndo };
   const commit = () => {
     if (!_undoToastPending) return;
@@ -5845,6 +5887,7 @@ function showUndoToast(msg, onUndo, opts) {
     try { cb(); } catch (e) { console.error('[undo-toast] undo failed:', e); }
   };
   undoBtn.onclick = undo;
+  dismissBtn.onclick = () => { clearTimeout(_undoToastTimer); commit(); };
   requestAnimationFrame(() => el.classList.add('show'));
   _undoToastTimer = setTimeout(commit, durationMs);
   return commit;
@@ -6258,13 +6301,13 @@ function renderImportPreview() {
     const _personOptions = Array.from(document.querySelectorAll('input[name="person"]'))
       .map(r => r.value);
     const personCell = isIncome
-      ? `<select onchange="editImportRow(${i},'person',this.value)" title="Whose income" aria-label="Whose income" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:110px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${_personOptions.map(p => `<option value="${esc(p)}"${(t.person || '') === p ? ' selected' : ''}>${esc(p)}</option>`).join('')}</select>`
+      ? `<select class="imp-sel" onchange="editImportRow(${i},'person',this.value)" title="Whose income" aria-label="Whose income">${_personOptions.map(p => `<option value="${esc(p)}"${(t.person || '') === p ? ' selected' : ''}>${esc(p)}</option>`).join('')}</select>`
       : '';
     return `<tr data-row-idx="${i}" style="${rowStyle}">
       <td style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editImportRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td style="padding:3px 6px;"><select onchange="editImportRow(${i},'category',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:140px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${catSelect}</select></td>
+      <td style="padding:3px 6px;"><select class="imp-sel" onchange="editImportRow(${i},'category',this.value)">${catSelect}</select></td>
       <td class="import-preview-person-cell" style="padding:3px 6px;">${personCell || '<span style="color:var(--faint);font-size:11px;">—</span>'}</td>
       <td style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
