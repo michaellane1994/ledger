@@ -711,10 +711,19 @@ tbody tr:hover .row-menu-btn{opacity:1;}
    so they read as tappable selects, not plain text. */
 .imp-sel{appearance:none;-webkit-appearance:none;background-color:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 22px 5px 8px;font-size:12px;color:var(--ink);font-family:'Inter',sans-serif;cursor:pointer;outline:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 12px) 52%,calc(100% - 7px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;}
 .imp-sel:focus{border-color:var(--accent);}
-/* Mobile: let the preview table scroll horizontally instead of squishing. */
+/* Mobile: transform each preview row into a stacked labelled card (standard
+   responsive-table pattern) so nothing squishes and no horizontal scroll.
+   Shared .stmt-preview covers both the CSV mapper and PDF parse previews. */
 @media (max-width:600px){
-  #import-preview-table{min-width:600px;}
-  #import-preview > div[style*="overflow:auto"]{-webkit-overflow-scrolling:touch;}
+  .stmt-preview thead{display:none;}
+  .stmt-preview,.stmt-preview tbody{display:block;width:100%;}
+  .stmt-preview tr{display:block;border:1px solid var(--border)!important;border-radius:10px;margin-bottom:10px;padding:12px 10px 8px;background:var(--surface);position:relative;}
+  .stmt-preview td{display:flex;align-items:center;justify-content:space-between;gap:10px;width:auto!important;padding:5px 0!important;border:none!important;text-align:left!important;}
+  .stmt-preview td::before{content:attr(data-label);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;flex-shrink:0;}
+  .stmt-preview td[data-label=""]{position:absolute;top:6px;right:8px;padding:0!important;}
+  .stmt-preview td[data-label=""]::before{content:none;}
+  .stmt-preview td input,.stmt-preview td select{width:auto!important;max-width:60%;flex:1;text-align:right;}
+  .stmt-preview td .imp-sel{text-align:left;}
 }
 .mapper h3{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:12px;}
 .mapper-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
@@ -877,12 +886,11 @@ textarea,select{color:var(--ink);}
   input[type="search"],
   textarea,
   select{font-size:16px !important;}
-  /* Import preview on mobile: drop the vertical max-height so rows flow into
-     the modal's own scroll, but keep a horizontal scroll so the 6-column
-     table can be swiped sideways instead of squishing. Height auto = only
-     the horizontal axis actually scrolls. */
+  /* Import + PDF preview on mobile: drop the nested scroll region so the
+     card-transformed rows flow inline and the modal scrolls naturally. */
   #import-preview > div[style*="max-height:320px"],
-  #import-preview > div[style*="overflow:auto"]{max-height:none !important;overflow-x:auto !important;overflow-y:visible !important;}
+  #import-preview > div[style*="overflow:auto"],
+  .pdf-preview-wrap{max-height:none !important;overflow:visible !important;}
   #pdf-raw-text{height:140px !important;font-size:16px;}
   #pdf-step-2 > div[style*="max-height:280px"]{max-height:none;overflow:visible;}
 }
@@ -2290,7 +2298,7 @@ function doGet(e) {
         <button class="btn btn-ghost btn-sm" onclick="resetImportEdits()" id="reset-edits-btn" style="display:none;font-size:11px;padding:3px 9px;">Reset edits</button>
       </div>
       <div style="overflow:auto;max-height:320px;background:var(--surface);border:1px solid var(--border);border-radius:6px;">
-        <table id="import-preview-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+        <table id="import-preview-table" class="stmt-preview" style="width:100%;border-collapse:collapse;font-size:12px;">
           <thead><tr style="background:var(--bg);position:sticky;top:0;z-index:1;">
             <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Date</th>
             <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Merchant</th>
@@ -2371,8 +2379,8 @@ function doGet(e) {
         <div style="font-size:12.5px;color:var(--muted);" id="pdf-parse-summary"></div>
         <button class="btn btn-ghost btn-sm" onclick="resetPdfEdits()" id="pdf-reset-edits-btn" style="display:none;font-size:11px;padding:3px 9px;">Reset edits</button>
       </div>
-      <div style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);">
-        <table style="width:100%;border-collapse:collapse;">
+      <div class="pdf-preview-wrap" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);">
+        <table class="stmt-preview" style="width:100%;border-collapse:collapse;">
           <thead>
             <tr style="background:var(--bg);position:sticky;top:0;z-index:1;">
               <th style="padding:7px 10px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Date</th>
@@ -2907,7 +2915,9 @@ function restoreDismissedCommitments() {
 }
 const _cfExclRaw = localStorage.getItem('l3_cf_excluded_cats');
 let cfExcludedCats = new Set(_cfExclRaw !== null ? JSON.parse(_cfExclRaw) : []);
-let cfFromMonth      = localStorage.getItem('l3_cf_from')    || '';
+// From-month intentionally NOT restored: cashflow forecast defaults to the
+// earliest data month each load (renderCashflowChart resolves '' to earliest).
+let cfFromMonth      = '';
 let cfToMonth        = localStorage.getItem('l3_cf_to')      || '';
 let cfAvgFrom        = localStorage.getItem('l3_cf_avg_from') || '';
 let fvBonusVisible   = true;
@@ -6304,12 +6314,12 @@ function renderImportPreview() {
       ? `<select class="imp-sel" onchange="editImportRow(${i},'person',this.value)" title="Whose income" aria-label="Whose income">${_personOptions.map(p => `<option value="${esc(p)}"${(t.person || '') === p ? ' selected' : ''}>${esc(p)}</option>`).join('')}</select>`
       : '';
     return `<tr data-row-idx="${i}" style="${rowStyle}">
-      <td style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editImportRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td style="padding:3px 6px;"><select class="imp-sel" onchange="editImportRow(${i},'category',this.value)">${catSelect}</select></td>
-      <td class="import-preview-person-cell" style="padding:3px 6px;">${personCell || '<span style="color:var(--faint);font-size:11px;">—</span>'}</td>
-      <td style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
+      <td data-label="Date" style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editImportRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td data-label="Merchant" style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td data-label="Category" style="padding:3px 6px;"><select class="imp-sel" onchange="editImportRow(${i},'category',this.value)">${catSelect}</select></td>
+      <td data-label="Person" class="import-preview-person-cell" style="padding:3px 6px;">${personCell || '<span style="color:var(--faint);font-size:11px;">—</span>'}</td>
+      <td data-label="" style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
   }).join('');
   // Only show the Person column header + cells when at least one row is
@@ -8378,11 +8388,11 @@ function renderPdfPreview() {
       ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
       : 'border-bottom:1px solid var(--border);';
     return `<tr data-row-idx="${i}" style="${rowStyle}">
-      <td style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editPdfRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editPdfRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editPdfRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td style="padding:3px 6px;"><select onchange="editPdfRow(${i},'category',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:140px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${catSelect}</select></td>
-      <td style="padding:3px 4px;text-align:center;"><button onclick="deletePdfRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
+      <td data-label="Date" style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editPdfRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td data-label="Merchant" style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editPdfRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editPdfRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td data-label="Category" style="padding:3px 6px;"><select class="imp-sel" onchange="editPdfRow(${i},'category',this.value)">${catSelect}</select></td>
+      <td data-label="" style="padding:3px 4px;text-align:center;"><button onclick="deletePdfRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
   }).join('');
 
