@@ -530,6 +530,19 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .ms-btn.has-filter{border-color:var(--accent);color:var(--accent);}
 .ms-drop{position:absolute;top:calc(100% + 3px);left:0;min-width:160px;max-height:260px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:500;display:none;padding:3px 0;}
 .ms-drop.open{display:block;animation:fadeIn .1s ease;}
+/* "Done" header only shown in the mobile bottom-sheet form of a filter. */
+.ms-drop-done{display:none;position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:11px 16px;justify-content:space-between;align-items:center;z-index:1;}
+.ms-drop-done-title{font-weight:600;font-size:13px;color:var(--ink);}
+.ms-drop-done button{background:var(--accent);color:#fff;border:none;border-radius:100px;padding:6px 18px;font-size:13px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;}
+.ms-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:499;display:none;}
+@media (max-width:600px){
+  .ms-backdrop.open{display:block;}
+  .ms-drop{position:fixed !important;left:0 !important;right:0 !important;bottom:0 !important;top:auto !important;min-width:0;max-width:none;width:100%;max-height:75vh;border-radius:16px 16px 0 0;border-bottom:none;padding:0 0 env(safe-area-inset-bottom);}
+  .ms-drop.open{animation:sheetUp .2s cubic-bezier(.16,1,.3,1);}
+  .ms-drop-done{display:flex;}
+  .ms-opt{padding:13px 18px;font-size:15px;min-height:48px;}
+  .ms-check{width:18px;height:18px;}
+}
 .ms-opt{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;user-select:none;}
 .ms-opt:hover{background:var(--bg);}
 .ms-opt input[type=checkbox]{display:none;}
@@ -832,6 +845,12 @@ textarea,select{color:var(--ink);}
   #cf-from-month, #cf-to-month, #cf-avg-from,
   #cf-start-bal, #ms-cf-excl-btn, #cf-bonus-btn,
   #chart-from, #chart-to{font-size:11px !important;}
+  /* Dense inline number inputs (settings budget field, mortgage extra-
+     payment box) sit compactly beside a small label. Scope them back from
+     the 16px zoom-guard to ~13px; they accept a brief iOS focus-zoom. */
+  #cat-management-list input[inputmode="numeric"],
+  .mort-extra-input,
+  .num-inline{font-size:13px !important;}
   /* Needs vs Wants over time date pickers: pad slightly + let them
      grow so labels don't collide with the select value on mobile. */
   .chart-range{gap:6px;}
@@ -878,14 +897,16 @@ textarea,select{color:var(--ink);}
      16px keeps the visual weight roughly the same while stopping the zoom
      that made the upload / import mapper unusable on phones. */
   .mapper-field select,
+  /* iOS auto-zoom guard: only text-entry controls trigger focus zoom below
+     16px. <select> opens a native picker and never zooms, so it's kept OUT
+     of this list to preserve each dropdown's designed compact size. */
   .mapper-field input,
   input[type="text"],
   input[type="email"],
   input[type="number"],
   input[type="date"],
   input[type="search"],
-  textarea,
-  select{font-size:16px !important;}
+  textarea{font-size:16px !important;}
   /* Import + PDF preview on mobile: drop the nested scroll region so the
      card-transformed rows flow inline and the modal scrolls naturally. */
   #import-preview > div[style*="max-height:320px"],
@@ -2100,6 +2121,7 @@ function doGet(e) {
 <!-- CAT DROPDOWN -->
 <div class="cat-dd-backdrop" id="cat-dd-backdrop" onclick="closeCatDropdown()"></div>
 <div class="cat-dropdown" id="cat-dd"></div>
+<div class="ms-backdrop" id="ms-backdrop" onclick="closeAllMs()"></div>
 
 <!-- DUPLICATES MODAL -->
 <div class="modal-overlay" id="dupes-modal">
@@ -5291,18 +5313,27 @@ function saveTxnDate(id, date) {
   persist(); renderDashboard(); renderIncome(); autoPush();
 }
 // ── MULTI-SELECT FILTER WIDGETS ──────────────────────────
+function closeAllMs() {
+  document.querySelectorAll('.ms-drop.open').forEach(d => d.classList.remove('open'));
+  const bd = document.getElementById('ms-backdrop');
+  if (bd) bd.classList.remove('open');
+}
 function openMs(e, id) {
   e.stopPropagation();
   const drop = document.getElementById(id + '-drop');
   const isOpen = drop?.classList.contains('open');
-  document.querySelectorAll('.ms-drop.open').forEach(d => d.classList.remove('open'));
-  if (drop && !isOpen) drop.classList.add('open');
+  closeAllMs();
+  if (drop && !isOpen) {
+    drop.classList.add('open');
+    if (window.matchMedia && window.matchMedia('(max-width:600px)').matches) {
+      const bd = document.getElementById('ms-backdrop');
+      if (bd) bd.classList.add('open');
+    }
+  }
 }
-document.addEventListener('click', () => {
-  document.querySelectorAll('.ms-drop.open').forEach(d => d.classList.remove('open'));
-});
+document.addEventListener('click', closeAllMs);
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') document.querySelectorAll('.ms-drop.open').forEach(d => d.classList.remove('open'));
+  if (e.key === 'Escape') closeAllMs();
 });
 function toggleMsOpt(id, value) {
   const fs = id === 'ms-cat' ? txnCatFilter : id === 'ms-card' ? txnCardFilter : txnMonthFilter;
@@ -5318,7 +5349,9 @@ function buildMsDrop(id, items, filterSet) {
   const drop = document.getElementById(id + '-drop');
   if (!drop) return;
   const handler = id.startsWith('ms-inc') ? 'toggleIncMs' : 'toggleMsOpt';
-  drop.innerHTML = items.map(({value, label}) => {
+  const titles = {'ms-cat':'Categories','ms-card':'Cards','ms-month':'Months','ms-inc-type':'Income types','ms-inc-month':'Months'};
+  const doneHeader = `<div class="ms-drop-done"><span class="ms-drop-done-title">${titles[id] || 'Filter'}</span><button type="button" onclick="event.stopPropagation();closeAllMs();">Done</button></div>`;
+  drop.innerHTML = doneHeader + items.map(({value, label}) => {
     const v = value.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     return `<label class="ms-opt" onclick="event.stopPropagation()"><input type="checkbox" ${filterSet.has(value)?'checked':''} onchange="${handler}('${id}','${v}')"><span class="ms-check"></span><span>${esc(label)}</span></label>`;
   }).join('');
@@ -6293,6 +6326,7 @@ function renderImportPreview() {
     document.getElementById('import-preview-footer').innerHTML = '';
     return;
   }
+  const curSym = (CURRENCIES[globalCurrency] || CURRENCIES.CAD).short;
   body.innerHTML = rows.map((t, i) => {
     const amtAbs = Math.abs(t.amount);
     const amtColor = t.refund ? 'color:#16a34a;' : '';
@@ -6316,7 +6350,7 @@ function renderImportPreview() {
     return `<tr data-row-idx="${i}" style="${rowStyle}">
       <td data-label="Date" style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editImportRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Merchant" style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}${curSym}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Category" style="padding:3px 6px;"><select class="imp-sel" onchange="editImportRow(${i},'category',this.value)">${catSelect}</select></td>
       <td data-label="Person" class="import-preview-person-cell" style="padding:3px 6px;">${personCell || '<span style="color:var(--faint);font-size:11px;">—</span>'}</td>
       <td data-label="" style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
@@ -8374,6 +8408,7 @@ function renderPdfPreview() {
     const r = document.getElementById('pdf-reset-edits-btn'); if (r) r.style.display = 'none';
     return;
   }
+  const curSym = (CURRENCIES[globalCurrency] || CURRENCIES.CAD).short;
   tbody.innerHTML = pdfParsedTxns.map((t, i) => {
     const amtAbs = Math.abs(t.amount);
     const amtColor = t.amount < 0 ? 'color:#16a34a;' : '';
@@ -8390,7 +8425,7 @@ function renderPdfPreview() {
     return `<tr data-row-idx="${i}" style="${rowStyle}">
       <td data-label="Date" style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editPdfRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Merchant" style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editPdfRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editPdfRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}${curSym}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editPdfRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Category" style="padding:3px 6px;"><select class="imp-sel" onchange="editPdfRow(${i},'category',this.value)">${catSelect}</select></td>
       <td data-label="" style="padding:3px 4px;text-align:center;"><button onclick="deletePdfRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
