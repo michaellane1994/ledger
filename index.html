@@ -7,7 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- pdf.js is lazy-loaded by ensurePdfJs() on first PDF upload. -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <style>
 /* ============================================================
    v3 Design System (driven by ui-ux-pro-max skill)
@@ -8187,6 +8188,20 @@ async function autoPush() {
 let pdfParsedTxns = [];
 let pdfFile = null;
 
+// Lazy pdf.js loader - ~350KB fetched only on first PDF upload.
+let _pdfJsPromise = null;
+function ensurePdfJs() {
+  if (window.pdfjsLib) return Promise.resolve();
+  if (_pdfJsPromise) return _pdfJsPromise;
+  _pdfJsPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => { _pdfJsPromise = null; reject(new Error('Could not load the PDF reader. Check your connection and try again.')); };
+    document.head.appendChild(s);
+  });
+  return _pdfJsPromise;
+}
 async function openPdfParser(file) {
   pdfFile = file;
   document.getElementById('pdf-filename').textContent = file.name;
@@ -8205,6 +8220,7 @@ async function openPdfParser(file) {
   populatePdfCardTypeDropdown(cardGuess);
 
   try {
+    await ensurePdfJs();
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
