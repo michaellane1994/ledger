@@ -2535,8 +2535,7 @@ function doGet(e) {
       </div>
       <div class="add-field full">
         <label>Card Name <span style="color:var(--faint);font-weight:400;">(optional — e.g. RBC Chequing, Amex)</span></label>
-        <input type="text" id="add-card" placeholder="Select or type a card" list="add-card-list" autocomplete="off">
-        <datalist id="add-card-list"></datalist>
+        <select id="add-card-select" onchange="onAddCardSelectChange()"></select>
       </div>
       <div class="add-field full">
         <label>Note (optional)</label>
@@ -6945,11 +6944,35 @@ function toggleAddNw() {
 
 // Populate the Add/Edit Transaction card dropdown with existing card names so
 // the field acts as a pick-list (still type-to-add-new via the datalist).
-function _fillAddCardDatalist() {
-  const dl = document.getElementById('add-card-list');
-  if (!dl) return;
-  dl.innerHTML = [...new Set(txns.map(t => t.card).filter(Boolean))].sort()
-    .map(c => `<option value="${esc(c)}">`).join('');
+// Add/Edit Transaction card dropdown: a real <select> of known cards (union of
+// saved cardTypes and cards already used in txns, so sample-data cards show)
+// plus a "+ Type a new card name..." option that prompts for a new one.
+function populateAddCardDropdown(preselect) {
+  const sel = document.getElementById('add-card-select');
+  if (!sel) return;
+  const all = [...new Set([...(cardTypes || []), ...txns.map(t => t.card).filter(Boolean)])]
+    .sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = ['<option value="">No card details</option>']
+    .concat(all.map(c => `<option value="${esc(c)}">${esc(c)}</option>`))
+    .concat(['<option value="__new__">+ Type a new card name...</option>'])
+    .join('');
+  sel.value = (preselect && all.includes(preselect)) ? preselect : '';
+}
+function onAddCardSelectChange() {
+  const sel = document.getElementById('add-card-select');
+  if (!sel || sel.value !== '__new__') return;
+  const raw = prompt('New card name (e.g. "Amex Gold", "TD Chequing"):', '');
+  const trimmed = (raw || '').trim();
+  if (!trimmed) { sel.value = ''; return; }
+  const existing = (cardTypes || []).find(c => c.toLowerCase() === trimmed.toLowerCase());
+  const finalName = existing || trimmed;
+  if (!existing) { cardTypes.push(trimmed); cardTypes.sort((a, b) => a.localeCompare(b)); persist(); }
+  populateAddCardDropdown(finalName);
+}
+function getAddCardName() {
+  const sel = document.getElementById('add-card-select');
+  const v = sel ? (sel.value || '').trim() : '';
+  return (v && v !== '__new__') ? v : 'No card details';
 }
 function openAddModal() {
   _editTxnId = null;
@@ -6960,8 +6983,7 @@ function openAddModal() {
   document.getElementById('add-date').value     = new Date().toISOString().slice(0,10);
   document.getElementById('add-amount').value   = '';
   document.getElementById('add-merchant').value = '';
-  document.getElementById('add-card').value     = '';
-  _fillAddCardDatalist();
+  populateAddCardDropdown('');
   document.getElementById('add-note').value     = '';
   document.getElementById('add-modal-title').textContent = 'Add Transaction';
   document.getElementById('add-modal-confirm-btn').textContent = 'Add →';
@@ -6993,8 +7015,7 @@ function openEditModal(id) {
   document.getElementById('add-amount').value   = Math.abs(t.amount || 0);
   document.getElementById('add-merchant').value = t.merchant || '';
   document.getElementById('add-person').value   = t.person || 'Michael';
-  document.getElementById('add-card').value     = t.card || '';
-  _fillAddCardDatalist();
+  populateAddCardDropdown(t.card || '');
   document.getElementById('add-note').value     = t.note || '';
   // Title and confirm button
   document.getElementById('add-modal-title').textContent = 'Edit Transaction';
@@ -7020,7 +7041,7 @@ function confirmAdd() {
   const amount   = parseFloat(document.getElementById('add-amount').value);
   const category = document.getElementById('add-cat').value;
   const person   = document.getElementById('add-person').value;
-  const card     = document.getElementById('add-card').value.trim() || 'No card details';
+  const card     = getAddCardName();
   const note     = document.getElementById('add-note').value.trim();
 
   if (!date)              { alert('Please enter a date.'); return; }
@@ -7053,7 +7074,7 @@ function saveEditTxn() {
   const amount   = parseFloat(document.getElementById('add-amount').value);
   const category = document.getElementById('add-cat').value;
   const person   = document.getElementById('add-person').value;
-  const card     = document.getElementById('add-card').value.trim() || 'No card details';
+  const card     = getAddCardName();
   const note     = document.getElementById('add-note').value.trim();
 
   if (!date)              { alert('Please enter a date.'); return; }
