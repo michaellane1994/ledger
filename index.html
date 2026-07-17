@@ -656,7 +656,7 @@ tbody td{padding:10px 15px;font-size:13.5px;vertical-align:middle;}
 tbody tr:hover .del-btn{opacity:1;}
 /* Edit-action variant: accent-colored, bigger, always visible on its own. Distinguishes the
    pencil from the delete X so users can find it at a glance. */
-.del-btn.edit-btn{color:var(--accent);font-size:16px;opacity:1;border:1px solid var(--border);background:var(--surface);}
+.del-btn.edit-btn{color:var(--accent);font-size:16px;opacity:1;border:1px solid var(--border);background:var(--surface);margin-right:8px;margin-bottom:5px;}
 .del-btn.edit-btn:hover{color:var(--accent-hover);background:var(--accent-soft);border-color:var(--accent);}
 /* Touch devices have no hover, so always show the row action buttons (edit, delete). */
 @media (hover: none), (max-width: 768px){
@@ -5782,6 +5782,28 @@ function renderLabelsCard() {
       <span class="lbl-card-sub">${r.count} txn${r.count !== 1 ? 's' : ''}${r.min ? ' · ' + _lblRange(r.min, r.max) : ''}</span>
     </button>`).join('') + `</div>`;
 }
+// Recurring is treated as a property of a merchant: flagging (or unflagging) a
+// transaction propagates to every other transaction with the same merchant, so
+// identical expenses stay in sync. Returns how many OTHER txns changed.
+function propagateRecurring(merchant, on) {
+  const key = (merchant || '').toLowerCase().trim();
+  if (!key) return 0;
+  let n = 0;
+  txns.forEach(t => {
+    if ((t.merchant || '').toLowerCase().trim() !== key) return;
+    if (t.savingsAccountId) return;
+    if (t.incomeType && t.incomeType !== 'transfer') return;
+    if (on) { if (!t.recurring) { t.recurring = true; n++; } }
+    else if (t.recurring) { delete t.recurring; n++; }
+  });
+  return n;
+}
+// Auto-flag freshly-imported txns whose merchant is already a known recurring one.
+function autoFlagImportedRecurring(fresh) {
+  const set = new Set();
+  txns.forEach(t => { if (t.recurring) { const k = (t.merchant || '').toLowerCase().trim(); if (k) set.add(k); } });
+  (fresh || []).forEach(t => { if (set.has((t.merchant || '').toLowerCase().trim())) t.recurring = true; });
+}
 function renderRecurringCard() {
   const section = document.getElementById('recurring-section');
   const body = document.getElementById('recurring-body');
@@ -7139,6 +7161,7 @@ async function doImport() {
     skipped  = expenseParsed.length - fresh.length;
     txns     = [...txns, ...fresh];
   }
+  autoFlagImportedRecurring(fresh);
 
   // Income rows: push a linked (txn + income) pair so the row shows up in BOTH
   // the Transactions tab (with income badge) AND the Income tab. Matches the
@@ -7412,6 +7435,7 @@ function confirmAdd() {
   const label = getAddLabel();
   const newTxn = { id: uid(), date, merchant, amount: finalAmount, category, person, card, note, manual: true, refund: isRefund, ...(recurring ? { recurring: true } : {}), ...(label ? { label } : {}) };
   txns.push(newTxn);
+  if (recurring) propagateRecurring(merchant, true);
   if (isTransfer) applyIncomeFlag(newTxn.id, 'transfer', category);
   persist();
   closeAddModal();
@@ -7445,7 +7469,10 @@ function saveEditTxn() {
   const isProtected    = (wasIncomeType && wasIncomeType !== 'transfer') || !!wasSavingsAcct;
 
   // Common fields
-  if (document.getElementById('add-recurring')?.checked) t.recurring = true; else delete t.recurring;
+  const _recOn = !!document.getElementById('add-recurring')?.checked;
+  if (_recOn) t.recurring = true; else delete t.recurring;
+  const _recProp = propagateRecurring(merchant, _recOn);
+  if (_recProp > 0 && typeof showToast === 'function') showToast(`${_recOn ? 'Flagged' : 'Unflagged'} ${_recProp} other "${merchant}" transaction${_recProp !== 1 ? 's' : ''} as recurring`);
   { const lbl = getAddLabel(); if (lbl) t.label = lbl; else delete t.label; }
   t.date     = date;
   t.merchant = merchant;
@@ -9176,6 +9203,7 @@ async function importPdfTransactions() {
     skipped = expenseRows.length - fresh.length;
     txns    = [...txns, ...fresh];
   }
+  autoFlagImportedRecurring(fresh);
 
   // Income rows: push a linked (txn + income) pair so the row shows up in BOTH
   // the Transactions tab (with income badge) AND the Income tab. Matches the
