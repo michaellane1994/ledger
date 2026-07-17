@@ -289,6 +289,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .bd-cat-name .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .bd-cat-amt{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
 .bd-empty{padding:24px;text-align:center;color:var(--faint);font-size:13.5px;}
+.bd-drill{cursor:pointer;}
+.bd-group-head.bd-drill:hover .nm{text-decoration:underline;}
+.bd-cat-line.bd-drill:hover .lbl{text-decoration:underline;}
 .bd-other{cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .bd-other .bd-caret{display:inline-block;margin-left:2px;color:var(--faint);font-size:11px;transition:transform .15s;}
 .bd-other.open .bd-caret{transform:rotate(90deg);}
@@ -4902,6 +4905,27 @@ function toggleBreakdownOther(el) {
   const rest = el.nextElementSibling;
   if (rest && rest.classList.contains('bd-cat-rest')) rest.classList.toggle('open');
 }
+// Drill from a Breakdown group/row into the filtered Transactions list.
+function breakdownDrill(el) {
+  const g = el.getAttribute('data-g') || '';
+  const c = el.getAttribute('data-c') || '';
+  txnTypeFilter  = 'expenses';
+  txnNeedsFilter = '';
+  txnCatFilter   = c ? new Set([c]) : new Set();
+  txnCardFilter  = new Set();
+  txnMonthFilter = new Set();
+  txnLabelFilter = '';
+  const srch = document.getElementById('f-search'); if (srch) srch.value = '';
+  const pf = document.getElementById('f-person');
+  if (breakdownMode === 'person') {
+    if (pf) pf.value = (g && g !== 'Unassigned') ? g : '';
+  } else {
+    if (pf) pf.value = '';
+    if (g && g !== 'No card') txnCardFilter = new Set([g]);
+  }
+  goNav('transactions');
+  renderTxns();
+}
 function renderBreakdown() {
   const section = document.getElementById('breakdown-section');
   const body    = document.getElementById('breakdown-body');
@@ -4984,7 +5008,7 @@ function renderBreakdown() {
     const isJoint = breakdownMode === 'person' && r.name === 'Joint';
     const jointPill = (isJoint && typeof showJoint !== 'undefined' && showJoint) ? `<span class="bd-joint-pill">Shared</span>` : '';
     const catLine = (c) => `
-      <div class="bd-cat-line">
+      <div class="bd-cat-line bd-drill" data-g="${esc(r.name)}" data-c="${esc(c.key)}" onclick="breakdownDrill(this)" title="View these transactions">
         <span class="bd-cat-name"><span class="dot" style="background:${c.color};"></span><span class="lbl">${esc(c.label)}</span></span>
         <span class="bd-cat-amt">${fmt(c.amount)}</span>
       </div>`;
@@ -5001,7 +5025,7 @@ function renderBreakdown() {
     }
     return `
       <div class="bd-group">
-        <div class="bd-group-head">
+        <div class="bd-group-head bd-drill" data-g="${esc(r.name)}" data-c="" onclick="breakdownDrill(this)" title="View all these transactions">
           <span class="bd-group-name"><span class="nm">${esc(r.name)}</span>${jointPill}</span>
           <span class="bd-group-total">${fmt(r.total)}</span>
         </div>
