@@ -273,6 +273,22 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:11px;margin-bottom:18px;}
 /* Money flow card (Sankey diagram: income sources -> destinations). */
 .moneyflow-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-xs);padding:var(--s-4) var(--s-5);}
+/* Breakdown card: spending grouped by person or card, each with a mini
+   category list. */
+.bd-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+.bd-group{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);padding:14px 16px;}
+.bd-group-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.bd-group-name{font-weight:600;font-size:14px;color:var(--ink);display:flex;align-items:center;gap:8px;min-width:0;}
+.bd-group-name > .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bd-joint-pill{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--accent);background:var(--accent-soft);padding:2px 7px;border-radius:100px;flex-shrink:0;}
+.bd-group-total{font-weight:700;font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums;flex-shrink:0;}
+.bd-cat-list{display:flex;flex-direction:column;gap:7px;}
+.bd-cat-line{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;font-size:12.5px;}
+.bd-cat-name{display:flex;align-items:center;gap:8px;color:var(--ink-2);min-width:0;}
+.bd-cat-name .dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+.bd-cat-name .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bd-cat-amt{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.bd-empty{padding:24px;text-align:center;color:var(--faint);font-size:13.5px;}
 #moneyflow-svg-container{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
 /* Money-flow hover tooltip. Follows the cursor (Chart.js-style) with a small
    dark bubble, positioned above-right of the pointer and flipped when it
@@ -1331,6 +1347,25 @@ textarea,select{color:var(--ink);}
           <div id="mf-sheet-body" class="mf-sheet-body"></div>
         </div>
       </div>
+
+      <section class="dash-section" id="breakdown-section" style="display:none;">
+        <div class="dash-section-head">
+          <div class="dash-section-head-text">
+            <div class="dash-section-eyebrow">Who spent what</div>
+            <div class="dash-section-title">Breakdown</div>
+            <div class="dash-section-sub" id="breakdown-sub">Spending split by person or card, for this period.</div>
+          </div>
+          <div class="dash-section-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div class="moneyflow-mode-toggle" role="group" aria-label="Breakdown dimension">
+              <button id="breakdown-mode-person" class="moneyflow-mode-btn active" onclick="setBreakdownMode('person')" title="Group spending by person">By person</button>
+              <button id="breakdown-mode-card" class="moneyflow-mode-btn" onclick="setBreakdownMode('card')" title="Group spending by card">By card</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body" id="breakdown-body"></div>
+        </div>
+      </section>
 
       <section class="dash-section" id="commitments-section" style="display:none;">
         <div class="dash-section-head">
@@ -4764,6 +4799,95 @@ function attachMoneyflowTooltips(container) {
   });
 }
 
+// ── BREAKDOWN (spending by person / card) ────────────────────
+// A dashboard card that groups the period's expenses by person or by card,
+// each with a mini list of its top categories. The "By person" view includes
+// a Joint group (styled with a shared pill) that aligns with the "Show Joint
+// option" setting; expenses with no person/card fall into an "Unassigned" /
+// "No card" group.
+let breakdownMode = localStorage.getItem('l3_breakdown_mode') || 'person'; // 'person' | 'card'
+function setBreakdownMode(m) {
+  if (m !== 'person' && m !== 'card') return;
+  breakdownMode = m;
+  localStorage.setItem('l3_breakdown_mode', m);
+  renderBreakdown();
+}
+function renderBreakdown() {
+  const section = document.getElementById('breakdown-section');
+  const body    = document.getElementById('breakdown-body');
+  if (!section || !body) return;
+
+  // Toggle button active states.
+  const pBtn = document.getElementById('breakdown-mode-person');
+  const cBtn = document.getElementById('breakdown-mode-card');
+  if (pBtn) pBtn.classList.toggle('active', breakdownMode === 'person');
+  if (cBtn) cBtn.classList.toggle('active', breakdownMode === 'card');
+
+  // Gather the period's expenses (same predicate the money flow uses).
+  const groups = {}; // key -> { total, cats: {catKey: amount} }
+  let anyExpense = false;
+  txns.forEach(t => {
+    if (!dashPeriodTest(t.date)) return;
+    if ((t.amount || 0) <= 0) return;
+    if (t.savingsAccountId) return;
+    if (t.incomeType && t.incomeType !== 'transfer') return;
+    anyExpense = true;
+    let key;
+    if (breakdownMode === 'person') key = (t.person && t.person.trim()) || 'Unassigned';
+    else key = (t.card && t.card.trim()) || 'No card';
+    const g = groups[key] || (groups[key] = { total: 0, cats: {} });
+    g.total += t.amount;
+    const ck = t.category || '__uncat';
+    g.cats[ck] = (g.cats[ck] || 0) + t.amount;
+  });
+
+  const rows = Object.entries(groups)
+    .map(([name, g]) => ({ name, total: g.total, cats: g.cats }))
+    .sort((a, b) => b.total - a.total);
+
+  if (!anyExpense || rows.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+
+  const catMeta = (key) => {
+    const c = CATS.find(x => x.key === key);
+    return { label: c ? c.label : (key === '__uncat' ? 'Uncategorised' : key), color: (c && c.color) || 'var(--border-2)' };
+  };
+
+  const html = `<div class="bd-groups">` + rows.map(r => {
+    const catRows = Object.entries(r.cats)
+      .map(([key, amount]) => ({ key, amount, ...catMeta(key) }))
+      .sort((a, b) => b.amount - a.amount);
+    // Show top 5 categories; roll the rest into "Other".
+    const TOP = 5;
+    let shown = catRows.slice(0, TOP);
+    const rest = catRows.slice(TOP);
+    if (rest.length) {
+      const restSum = rest.reduce((s, x) => s + x.amount, 0);
+      shown.push({ key: '__other', amount: restSum, label: `Other (${rest.length})`, color: 'var(--border-2)' });
+    }
+    const isJoint = breakdownMode === 'person' && r.name === 'Joint';
+    const jointPill = (isJoint && typeof showJoint !== 'undefined' && showJoint) ? `<span class="bd-joint-pill">Shared</span>` : '';
+    const catListHtml = shown.map(c => `
+      <div class="bd-cat-line">
+        <span class="bd-cat-name"><span class="dot" style="background:${c.color};"></span><span class="lbl">${esc(c.label)}</span></span>
+        <span class="bd-cat-amt">${fmt(c.amount)}</span>
+      </div>`).join('');
+    return `
+      <div class="bd-group">
+        <div class="bd-group-head">
+          <span class="bd-group-name"><span class="nm">${esc(r.name)}</span>${jointPill}</span>
+          <span class="bd-group-total">${fmt(r.total)}</span>
+        </div>
+        <div class="bd-cat-list">${catListHtml}</div>
+      </div>`;
+  }).join('') + `</div>`;
+
+  body.innerHTML = html;
+}
+
 function renderDashboard() {
   renderPills();
   if (typeof renderCurrencyDropdown === 'function') renderCurrencyDropdown();
@@ -5155,6 +5279,7 @@ function renderDashboard() {
   renderChartSection();
   renderCashflowChart();
   renderMoneyflow();
+  renderBreakdown();
 
   // Recent 5 — positive-amount expenses only (excludes transfers and refunds)
   const recent = [...expenses].filter(t => effectiveAmt(t) > 0).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
