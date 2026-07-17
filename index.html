@@ -175,7 +175,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .topbar-title:focus{outline:none;}
 .topbar-title:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
 .month-pills{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;align-items:center;}
-.mpill{padding:4px 11px;border-radius:100px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap;flex-shrink:0;}
+.mpill{padding:4px 11px;border-radius:100px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap;flex-shrink:0;}
 .mpill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .mpill.year-pill{font-weight:600;font-size:12px;}
 .pill-sep{width:1px;background:var(--border);margin:2px 4px;align-self:stretch;flex-shrink:0;}
@@ -2979,6 +2979,16 @@ function renderPills() {
     const sep = document.createElement('div');
     sep.className = 'pill-sep';
     container.appendChild(sep);
+    // Quick views so the top bar can show Latest / last 3 months / year-to-date
+    // as well as a specific month or the full year — and always reflects which
+    // one is active.
+    [['latest','Latest'],['3m','3M'],['ytd','YTD']].forEach(([key,label]) => {
+      const p = document.createElement('div');
+      p.className = 'mpill' + (dashPeriod === key ? ' active' : '');
+      p.textContent = label;
+      p.onclick = () => { dashPeriod = key; renderPills(); renderDashboard(); };
+      container.appendChild(p);
+    });
     // Full Year pill
     const fy = document.createElement('div');
     fy.className = 'mpill' + (dashPeriod === 'year' ? ' active' : '');
@@ -2992,7 +3002,7 @@ function renderPills() {
       const msel = document.createElement('select');
       msel.className = 'year-select month-select';
       msel.setAttribute('aria-label', 'Month');
-      const placeholder = `<option value="" disabled${dashPeriod === 'year' ? ' selected' : ''}>Month</option>`;
+      const placeholder = `<option value="" disabled${dashPeriod !== '' ? ' selected' : ''}>Month</option>`;
       const monthOpts = yearMonths.map(m => {
         const [, mo] = m.split('-');
         const label = new Date(selYear, mo - 1).toLocaleString('default', { month: 'short' });
