@@ -582,6 +582,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .txn-table.selecting .txn-sel-cell{display:table-cell;}
 .txn-sel-cell input{width:15px;height:15px;cursor:pointer;accent-color:var(--accent);}
 .lbl-chip{display:inline-block;font-size:10px;font-weight:600;padding:1px 8px;border-radius:100px;background:color-mix(in srgb, var(--lc) 16%, transparent);color:var(--lc);vertical-align:middle;white-space:nowrap;letter-spacing:.1px;}
+.recur-chip{display:inline-block;font-size:11px;color:var(--accent);vertical-align:middle;font-weight:700;}
 .bulk-bar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2100;display:none;align-items:center;gap:8px;background:#1f1c15;color:#fff;padding:8px 10px 8px 16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.32);flex-wrap:wrap;max-width:94vw;}
 .bulk-bar .bulk-count{font-size:13px;font-weight:600;margin-right:2px;white-space:nowrap;}
 .bulk-bar select{font-size:12.5px;font-family:'Inter',sans-serif;padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;outline:none;}
@@ -1607,6 +1608,7 @@ textarea,select{color:var(--ink);}
         <select id="bulk-person" onchange="bulkApply('person',this.value)" title="Set person"></select>
         <select id="bulk-card" onchange="bulkApply('card',this.value)" title="Set card"></select>
         <select id="bulk-label" onchange="bulkApply('label',this.value)" title="Set label"></select>
+        <select id="bulk-recur" onchange="bulkApply('recurring',this.value)" title="Set recurring"></select>
         <button class="bulk-done" onclick="toggleTxnSelectMode()">Done</button>
       </div>
       <div class="txn-table">
@@ -1999,8 +2001,8 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
     if (data.action === 'push') {
-      writeSheet(ss, SHEET_NAME, ['id','date','merchant','amount','category','person','card','note','refund','manual','incomeType','savingsAccountId','incomeCategory','needs','rental','label'],
-        (data.txns||[]).map(t => [t.id,t.date,t.merchant,t.amount,t.category,t.person||'',t.card||'',t.note||'',t.refund?'true':'false',t.manual?'true':'false',t.incomeType||'',t.savingsAccountId||'',t.incomeCategory||'',t.needs===true?'true':t.needs===false?'false':'',t.rental?'true':'',t.label||'']));
+      writeSheet(ss, SHEET_NAME, ['id','date','merchant','amount','category','person','card','note','refund','manual','incomeType','savingsAccountId','incomeCategory','needs','rental','label','recurring'],
+        (data.txns||[]).map(t => [t.id,t.date,t.merchant,t.amount,t.category,t.person||'',t.card||'',t.note||'',t.refund?'true':'false',t.manual?'true':'false',t.incomeType||'',t.savingsAccountId||'',t.incomeCategory||'',t.needs===true?'true':t.needs===false?'false':'',t.rental?'true':'',t.label||'',t.recurring?'true':'']));
       writeSheet(ss, LEARNED_SHEET, ['merchant','category'],
         Object.entries(data.learned||{}).map(([m,c]) => [m,c]));
       writeSheet(ss, INCOME_SHEET, ['id','date','amount','type','person','desc','note','fromTxnId','category'],
@@ -2018,7 +2020,7 @@ function doPost(e) {
     }
 
     if (data.action === 'pull') {
-      const txns     = readSheet(ss, SHEET_NAME,   r => ({id:r.id,date:r.date,merchant:r.merchant,amount:parseFloat(r.amount)||0,category:r.category,person:r.person,card:r.card||'',note:r.note,refund:r.refund===true||r.refund==='true',manual:r.manual===true||r.manual==='true',incomeType:r.incomeType||undefined,savingsAccountId:r.savingsAccountId||undefined,incomeCategory:r.incomeCategory||undefined,needs:(r.needs===true||r.needs==='true')?true:(r.needs===false||r.needs==='false')?false:undefined,rental:(r.rental===true||r.rental==='true')?true:undefined,label:r.label||undefined}));
+      const txns     = readSheet(ss, SHEET_NAME,   r => ({id:r.id,date:r.date,merchant:r.merchant,amount:parseFloat(r.amount)||0,category:r.category,person:r.person,card:r.card||'',note:r.note,refund:r.refund===true||r.refund==='true',manual:r.manual===true||r.manual==='true',incomeType:r.incomeType||undefined,savingsAccountId:r.savingsAccountId||undefined,incomeCategory:r.incomeCategory||undefined,needs:(r.needs===true||r.needs==='true')?true:(r.needs===false||r.needs==='false')?false:undefined,rental:(r.rental===true||r.rental==='true')?true:undefined,label:r.label||undefined,recurring:(r.recurring===true||r.recurring==='true')?true:undefined}));
       const learned  = {}; readSheet(ss, LEARNED_SHEET, r => r).forEach(r => { if(r.merchant) learned[r.merchant]=r.category; });
       const incomes  = readSheet(ss, INCOME_SHEET,  r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,type:r.type,person:r.person,desc:r.desc,note:r.note,fromTxnId:r.fromTxnId||undefined,category:r.category||undefined}));
       const savAccts = readSheet(ss, SAVINGS_SHEET, r => ({id:r.id,name:r.name,type:r.type,person:r.person,balance:parseFloat(r.balance)||0,baseBalance:parseFloat(r.baseBalance)||0,goal:r.goal?parseFloat(r.goal):null,currency:r.currency||'',balanceEquiv:r.balanceEquiv?parseFloat(r.balanceEquiv):null}));
@@ -2593,6 +2595,11 @@ function doGet(e) {
       <div class="add-field full">
         <label>Note (optional)</label>
         <textarea id="add-note" placeholder="e.g. Expensed through work, John transferred $40 for dinner"></textarea>
+      </div>
+      <div class="add-field full">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;font-size:13px;">
+          <input type="checkbox" id="add-recurring" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;"> Recurring &mdash; a regular cost like rent or a subscription
+        </label>
       </div>
       <div class="add-field" id="add-nw-field" style="display:none;">
         <label>Needs / Wants override</label>
@@ -5577,6 +5584,7 @@ function resetTxnFilters() {
   txnCardFilter  = new Set();
   txnMonthFilter = new Set();
   txnLabelFilter = '';
+  txnRecurringFilter = false;
   txnSort        = 'date-desc';
   const s = document.getElementById('f-search'); if (s) s.value = '';
   const p = document.getElementById('f-person'); if (p) p.value = '';
@@ -5701,6 +5709,8 @@ function filterByLabel(id) {
   renderTxns();
 }
 function clearLabelFilter() { txnLabelFilter = ''; renderTxns(); }
+let txnRecurringFilter = false;
+function toggleRecurringFilter() { txnRecurringFilter = !txnRecurringFilter; renderTxns(); }
 function renderLabelsCard() {
   const section = document.getElementById('labels-section');
   const body = document.getElementById('labels-body');
@@ -5764,6 +5774,7 @@ function renderBulkBar() {
   const allCards = [...new Set([...(cardTypes || []), ...txns.map(t => t.card).filter(Boolean)])].sort((a,b)=>a.localeCompare(b));
   document.getElementById('bulk-card').innerHTML = '<option value="">Set card…</option>' + allCards.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
   document.getElementById('bulk-label').innerHTML = '<option value="">Set label…</option>' + labels.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('') + '<option value="__none__">— Remove label —</option><option value="__new__">+ New label…</option>';
+  document.getElementById('bulk-recur').innerHTML = '<option value="">Recurring…</option><option value="yes">Mark recurring</option><option value="no">Not recurring</option>';
 }
 function bulkApply(field, value) {
   if (!value || !selectedTxnIds.size) { renderBulkBar(); return; }
@@ -5781,6 +5792,7 @@ function bulkApply(field, value) {
     else if (field === 'person') t.person = value;
     else if (field === 'card') t.card = value;
     else if (field === 'label') { if (clearLabel) delete t.label; else t.label = value; }
+    else if (field === 'recurring') { if (value === 'yes') t.recurring = true; else delete t.recurring; }
   });
   persist();
   if (typeof autoPush === 'function') autoPush();
@@ -5828,7 +5840,7 @@ function renderTxns() {
   if (pillsEl) {
     const tp = (type, label) => `<span class="tcp tcp-transfer${txnTypeFilter === type ? ' active' : ''}" onclick="setTxnTypePill('${type}')">${label}</span>`;
     const np = (kind, label) => `<span class="tcp tcp-needs${txnNeedsFilter === kind ? ' active' : ''}" onclick="setTxnNeedsPill('${kind}')">${label}</span>`;
-    pillsEl.innerHTML = tp('expenses','Expenses') + tp('transfer','Transfers') + tp('income','Income') + '<span style="display:inline-block;width:1px;height:14px;background:var(--border);margin:0 6px;vertical-align:middle;"></span>' + np('needs','Needs') + np('wants','Wants');
+    pillsEl.innerHTML = tp('expenses','Expenses') + tp('transfer','Transfers') + tp('income','Income') + '<span style="display:inline-block;width:1px;height:14px;background:var(--border);margin:0 6px;vertical-align:middle;"></span>' + np('needs','Needs') + np('wants','Wants') + `<span class="tcp tcp-transfer${txnRecurringFilter ? ' active' : ''}" onclick="toggleRecurringFilter()" title="Show only recurring">↻ Recurring</span>`;
     if (txnLabelFilter) {
       const l = labelById(txnLabelFilter);
       if (l) pillsEl.innerHTML += `<span class="lbl-filter-chip" style="--lc:${l.color};">Label: ${esc(l.name)} <button onclick="clearLabelFilter()" aria-label="Clear label filter" title="Clear label filter">✕</button></span>`;
@@ -5871,6 +5883,7 @@ function renderTxns() {
     }
     if (cpf && t.person !== cpf) return false;
     if (txnLabelFilter && t.label !== txnLabelFilter) return false;
+    if (txnRecurringFilter && !t.recurring) return false;
     if (txnCardFilter.size > 0  && !txnCardFilter.has(t.card))                    return false;
     if (txnMonthFilter.size > 0 && !txnMonthFilter.has(t.date?.substring(0,7)))   return false;
     return true;
@@ -5920,7 +5933,7 @@ function renderTxns() {
     return `<tr class="${rowClasses}">
       <td class="txn-sel-cell"><input type="checkbox" class="txn-sel-cb" data-id="${t.id}" ${selectedTxnIds.has(t.id)?'checked':''} onclick="event.stopPropagation()" onchange="toggleTxnSel('${t.id}',this.checked)" aria-label="Select transaction"></td>
       <td class="txn-td-date" style="width:100px;"><input type="date" class="txn-date-input" value="${t.date}" onchange="saveTxnDate('${t.id}',this.value)"></td>
-      <td class="txn-td-merchant" style="font-weight:500;"><span class="txn-edit-text" contenteditable="true" onblur="saveTxnMerchant('${t.id}',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(t.merchant)}</span>${labelChipHtml(t)}</td>
+      <td class="txn-td-merchant" style="font-weight:500;"><span class="txn-edit-text" contenteditable="true" onblur="saveTxnMerchant('${t.id}',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(t.merchant)}</span>${t.recurring ? ' <span class="recur-chip" title="Recurring">↻</span>' : ''}${labelChipHtml(t)}</td>
       <td class="txn-td-cat" style="position:relative;"><span class="txn-date-mob">${t.date ? t.date.slice(5).replace('-','/') : ''}</span>${catCell}</td>
       <td class="hide-mobile"><select onchange="savePerson('${t.id}',this.value)" style="border:none;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;outline:none;padding:2px 4px;border-radius:4px;">
         <option value="Michael" ${t.person==='Michael'?'selected':''}>Michael</option>
@@ -7183,6 +7196,7 @@ function openAddModal() {
   document.getElementById('add-date').value     = new Date().toISOString().slice(0,10);
   document.getElementById('add-amount').value   = '';
   document.getElementById('add-merchant').value = '';
+  const _rec = document.getElementById('add-recurring'); if (_rec) _rec.checked = false;
   populateAddCardDropdown('');
   document.getElementById('add-note').value     = '';
   document.getElementById('add-modal-title').textContent = 'Add Transaction';
@@ -7217,6 +7231,7 @@ function openEditModal(id) {
   document.getElementById('add-person').value   = t.person || 'Michael';
   populateAddCardDropdown(t.card || '');
   document.getElementById('add-note').value     = t.note || '';
+  const _recE = document.getElementById('add-recurring'); if (_recE) _recE.checked = !!t.recurring;
   // Title and confirm button
   document.getElementById('add-modal-title').textContent = 'Edit Transaction';
   document.getElementById('add-modal-confirm-btn').textContent = 'Save →';
@@ -7251,7 +7266,8 @@ function confirmAdd() {
   const isRefund   = addModalType === 'refund';
   const isTransfer = addModalType === 'transfer';
   const finalAmount = isRefund ? -amount : amount;
-  const newTxn = { id: uid(), date, merchant, amount: finalAmount, category, person, card, note, manual: true, refund: isRefund };
+  const recurring = !!document.getElementById('add-recurring')?.checked;
+  const newTxn = { id: uid(), date, merchant, amount: finalAmount, category, person, card, note, manual: true, refund: isRefund, ...(recurring ? { recurring: true } : {}) };
   txns.push(newTxn);
   if (isTransfer) applyIncomeFlag(newTxn.id, 'transfer', category);
   persist();
@@ -7286,6 +7302,7 @@ function saveEditTxn() {
   const isProtected    = (wasIncomeType && wasIncomeType !== 'transfer') || !!wasSavingsAcct;
 
   // Common fields
+  if (document.getElementById('add-recurring')?.checked) t.recurring = true; else delete t.recurring;
   t.date     = date;
   t.merchant = merchant;
   t.category = category;
