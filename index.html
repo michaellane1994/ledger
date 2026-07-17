@@ -112,11 +112,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 /* ── DARK MODE ── */
 [data-theme="dark"]{
   --ink:#ede8e1;--ink-2:#c9c4ba;
-  --bg:#19170f;--bg-2:#201c14;--surface:#242018;--surface-2:#2b2619;
-  --border:#38342c;--border-2:#28251e;
-  --muted:#9c9488;--faint:#6b6358;
+  --bg:#1a1917;--bg-2:#211f1c;--surface:#242320;--surface-2:#2b2925;
+  --border:#39362f;--border-2:#2a2723;
+  --muted:#9c948a;--faint:#6b635a;
   --accent:#5ba07a;--accent-hover:#7cc294;--accent-soft:#12271c;--accent-2:#7cc294;
-  --sidebar-bg:#17140d;--row-hover:rgba(255,255,255,.04);
+  --sidebar-bg:#161513;--row-hover:rgba(255,255,255,.04);
   --topbar-bg:color-mix(in srgb, var(--bg) 85%, transparent);
   --shadow-xs:0 1px 2px rgba(0,0,0,.4);
   --shadow-sm:0 1px 3px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);
@@ -127,7 +127,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
   --c-bills-bg:#0a1540;--c-gym-bg:#041e20;--c-shopping-bg:#1c0830;--c-misc-bg:#1a1c22;
   --c-transport-bg:#051828;--c-travel-bg:#041830;--c-activities-bg:#2a0818;--c-health-bg:#052820;--c-puppies-bg:#281002;
 }
-[data-theme="dark"] .sidebar{background:linear-gradient(180deg,#15110a 0%,#1a160f 100%);}
+[data-theme="dark"] .sidebar{background:linear-gradient(180deg,#141311 0%,#1a1917 100%);}
 [data-theme="dark"] tbody tr:hover{background:var(--row-hover);}
 [data-theme="dark"] .refund-badge{background:#0d2b1a;color:#5dbd85;}
 [data-theme="dark"] .income-badge{background:#0a1540;color:#6ea8da;}
@@ -181,6 +181,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .pill-sep{width:1px;background:var(--border);margin:2px 4px;align-self:stretch;flex-shrink:0;}
 /* Year dropdown replaces year pills — keeps the period bar width fixed as multi-year data accumulates. */
 .year-select{padding:4px 8px 4px 10px;border-radius:100px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;flex-shrink:0;outline:none;line-height:1.2;}
+.period-select{min-width:118px;padding-right:8px;}
 .year-select:hover{border-color:var(--accent);}
 .year-select:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(107,163,232,.18);}
 .dash-pill{padding:3px 10px;border-radius:100px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap;}
@@ -2970,62 +2971,45 @@ function renderPills() {
   }
 
   function buildPills(container) {
-    // Year is a dropdown so the period bar stays a fixed width even as multiple years
-    // of data accumulate. Previously each year added a pill, which spilled into a
-    // horizontal scrollbar that looked ugly on narrow screens.
+    // Year dropdown, then a single "period" dropdown holding every option
+    // within that year: quick views, the full year, or a specific month.
     const ysel = document.createElement('select');
     ysel.className = 'year-select';
     ysel.setAttribute('aria-label', 'Year');
     ysel.innerHTML = years.map(y => `<option value="${y}"${y === selYear ? ' selected' : ''}>${y}</option>`).join('');
     ysel.onchange = (e) => setSelYear(e.target.value);
     container.appendChild(ysel);
-    // Separator
     const sep = document.createElement('div');
     sep.className = 'pill-sep';
     container.appendChild(sep);
-    // Quick views so the top bar can show Latest / last 3 months / year-to-date
-    // as well as a specific month or the full year — and always reflects which
-    // one is active.
-    [['latest','Latest'],['3m','3M'],['ytd','YTD']].forEach(([key,label]) => {
-      const p = document.createElement('div');
-      p.className = 'mpill' + (dashPeriod === key ? ' active' : '');
-      p.textContent = label;
-      p.onclick = () => { dashPeriod = key; renderPills(); renderDashboard(); };
-      container.appendChild(p);
-    });
-    // Full Year pill
-    const fy = document.createElement('div');
-    fy.className = 'mpill' + (dashPeriod === 'year' ? ' active' : '');
-    fy.textContent = 'Full Year';
-    fy.onclick = () => { dashPeriod = 'year'; renderPills(); renderDashboard(); };
-    container.appendChild(fy);
-    // Month is a dropdown (mirrors the year selector) so the topbar stays compact
-    // regardless of how many months exist for the selected year. Placeholder "Month"
-    // is shown when Full Year is active; picking a month switches out of Full Year.
+    const sel = document.createElement('select');
+    sel.className = 'year-select period-select';
+    sel.setAttribute('aria-label', 'Period');
+    let html = '<optgroup label="Quick views">'
+      + '<option value="latest">Latest month</option>'
+      + '<option value="3m">Last 3 months</option>'
+      + '<option value="ytd">Year to date</option>'
+      + '<option value="year">Full year</option>'
+      + '</optgroup>';
     if (yearMonths.length) {
-      const msel = document.createElement('select');
-      msel.className = 'year-select month-select';
-      msel.setAttribute('aria-label', 'Month');
-      const placeholder = `<option value="" disabled${dashPeriod !== '' ? ' selected' : ''}>Month</option>`;
-      const monthOpts = yearMonths.map(m => {
-        const [, mo] = m.split('-');
-        const label = new Date(selYear, mo - 1).toLocaleString('default', { month: 'short' });
-        const sel = (dashPeriod === '' && m === selMonth) ? ' selected' : '';
-        return `<option value="${m}"${sel}>${label}</option>`;
-      }).join('');
-      msel.innerHTML = placeholder + monthOpts;
-      msel.onchange = (e) => {
-        const m = e.target.value;
-        if (!m) return;
-        dashPeriod = '';
-        selMonth = m;
-        renderPills();
-        renderDashboard();
-        txnMonthFilter = new Set([m]);
-        renderTxns();
-      };
-      container.appendChild(msel);
+      html += '<optgroup label="Month">'
+        + yearMonths.map(m => {
+            const [, mo] = m.split('-');
+            const label = new Date(selYear, mo - 1).toLocaleString('default', { month: 'long' });
+            return `<option value="month:${m}">${label}</option>`;
+          }).join('')
+        + '</optgroup>';
     }
+    sel.innerHTML = html;
+    let cur = 'latest';
+    if (dashPeriod === '3m') cur = '3m';
+    else if (dashPeriod === 'ytd') cur = 'ytd';
+    else if (dashPeriod === 'year') cur = 'year';
+    else if (dashPeriod === 'latest') cur = 'latest';
+    else if (selMonth) cur = `month:${selMonth}`;
+    sel.value = cur;
+    sel.onchange = (e) => setMoneyflowPeriod(e.target.value === 'year' ? ('year:' + selYear) : e.target.value);
+    container.appendChild(sel);
   }
 
   buildPills(el);
