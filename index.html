@@ -2350,9 +2350,9 @@ function doGet(e) {
       <div style="margin-top:10px;">
         <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Whose card is this?</label>
         <div class="person-row">
-          <label><input type="radio" name="person" value="Michael" checked> Michael</label>
-          <label><input type="radio" name="person" value="Lili"> Lili</label>
-          <label><input type="radio" name="person" value="Joint"> Joint</label>
+          <label><input type="radio" name="person" value="Michael" checked onchange="onMapperPersonChange(this.value)"> Michael</label>
+          <label><input type="radio" name="person" value="Lili" onchange="onMapperPersonChange(this.value)"> Lili</label>
+          <label><input type="radio" name="person" value="Joint" onchange="onMapperPersonChange(this.value)"> Joint</label>
         </div>
       </div>
       <div style="margin-top:10px;">
@@ -2430,7 +2430,7 @@ function doGet(e) {
       <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div class="add-field">
           <label>Whose card is this?</label>
-          <select id="pdf-person" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
+          <select id="pdf-person" onchange="onPdfPersonChange(this.value)" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
             <option value="Michael">Michael</option>
             <option value="Lili">Lili</option>
             <option value="Joint">Joint</option>
@@ -6537,6 +6537,18 @@ function updateImportPreview() {
   if (prevEdits.size === 0) _pendingImportEdited = false;
   renderImportPreview();
 }
+// When the mapper's global person changes, update every preview row that the
+// user hasn't individually overridden, then re-render.
+function onMapperPersonChange(value) {
+  if (!Array.isArray(_pendingImportRows) || !_pendingImportRows.length) return;
+  _pendingImportRows.forEach(r => { if (!r._personManual) r.person = value; });
+  renderImportPreview();
+}
+function onPdfPersonChange(value) {
+  if (!Array.isArray(pdfParsedTxns) || !pdfParsedTxns.length) return;
+  pdfParsedTxns.forEach(r => { if (!r._personManual) r.person = value; });
+  renderPdfPreview();
+}
 function renderImportPreview() {
   const panel = document.getElementById('import-preview');
   panel.style.display = 'block';
@@ -6634,6 +6646,7 @@ function editImportRow(idx, field, value) {
     row.date = value;
   } else if (field === 'person') {
     row.person = value;
+    row._personManual = true;
   }
   _pendingImportEdited = true;
   renderImportPreview();
@@ -8708,6 +8721,7 @@ function editPdfRow(idx, field, value) {
     row.date = value;
   } else if (field === 'person') {
     row.person = value;
+    row._personManual = true;
   }
   _pdfEdited = true;
   renderPdfPreview();
