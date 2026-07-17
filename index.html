@@ -594,6 +594,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .recur-meta{color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .recur-a{color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
 .recur-viewall{margin-top:8px;background:none;border:none;color:var(--accent);font-weight:600;font-size:12.5px;cursor:pointer;font-family:'Inter',sans-serif;text-align:left;padding:6px 2px;}
+.recur-x{font-size:10px;color:var(--faint);font-weight:600;margin-left:2px;}
 .bulk-bar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2100;display:none;align-items:center;gap:8px;background:#1f1c15;color:#fff;padding:8px 10px 8px 16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.32);flex-wrap:wrap;max-width:94vw;}
 .bulk-bar .bulk-count{font-size:13px;font-weight:600;margin-right:2px;white-space:nowrap;}
 .bulk-bar select{font-size:12.5px;font-family:'Inter',sans-serif;padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;outline:none;}
@@ -1449,8 +1450,8 @@ textarea,select{color:var(--ink);}
         <div class="dash-section-head">
           <div class="dash-section-head-text">
             <div class="dash-section-eyebrow">Flagged by you</div>
-            <div class="dash-section-title">Recurring this period</div>
-            <div class="dash-section-sub">Transactions you've marked recurring. Open to see what's included.</div>
+            <div class="dash-section-title">Recurring expenses</div>
+            <div class="dash-section-sub">Everything you've marked recurring, deduplicated. Your expected regular costs.</div>
           </div>
           <div class="dash-section-actions">
             <span id="recurring-total-pill" style="font-size:13px;font-weight:600;color:var(--ink-2);background:var(--surface);border:1px solid var(--border);padding:6px 14px;border-radius:999px;"></span>
@@ -5786,27 +5787,32 @@ function renderRecurringCard() {
   const body = document.getElementById('recurring-body');
   const pill = document.getElementById('recurring-total-pill');
   if (!section || !body) return;
-  const rows = [];
-  let total = 0;
+  // One list of ALL recurring-flagged expenses (ignores the dashboard period —
+  // these are expected regularly), grouped by merchant so each shows once with
+  // its recurring amount (the most recent occurrence).
+  const groups = {};
   txns.forEach(t => {
     if (!t.recurring) return;
-    if (!dashPeriodTest(t.date)) return;
     if ((t.amount || 0) <= 0) return;
     if (t.savingsAccountId) return;
     if (t.incomeType && t.incomeType !== 'transfer') return;
-    rows.push(t); total += t.amount;
+    const key = (t.merchant || '').toLowerCase().trim() || '—';
+    const g = groups[key] || (groups[key] = { merchant: t.merchant || '—', amount: 0, count: 0, last: '' });
+    g.count++;
+    if (t.date >= g.last) { g.last = t.date; g.amount = t.amount; }
   });
+  const rows = Object.values(groups).sort((a, b) => b.amount - a.amount);
+  const total = rows.reduce((s, g) => s + g.amount, 0);
   if (!rows.length) { section.style.display = 'none'; return; }
   section.style.display = '';
   if (pill) pill.textContent = fmt(total);
-  rows.sort((a, b) => b.amount - a.amount);
   body.innerHTML = `
     <div class="recur-summary" role="button" tabindex="0" onclick="toggleRecurringList(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRecurringList(this);}">
       <span class="recur-summary-label">Show the ${rows.length} recurring expense${rows.length !== 1 ? 's' : ''} included</span>
       <span class="recur-caret" aria-hidden="true">▸</span>
     </div>
     <div class="recur-list">
-      ${rows.map(t => `<div class="recur-row"><span class="recur-m">${esc(t.merchant)}</span><span class="recur-meta">${fmtDate(t.date)}</span><span class="recur-a">${fmt(t.amount)}</span></div>`).join('')}
+      ${rows.map(g => `<div class="recur-row"><span class="recur-m">${esc(g.merchant)}</span><span class="recur-meta">${g.count > 1 ? g.count + '×' : ''}</span><span class="recur-a">${fmt(g.amount)}</span></div>`).join('')}
       <button type="button" class="recur-viewall" onclick="viewRecurring()">View all in Transactions →</button>
     </div>`;
 }
