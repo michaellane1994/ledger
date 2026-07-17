@@ -667,6 +667,9 @@ tr.rental-tagged .txn-td-date{border-left:2px solid #2d6a4f;}
   .cat-dropdown.open{animation:sheetUp .2s cubic-bezier(.16,1,.3,1);}
   .cat-dropdown .cat-opt{padding:13px 18px;font-size:15px;min-height:48px;}
   .cat-dropdown .cat-opt-group{padding:12px 18px 5px;}
+  /* Dashboard category-filter + currency menus become bottom sheets too, so
+     every custom dropdown behaves the same way on mobile. */
+  #dash-cat-menu, #dash-currency-menu{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;width:100%!important;min-width:0!important;max-width:none!important;max-height:70vh!important;border-radius:16px 16px 0 0!important;border-bottom:none!important;z-index:500;animation:sheetUp .2s cubic-bezier(.16,1,.3,1);padding-bottom:env(safe-area-inset-bottom);}
 }
 @keyframes sheetUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
 .cat-dropdown.open{display:block;animation:fadeIn .12s ease;}
@@ -2242,6 +2245,7 @@ function doGet(e) {
 <div class="cat-dd-backdrop" id="cat-dd-backdrop" onclick="closeCatDropdown()"></div>
 <div class="cat-dropdown" id="cat-dd"></div>
 <div class="ms-backdrop" id="ms-backdrop" onclick="closeAllMs()"></div>
+<div class="ms-backdrop" id="sheet-backdrop" onclick="closeSheetMenus()"></div>
 
 <!-- DUPLICATES MODAL -->
 <div class="modal-overlay" id="dupes-modal">
@@ -5485,13 +5489,25 @@ function setDashCatMode(mode) {
   if (mode === 'all')   dashCatFilter = new Set();
   renderDashboard();
 }
+// Shared dim backdrop for the dashboard menus when they render as mobile
+// bottom sheets.
+function closeSheetMenus() {
+  ['dash-cat-menu','dash-currency-menu'].forEach(id => { const m = document.getElementById(id); if (m) m.style.display = 'none'; });
+  const bd = document.getElementById('sheet-backdrop'); if (bd) bd.classList.remove('open');
+}
+function _sheetBackdrop(opening) {
+  const bd = document.getElementById('sheet-backdrop');
+  const mob = window.matchMedia('(max-width:600px)').matches;
+  if (bd) bd.classList.toggle('open', opening && mob);
+}
 function toggleCatDropdown(e) {
   e.stopPropagation();
   const menu = document.getElementById('dash-cat-menu');
   const opening = menu.style.display === 'none';
   menu.style.display = opening ? 'block' : 'none';
+  _sheetBackdrop(opening);
   if (opening) {
-    const close = ev => { if (!document.getElementById('dash-cat-wrap').contains(ev.target)) { menu.style.display = 'none'; document.removeEventListener('click', close); } };
+    const close = ev => { if (!document.getElementById('dash-cat-wrap').contains(ev.target)) { menu.style.display = 'none'; _sheetBackdrop(false); document.removeEventListener('click', close); } };
     document.addEventListener('click', close);
   }
 }
@@ -9612,8 +9628,9 @@ function toggleCurrencyDropdown(e) {
   renderCurrencyDropdown();
   const opening = menu.style.display === 'none';
   menu.style.display = opening ? 'block' : 'none';
+  _sheetBackdrop(opening);
   if (opening) {
-    const close = ev => { if (!document.getElementById('dash-currency-wrap').contains(ev.target)) { menu.style.display = 'none'; document.removeEventListener('click', close); } };
+    const close = ev => { if (!document.getElementById('dash-currency-wrap').contains(ev.target)) { menu.style.display = 'none'; _sheetBackdrop(false); document.removeEventListener('click', close); } };
     document.addEventListener('click', close);
   }
 }
