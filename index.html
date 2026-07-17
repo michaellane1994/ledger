@@ -583,6 +583,17 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .txn-sel-cell input{width:15px;height:15px;cursor:pointer;accent-color:var(--accent);}
 .lbl-chip{display:inline-block;font-size:10px;font-weight:600;padding:1px 8px;border-radius:100px;background:color-mix(in srgb, var(--lc) 16%, transparent);color:var(--lc);vertical-align:middle;white-space:nowrap;letter-spacing:.1px;}
 .recur-chip{display:inline-block;font-size:11px;color:var(--accent);vertical-align:middle;font-weight:700;}
+.recur-summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:6px 2px;-webkit-tap-highlight-color:transparent;}
+.recur-summary-label{font-size:13.5px;color:var(--ink-2);font-weight:500;}
+.recur-caret{color:var(--faint);font-size:13px;transition:transform .15s;}
+.recur-summary.open .recur-caret{transform:rotate(90deg);}
+.recur-list{display:none;flex-direction:column;margin-top:8px;border-top:1px solid var(--border);padding-top:6px;}
+.recur-list.open{display:flex;}
+.recur-row{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;font-size:12.5px;padding:7px 2px;border-bottom:1px solid var(--border);}
+.recur-m{color:var(--ink-2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.recur-meta{color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.recur-a{color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
+.recur-viewall{margin-top:8px;background:none;border:none;color:var(--accent);font-weight:600;font-size:12.5px;cursor:pointer;font-family:'Inter',sans-serif;text-align:left;padding:6px 2px;}
 .bulk-bar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2100;display:none;align-items:center;gap:8px;background:#1f1c15;color:#fff;padding:8px 10px 8px 16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.32);flex-wrap:wrap;max-width:94vw;}
 .bulk-bar .bulk-count{font-size:13px;font-weight:600;margin-right:2px;white-space:nowrap;}
 .bulk-bar select{font-size:12.5px;font-family:'Inter',sans-serif;padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;outline:none;}
@@ -1431,6 +1442,22 @@ textarea,select{color:var(--ink);}
         </div>
         <div class="card">
           <div class="card-body" id="labels-body"></div>
+        </div>
+      </section>
+
+      <section class="dash-section" id="recurring-section" style="display:none;">
+        <div class="dash-section-head">
+          <div class="dash-section-head-text">
+            <div class="dash-section-eyebrow">Flagged by you</div>
+            <div class="dash-section-title">Recurring this period</div>
+            <div class="dash-section-sub">Transactions you've marked recurring. Open to see what's included.</div>
+          </div>
+          <div class="dash-section-actions">
+            <span id="recurring-total-pill" style="font-size:13px;font-weight:600;color:var(--ink-2);background:var(--surface);border:1px solid var(--border);padding:6px 14px;border-radius:999px;"></span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body" id="recurring-body"></div>
         </div>
       </section>
 
@@ -5439,6 +5466,7 @@ function renderDashboard() {
   renderMoneyflow();
   renderBreakdown();
   renderLabelsCard();
+  renderRecurringCard();
 
   // Recent 5 — positive-amount expenses only (excludes transfers and refunds)
   const recent = [...expenses].filter(t => effectiveAmt(t) > 0).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
@@ -5753,6 +5781,48 @@ function renderLabelsCard() {
       <span class="lbl-card-sub">${r.count} txn${r.count !== 1 ? 's' : ''}${r.min ? ' · ' + _lblRange(r.min, r.max) : ''}</span>
     </button>`).join('') + `</div>`;
 }
+function renderRecurringCard() {
+  const section = document.getElementById('recurring-section');
+  const body = document.getElementById('recurring-body');
+  const pill = document.getElementById('recurring-total-pill');
+  if (!section || !body) return;
+  const rows = [];
+  let total = 0;
+  txns.forEach(t => {
+    if (!t.recurring) return;
+    if (!dashPeriodTest(t.date)) return;
+    if ((t.amount || 0) <= 0) return;
+    if (t.savingsAccountId) return;
+    if (t.incomeType && t.incomeType !== 'transfer') return;
+    rows.push(t); total += t.amount;
+  });
+  if (!rows.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  if (pill) pill.textContent = fmt(total);
+  rows.sort((a, b) => b.amount - a.amount);
+  body.innerHTML = `
+    <div class="recur-summary" role="button" tabindex="0" onclick="toggleRecurringList(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRecurringList(this);}">
+      <span class="recur-summary-label">Show the ${rows.length} recurring expense${rows.length !== 1 ? 's' : ''} included</span>
+      <span class="recur-caret" aria-hidden="true">▸</span>
+    </div>
+    <div class="recur-list">
+      ${rows.map(t => `<div class="recur-row"><span class="recur-m">${esc(t.merchant)}</span><span class="recur-meta">${fmtDate(t.date)}</span><span class="recur-a">${fmt(t.amount)}</span></div>`).join('')}
+      <button type="button" class="recur-viewall" onclick="viewRecurring()">View all in Transactions →</button>
+    </div>`;
+}
+function toggleRecurringList(el) {
+  el.classList.toggle('open');
+  const list = el.nextElementSibling;
+  if (list && list.classList.contains('recur-list')) list.classList.toggle('open');
+}
+function viewRecurring() {
+  txnTypeFilter = 'expenses'; txnNeedsFilter = ''; txnCatFilter = new Set(); txnCardFilter = new Set();
+  txnMonthFilter = new Set(); txnLabelFilter = ''; txnRecurringFilter = true;
+  const s = document.getElementById('f-search'); if (s) s.value = '';
+  const p = document.getElementById('f-person'); if (p) p.value = '';
+  goNav('transactions');
+  renderTxns();
+}
 function toggleTxnSelectMode() {
   txnSelectMode = !txnSelectMode;
   selectedTxnIds.clear();
@@ -5805,6 +5875,11 @@ function bulkApply(field, value) {
     if (!value) { renderBulkBar(); return; }
   }
   const clearLabel = (field === 'label' && value === '__none__');
+  const undoSnap = [];
+  selectedTxnIds.forEach(id => {
+    const t = txns.find(x => x.id === id);
+    if (t) undoSnap.push({ id, category: t.category, person: t.person, card: t.card, label: t.label, recurring: t.recurring });
+  });
   selectedTxnIds.forEach(id => {
     const t = txns.find(x => x.id === id);
     if (!t) return;
@@ -5819,6 +5894,24 @@ function bulkApply(field, value) {
   renderTxns();
   renderDashboard();
   renderBulkBar();
+  const n = undoSnap.length;
+  if (n && typeof showUndoToast === 'function') {
+    showUndoToast(`Updated ${n} transaction${n !== 1 ? 's' : ''}`, () => {
+      undoSnap.forEach(s => {
+        const t = txns.find(x => x.id === s.id);
+        if (!t) return;
+        if (field === 'category') t.category = s.category;
+        else if (field === 'person') t.person = s.person;
+        else if (field === 'card') t.card = s.card;
+        else if (field === 'label') { if (s.label) t.label = s.label; else delete t.label; }
+        else if (field === 'recurring') { if (s.recurring) t.recurring = true; else delete t.recurring; }
+      });
+      persist();
+      if (typeof autoPush === 'function') autoPush();
+      renderTxns();
+      renderDashboard();
+    });
+  }
 }
 function renderTxns() {
   const s   = (document.getElementById('f-search').value || '').toLowerCase();
