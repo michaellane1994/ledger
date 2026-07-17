@@ -867,6 +867,7 @@ textarea,select{color:var(--ink);}
   #dash-period-bar select,
   .year-select,
   #moneyflow-period-picker,
+  #breakdown-period-picker,
   #mf-sheet-sort-select{font-size:12px !important;}
   /* Filter bar (Transactions + Income): person / category / bulk-select
      controls sit at 13px on desktop; without this carve-out they inflate
@@ -1361,6 +1362,7 @@ textarea,select{color:var(--ink);}
             <div class="dash-section-sub" id="breakdown-sub">Spending split by person or card, for this period.</div>
           </div>
           <div class="dash-section-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="breakdown-period-picker" class="moneyflow-period-picker" onchange="setMoneyflowPeriod(this.value)" title="Period · syncs the whole dashboard" aria-label="Period"></select>
             <div class="moneyflow-mode-toggle" role="group" aria-label="Breakdown dimension">
               <button id="breakdown-mode-person" class="moneyflow-mode-btn active" onclick="setBreakdownMode('person')" title="Group spending by person">By person</button>
               <button id="breakdown-mode-card" class="moneyflow-mode-btn" onclick="setBreakdownMode('card')" title="Group spending by card">By card</button>
@@ -4046,8 +4048,8 @@ function toggleMoneyflowCustomCat(key) {
 // dashboard's period state. Users can jump straight to a month or a quick
 // view (Latest / 3M / YTD / a specific year) from within the Money flow
 // section, and the whole dashboard follows.
-function renderMoneyflowPeriodPicker() {
-  const sel = document.getElementById('moneyflow-period-picker');
+function renderMoneyflowPeriodPicker(selId) {
+  const sel = document.getElementById(selId || 'moneyflow-period-picker');
   if (!sel) return;
   const months = (typeof getMonths === 'function') ? getMonths() : [];
   const years = [...new Set(months.map(m => m.substring(0, 4)))].sort().reverse();
@@ -4862,6 +4864,8 @@ function renderBreakdown() {
     const b = document.getElementById('breakdown-topn-' + v);
     if (b) b.classList.toggle('active', v === breakdownTopN);
   });
+  // Period picker: mirrors the dashboard's current period (shared with Money flow).
+  if (typeof renderMoneyflowPeriodPicker === 'function') renderMoneyflowPeriodPicker('breakdown-period-picker');
 
   // Custom category picker: visible only in custom mode.
   const picker  = document.getElementById('breakdown-custom-picker');
