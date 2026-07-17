@@ -1360,10 +1360,23 @@ textarea,select{color:var(--ink);}
               <button id="breakdown-mode-person" class="moneyflow-mode-btn active" onclick="setBreakdownMode('person')" title="Group spending by person">By person</button>
               <button id="breakdown-mode-card" class="moneyflow-mode-btn" onclick="setBreakdownMode('card')" title="Group spending by card">By card</button>
             </div>
+            <div class="moneyflow-mode-toggle" role="group" aria-label="Categories shown">
+              <button id="breakdown-topn-3" class="moneyflow-mode-btn" onclick="setBreakdownTopN('3')" title="Top 3 categories">Top 3</button>
+              <button id="breakdown-topn-5" class="moneyflow-mode-btn active" onclick="setBreakdownTopN('5')" title="Top 5 categories">Top 5</button>
+              <button id="breakdown-topn-10" class="moneyflow-mode-btn" onclick="setBreakdownTopN('10')" title="Top 10 categories">Top 10</button>
+              <button id="breakdown-topn-all" class="moneyflow-mode-btn" onclick="setBreakdownTopN('all')" title="Every category">All</button>
+              <button id="breakdown-topn-custom" class="moneyflow-mode-btn" onclick="setBreakdownTopN('custom')" title="Pick which categories to show">Custom</button>
+            </div>
           </div>
         </div>
         <div class="card">
-          <div class="card-body" id="breakdown-body"></div>
+          <div class="card-body">
+            <div id="breakdown-custom-picker" style="display:none;padding:8px 12px 4px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;">Categories to include</div>
+              <div id="breakdown-custom-chips" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+            </div>
+            <div id="breakdown-body"></div>
+          </div>
         </div>
       </section>
 
@@ -4806,10 +4819,23 @@ function attachMoneyflowTooltips(container) {
 // option" setting; expenses with no person/card fall into an "Unassigned" /
 // "No card" group.
 let breakdownMode = localStorage.getItem('l3_breakdown_mode') || 'person'; // 'person' | 'card'
+let breakdownTopN = localStorage.getItem('l3_breakdown_topn') || '5';      // '3'|'5'|'10'|'all'|'custom'
+let breakdownCustomCats = JSON.parse(localStorage.getItem('l3_breakdown_custom') || '[]');
 function setBreakdownMode(m) {
   if (m !== 'person' && m !== 'card') return;
   breakdownMode = m;
   localStorage.setItem('l3_breakdown_mode', m);
+  renderBreakdown();
+}
+function setBreakdownTopN(v) {
+  breakdownTopN = v;
+  localStorage.setItem('l3_breakdown_topn', v);
+  renderBreakdown();
+}
+function toggleBreakdownCustomCat(key) {
+  const i = breakdownCustomCats.indexOf(key);
+  if (i >= 0) breakdownCustomCats.splice(i, 1); else breakdownCustomCats.push(key);
+  localStorage.setItem('l3_breakdown_custom', JSON.stringify(breakdownCustomCats));
   renderBreakdown();
 }
 function renderBreakdown() {
@@ -4822,6 +4848,21 @@ function renderBreakdown() {
   const cBtn = document.getElementById('breakdown-mode-card');
   if (pBtn) pBtn.classList.toggle('active', breakdownMode === 'person');
   if (cBtn) cBtn.classList.toggle('active', breakdownMode === 'card');
+  ['3','5','10','all','custom'].forEach(v => {
+    const b = document.getElementById('breakdown-topn-' + v);
+    if (b) b.classList.toggle('active', v === breakdownTopN);
+  });
+
+  // Custom category picker: visible only in custom mode.
+  const picker  = document.getElementById('breakdown-custom-picker');
+  const chipsEl = document.getElementById('breakdown-custom-chips');
+  if (picker) picker.style.display = breakdownTopN === 'custom' ? '' : 'none';
+  if (chipsEl && breakdownTopN === 'custom') {
+    chipsEl.innerHTML = CATS.map(c => {
+      const on = breakdownCustomCats.includes(c.key);
+      return `<button type="button" class="moneyflow-cat-chip${on ? ' on' : ''}" style="--cat-c:${c.color};" onclick="toggleBreakdownCustomCat('${c.key}')" title="${on ? 'Hide' : 'Show'} ${esc(c.label)}"><span class="chip-dot"></span>${esc(c.label)}</button>`;
+    }).join('');
+  }
 
   // Gather the period's expenses (same predicate the money flow uses).
   const groups = {}; // key -> { total, cats: {catKey: amount} }
@@ -4855,18 +4896,28 @@ function renderBreakdown() {
     const c = CATS.find(x => x.key === key);
     return { label: c ? c.label : (key === '__uncat' ? 'Uncategorised' : key), color: (c && c.color) || 'var(--border-2)' };
   };
+  // Custom with nothing picked behaves like "all" so the card isn't empty.
+  const customActive = breakdownTopN === 'custom' && breakdownCustomCats.length > 0;
 
   const html = `<div class="bd-groups">` + rows.map(r => {
     const catRows = Object.entries(r.cats)
       .map(([key, amount]) => ({ key, amount, ...catMeta(key) }))
       .sort((a, b) => b.amount - a.amount);
-    // Show top 5 categories; roll the rest into "Other".
-    const TOP = 5;
-    let shown = catRows.slice(0, TOP);
-    const rest = catRows.slice(TOP);
+    // Slice categories per the Top-N / All / Custom control; roll the rest
+    // into an "Other" line so each group still sums to its total.
+    let shown, rest;
+    if (breakdownTopN === 'all' || (breakdownTopN === 'custom' && !customActive)) {
+      shown = catRows; rest = [];
+    } else if (customActive) {
+      shown = catRows.filter(c => breakdownCustomCats.includes(c.key));
+      rest  = catRows.filter(c => !breakdownCustomCats.includes(c.key));
+    } else {
+      const n = parseInt(breakdownTopN, 10) || 5;
+      shown = catRows.slice(0, n); rest = catRows.slice(n);
+    }
     if (rest.length) {
       const restSum = rest.reduce((s, x) => s + x.amount, 0);
-      shown.push({ key: '__other', amount: restSum, label: `Other (${rest.length})`, color: 'var(--border-2)' });
+      if (restSum > 0) shown = shown.concat([{ key: '__other', amount: restSum, label: `Other (${rest.length})`, color: 'var(--border-2)' }]);
     }
     const isJoint = breakdownMode === 'person' && r.name === 'Joint';
     const jointPill = (isJoint && typeof showJoint !== 'undefined' && showJoint) ? `<span class="bd-joint-pill">Shared</span>` : '';
