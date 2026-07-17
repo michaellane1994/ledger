@@ -573,6 +573,31 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .ms-opt input:checked+.ms-check{background:var(--accent);border-color:var(--accent);}
 .ms-opt input:checked+.ms-check::after{content:'✓';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:9px;color:#fff;line-height:1;}
 .txn-cat-pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+/* Bulk-select on Transactions */
+.txn-sel-cell{display:none;width:34px;text-align:center;}
+.txn-table.selecting .txn-sel-cell{display:table-cell;}
+.txn-sel-cell input{width:15px;height:15px;cursor:pointer;accent-color:var(--accent);}
+.lbl-chip{display:inline-block;font-size:10px;font-weight:600;padding:1px 8px;border-radius:100px;background:color-mix(in srgb, var(--lc) 16%, transparent);color:var(--lc);vertical-align:middle;white-space:nowrap;letter-spacing:.1px;}
+.bulk-bar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2100;display:none;align-items:center;gap:8px;background:#1f1c15;color:#fff;padding:8px 10px 8px 16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.32);flex-wrap:wrap;max-width:94vw;}
+.bulk-bar .bulk-count{font-size:13px;font-weight:600;margin-right:2px;white-space:nowrap;}
+.bulk-bar select{font-size:12.5px;font-family:'Inter',sans-serif;padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;outline:none;}
+.bulk-bar select option{color:#000;}
+.bulk-bar .bulk-done{font-size:12.5px;font-weight:600;background:#fff;color:#1f1c15;border:none;border-radius:8px;padding:7px 13px;cursor:pointer;}
+.lbl-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;}
+.lbl-card{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;font-family:'Inter',sans-serif;transition:border-color .12s,box-shadow .12s;}
+.lbl-card:hover{border-color:var(--accent);box-shadow:var(--shadow-xs);}
+.lbl-card-top{display:flex;align-items:center;gap:8px;}
+.lbl-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+.lbl-card-name{font-size:13px;font-weight:600;color:var(--ink);}
+.lbl-card-amt{font-size:22px;font-weight:600;color:var(--ink);letter-spacing:-0.01em;font-variant-numeric:tabular-nums;}
+.lbl-card-sub{font-size:11px;color:var(--muted);}
+.lbl-filter-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 4px 3px 10px;border-radius:100px;background:color-mix(in srgb, var(--lc) 16%, transparent);color:var(--lc);margin-left:6px;vertical-align:middle;}
+.lbl-filter-chip button{background:none;border:none;color:inherit;cursor:pointer;font-size:12px;padding:2px 4px;line-height:1;border-radius:50%;}
+.lbl-filter-chip button:hover{background:color-mix(in srgb, var(--lc) 22%, transparent);}
+@media (max-width:600px){
+  .txn-table.selecting tr{position:relative;padding-left:30px;}
+  .txn-table.selecting .txn-sel-cell{display:flex;position:absolute;left:4px;top:0;bottom:0;align-items:center;width:auto;z-index:2;}
+}
 .tcp{padding:3px 10px;border-radius:100px;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);user-select:none;white-space:nowrap;}
 .tcp:hover{color:var(--ink);border-color:var(--muted);}
 .tcp-transfer{border-color:#1d4e89;color:#1d4e89;}
@@ -1387,6 +1412,19 @@ textarea,select{color:var(--ink);}
         </div>
       </section>
 
+      <section class="dash-section" id="labels-section" style="display:none;">
+        <div class="dash-section-head">
+          <div class="dash-section-head-text">
+            <div class="dash-section-eyebrow">Trips &amp; tags</div>
+            <div class="dash-section-title">Labels</div>
+            <div class="dash-section-sub">Spending grouped by your labels, for this period. Tap one to see its transactions.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body" id="labels-body"></div>
+        </div>
+      </section>
+
       <section class="dash-section" id="commitments-section" style="display:none;">
         <div class="dash-section-head">
           <div class="dash-section-head-text">
@@ -1553,14 +1591,23 @@ textarea,select{color:var(--ink);}
           <button class="ms-btn" id="ms-month-btn" onclick="openMs(event,'ms-month')">All months</button>
           <div class="ms-drop" id="ms-month-drop"></div>
         </div>
+        <button id="txn-select-btn" onclick="toggleTxnSelectMode()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;white-space:nowrap;" title="Bulk-select transactions to edit in one go">Select</button>
         <button onclick="resetTxnFilters()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Inter',sans-serif;color:var(--faint);cursor:pointer;white-space:nowrap;" title="Reset filters">Reset</button>
       </div>
       <div class="txn-cat-pills" id="txn-cat-pills"></div>
+      <div class="bulk-bar" id="bulk-bar">
+        <span class="bulk-count" id="bulk-count">0 selected</span>
+        <select id="bulk-cat" onchange="bulkApply('category',this.value)" title="Set category"></select>
+        <select id="bulk-person" onchange="bulkApply('person',this.value)" title="Set person"></select>
+        <select id="bulk-card" onchange="bulkApply('card',this.value)" title="Set card"></select>
+        <select id="bulk-label" onchange="bulkApply('label',this.value)" title="Set label"></select>
+        <button class="bulk-done" onclick="toggleTxnSelectMode()">Done</button>
+      </div>
       <div class="txn-table">
         <table>
           <thead>
             <tr>
-              <th id="txn-date-th" class="th-sort sort-active" onclick="setTxnSort('date')">Date <span id="txn-date-icon" style="font-size:10px;">↓</span></th><th>Merchant</th><th>Category</th><th class="hide-mobile">Person</th><th class="hide-mobile">Card</th><th class="hide-mobile">Note</th>
+              <th class="txn-sel-cell"><input type="checkbox" id="txn-select-all" onchange="toggleSelectAllTxns(this.checked)" aria-label="Select all"></th><th id="txn-date-th" class="th-sort sort-active" onclick="setTxnSort('date')">Date <span id="txn-date-icon" style="font-size:10px;">↓</span></th><th>Merchant</th><th>Category</th><th class="hide-mobile">Person</th><th class="hide-mobile">Card</th><th class="hide-mobile">Note</th>
               <th id="txn-amt-th" style="text-align:right;" class="th-sort" onclick="setTxnSort('amount')">Amount <span id="txn-amt-icon" style="font-size:10px;">↕</span></th>
             </tr>
           </thead>
@@ -1946,8 +1993,8 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
 
     if (data.action === 'push') {
-      writeSheet(ss, SHEET_NAME, ['id','date','merchant','amount','category','person','card','note','refund','manual','incomeType','savingsAccountId','incomeCategory','needs','rental'],
-        (data.txns||[]).map(t => [t.id,t.date,t.merchant,t.amount,t.category,t.person||'',t.card||'',t.note||'',t.refund?'true':'false',t.manual?'true':'false',t.incomeType||'',t.savingsAccountId||'',t.incomeCategory||'',t.needs===true?'true':t.needs===false?'false':'',t.rental?'true':'']));
+      writeSheet(ss, SHEET_NAME, ['id','date','merchant','amount','category','person','card','note','refund','manual','incomeType','savingsAccountId','incomeCategory','needs','rental','label'],
+        (data.txns||[]).map(t => [t.id,t.date,t.merchant,t.amount,t.category,t.person||'',t.card||'',t.note||'',t.refund?'true':'false',t.manual?'true':'false',t.incomeType||'',t.savingsAccountId||'',t.incomeCategory||'',t.needs===true?'true':t.needs===false?'false':'',t.rental?'true':'',t.label||'']));
       writeSheet(ss, LEARNED_SHEET, ['merchant','category'],
         Object.entries(data.learned||{}).map(([m,c]) => [m,c]));
       writeSheet(ss, INCOME_SHEET, ['id','date','amount','type','person','desc','note','fromTxnId','category'],
@@ -1965,7 +2012,7 @@ function doPost(e) {
     }
 
     if (data.action === 'pull') {
-      const txns     = readSheet(ss, SHEET_NAME,   r => ({id:r.id,date:r.date,merchant:r.merchant,amount:parseFloat(r.amount)||0,category:r.category,person:r.person,card:r.card||'',note:r.note,refund:r.refund===true||r.refund==='true',manual:r.manual===true||r.manual==='true',incomeType:r.incomeType||undefined,savingsAccountId:r.savingsAccountId||undefined,incomeCategory:r.incomeCategory||undefined,needs:(r.needs===true||r.needs==='true')?true:(r.needs===false||r.needs==='false')?false:undefined,rental:(r.rental===true||r.rental==='true')?true:undefined}));
+      const txns     = readSheet(ss, SHEET_NAME,   r => ({id:r.id,date:r.date,merchant:r.merchant,amount:parseFloat(r.amount)||0,category:r.category,person:r.person,card:r.card||'',note:r.note,refund:r.refund===true||r.refund==='true',manual:r.manual===true||r.manual==='true',incomeType:r.incomeType||undefined,savingsAccountId:r.savingsAccountId||undefined,incomeCategory:r.incomeCategory||undefined,needs:(r.needs===true||r.needs==='true')?true:(r.needs===false||r.needs==='false')?false:undefined,rental:(r.rental===true||r.rental==='true')?true:undefined,label:r.label||undefined}));
       const learned  = {}; readSheet(ss, LEARNED_SHEET, r => r).forEach(r => { if(r.merchant) learned[r.merchant]=r.category; });
       const incomes  = readSheet(ss, INCOME_SHEET,  r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,type:r.type,person:r.person,desc:r.desc,note:r.note,fromTxnId:r.fromTxnId||undefined,category:r.category||undefined}));
       const savAccts = readSheet(ss, SAVINGS_SHEET, r => ({id:r.id,name:r.name,type:r.type,person:r.person,balance:parseFloat(r.balance)||0,baseBalance:parseFloat(r.baseBalance)||0,goal:r.goal?parseFloat(r.goal):null,currency:r.currency||'',balanceEquiv:r.balanceEquiv?parseFloat(r.balanceEquiv):null}));
@@ -2798,6 +2845,9 @@ let mortVoluntaryPmts = JSON.parse(localStorage.getItem('l3_mort_voluntary') || 
 // Populates the Card dropdown in the CSV upload mapper so labels don't have to
 // be retyped each import. Seeded from existing txn cards on first load below.
 let cardTypes = JSON.parse(localStorage.getItem('l3_card_types') || '[]');
+// User-created labels for grouping transactions across categories (e.g. a
+// trip). Each: { id, name, color }. A transaction references one via t.label.
+let labels = JSON.parse(localStorage.getItem('l3_labels') || '[]');
 if (!cardTypes.length && txns.length) {
   cardTypes = [...new Set(txns.map(t => t.card).filter(Boolean))].sort();
   if (cardTypes.length) localStorage.setItem('l3_card_types', JSON.stringify(cardTypes));
@@ -2819,6 +2869,7 @@ function persist() {
   if (sheetsUrl) localStorage.setItem('l3_sheets_url', sheetsUrl);
   localStorage.setItem('l3_rental', JSON.stringify(rentalExpenses));
   localStorage.setItem('l3_card_types', JSON.stringify(cardTypes));
+  localStorage.setItem('l3_labels',     JSON.stringify(labels));
 }
 
 // Returns a normalised merchant key for matching
@@ -5353,6 +5404,7 @@ function renderDashboard() {
   renderCashflowChart();
   renderMoneyflow();
   renderBreakdown();
+  renderLabelsCard();
 
   // Recent 5 — positive-amount expenses only (excludes transfers and refunds)
   const recent = [...expenses].filter(t => effectiveAmt(t) > 0).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
@@ -5504,6 +5556,7 @@ function resetTxnFilters() {
   txnCatFilter   = new Set();
   txnCardFilter  = new Set();
   txnMonthFilter = new Set();
+  txnLabelFilter = '';
   txnSort        = 'date-desc';
   const s = document.getElementById('f-search'); if (s) s.value = '';
   const p = document.getElementById('f-person'); if (p) p.value = '';
@@ -5594,6 +5647,127 @@ function buildMsDrop(id, items, filterSet) {
   }
 }
 
+// ── LABELS + BULK EDIT ───────────────────────────────────────
+const LABEL_COLORS = ['#3a7d5a','#c15c1e','#1d4e89','#6ba3e8','#8a5cc4','#c44d6b','#2f8f83','#b0842e'];
+function labelById(id) { return labels.find(l => l.id === id); }
+function createLabel(name) {
+  const clean = (name || '').trim();
+  if (!clean) return '';
+  const existing = labels.find(l => l.name.toLowerCase() === clean.toLowerCase());
+  if (existing) return existing.id;
+  const id = 'lbl_' + uid();
+  labels.push({ id, name: clean, color: LABEL_COLORS[labels.length % LABEL_COLORS.length] });
+  persist();
+  return id;
+}
+function labelChipHtml(t) {
+  if (!t.label) return '';
+  const l = labelById(t.label);
+  if (!l) return '';
+  return ` <span class="lbl-chip" style="--lc:${l.color};">${esc(l.name)}</span>`;
+}
+function bulkPersonOptions() {
+  const ppl = [...new Set(txns.map(t => t.person).filter(p => p && p !== 'Joint'))];
+  if (!ppl.length) ppl.push('Michael', 'Lili');
+  return ppl;
+}
+let txnSelectMode = false;
+let selectedTxnIds = new Set();
+let txnLabelFilter = '';
+function filterByLabel(id) {
+  txnLabelFilter = id || '';
+  if (txnSelectMode) toggleTxnSelectMode();
+  goNav('transactions');
+  renderTxns();
+}
+function clearLabelFilter() { txnLabelFilter = ''; renderTxns(); }
+function renderLabelsCard() {
+  const section = document.getElementById('labels-section');
+  const body = document.getElementById('labels-body');
+  if (!section || !body) return;
+  if (!labels.length) { section.style.display = 'none'; return; }
+  const totals = {};
+  txns.forEach(t => {
+    if (!t.label) return;
+    if (!dashPeriodTest(t.date)) return;
+    if ((t.amount || 0) <= 0) return;
+    if (t.savingsAccountId) return;
+    if (t.incomeType && t.incomeType !== 'transfer') return;
+    const g = totals[t.label] || (totals[t.label] = { sum: 0, count: 0 });
+    g.sum += t.amount; g.count++;
+  });
+  const rows = labels
+    .map(l => ({ ...l, sum: (totals[l.id] || {}).sum || 0, count: (totals[l.id] || {}).count || 0 }))
+    .filter(r => r.count > 0)
+    .sort((a, b) => b.sum - a.sum);
+  if (!rows.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  body.innerHTML = `<div class="lbl-cards">` + rows.map(r => `
+    <button type="button" class="lbl-card" onclick="filterByLabel('${r.id}')" title="View these transactions">
+      <span class="lbl-card-top"><span class="lbl-dot" style="background:${r.color};"></span><span class="lbl-card-name">${esc(r.name)}</span></span>
+      <span class="lbl-card-amt">${fmt(r.sum)}</span>
+      <span class="lbl-card-sub">${r.count} txn${r.count !== 1 ? 's' : ''}</span>
+    </button>`).join('') + `</div>`;
+}
+function toggleTxnSelectMode() {
+  txnSelectMode = !txnSelectMode;
+  selectedTxnIds.clear();
+  const tbl = document.querySelector('.txn-table');
+  if (tbl) tbl.classList.toggle('selecting', txnSelectMode);
+  const btn = document.getElementById('txn-select-btn');
+  if (btn) btn.textContent = txnSelectMode ? 'Cancel' : 'Select';
+  const sa = document.getElementById('txn-select-all');
+  if (sa) sa.checked = false;
+  renderTxns();
+  renderBulkBar();
+}
+function toggleTxnSel(id, checked) {
+  if (checked) selectedTxnIds.add(id); else selectedTxnIds.delete(id);
+  renderBulkBar();
+}
+function toggleSelectAllTxns(checked) {
+  document.querySelectorAll('#txn-body .txn-sel-cb').forEach(cb => {
+    cb.checked = checked;
+    const id = cb.getAttribute('data-id');
+    if (checked) selectedTxnIds.add(id); else selectedTxnIds.delete(id);
+  });
+  renderBulkBar();
+}
+function renderBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  if (!bar) return;
+  if (!txnSelectMode || selectedTxnIds.size === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  document.getElementById('bulk-count').textContent = selectedTxnIds.size + ' selected';
+  document.getElementById('bulk-cat').innerHTML = '<option value="">Set category…</option>' + CATS.map(c => `<option value="${esc(c.key)}">${esc(c.label)}</option>`).join('');
+  document.getElementById('bulk-person').innerHTML = '<option value="">Set person…</option>' + bulkPersonOptions().map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('') + (showJoint ? '<option value="Joint">Joint</option>' : '');
+  const allCards = [...new Set([...(cardTypes || []), ...txns.map(t => t.card).filter(Boolean)])].sort((a,b)=>a.localeCompare(b));
+  document.getElementById('bulk-card').innerHTML = '<option value="">Set card…</option>' + allCards.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  document.getElementById('bulk-label').innerHTML = '<option value="">Set label…</option>' + labels.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('') + '<option value="__none__">— Remove label —</option><option value="__new__">+ New label…</option>';
+}
+function bulkApply(field, value) {
+  if (!value || !selectedTxnIds.size) { renderBulkBar(); return; }
+  if (field === 'label' && value === '__new__') {
+    const name = (prompt('New label name (e.g. "Work trip", "Italy 2026"):', '') || '').trim();
+    if (!name) { renderBulkBar(); return; }
+    value = createLabel(name);
+    if (!value) { renderBulkBar(); return; }
+  }
+  const clearLabel = (field === 'label' && value === '__none__');
+  selectedTxnIds.forEach(id => {
+    const t = txns.find(x => x.id === id);
+    if (!t) return;
+    if (field === 'category') t.category = value;
+    else if (field === 'person') t.person = value;
+    else if (field === 'card') t.card = value;
+    else if (field === 'label') { if (clearLabel) delete t.label; else t.label = value; }
+  });
+  persist();
+  if (typeof autoPush === 'function') autoPush();
+  renderTxns();
+  renderDashboard();
+  renderBulkBar();
+}
 function renderTxns() {
   const s   = (document.getElementById('f-search').value || '').toLowerCase();
   const cpf = document.getElementById('f-person').value;
@@ -5635,6 +5809,10 @@ function renderTxns() {
     const tp = (type, label) => `<span class="tcp tcp-transfer${txnTypeFilter === type ? ' active' : ''}" onclick="setTxnTypePill('${type}')">${label}</span>`;
     const np = (kind, label) => `<span class="tcp tcp-needs${txnNeedsFilter === kind ? ' active' : ''}" onclick="setTxnNeedsPill('${kind}')">${label}</span>`;
     pillsEl.innerHTML = tp('expenses','Expenses') + tp('transfer','Transfers') + tp('income','Income') + '<span style="display:inline-block;width:1px;height:14px;background:var(--border);margin:0 6px;vertical-align:middle;"></span>' + np('needs','Needs') + np('wants','Wants');
+    if (txnLabelFilter) {
+      const l = labelById(txnLabelFilter);
+      if (l) pillsEl.innerHTML += `<span class="lbl-filter-chip" style="--lc:${l.color};">Label: ${esc(l.name)} <button onclick="clearLabelFilter()" aria-label="Clear label filter" title="Clear label filter">✕</button></span>`;
+    }
   }
   // Sort icons + active column highlight
   const dateIcon = document.getElementById('txn-date-icon');
@@ -5672,6 +5850,7 @@ function renderTxns() {
       if (txnNeedsFilter === 'wants' && isN) return false;
     }
     if (cpf && t.person !== cpf) return false;
+    if (txnLabelFilter && t.label !== txnLabelFilter) return false;
     if (txnCardFilter.size > 0  && !txnCardFilter.has(t.card))                    return false;
     if (txnMonthFilter.size > 0 && !txnMonthFilter.has(t.date?.substring(0,7)))   return false;
     return true;
@@ -5719,8 +5898,9 @@ function renderTxns() {
       : `<button class="cat-badge" style="background:${c.bg};color:${c.color};" onclick="openDD(event,'${t.id}')"><span class="cat-badge-dot" style="background:${c.color};"></span>${c.label} ▾</button>`;
     const rowClasses = [isRefund ? 'refund-row' : '', t.rental ? 'rental-tagged' : ''].filter(Boolean).join(' ');
     return `<tr class="${rowClasses}">
+      <td class="txn-sel-cell"><input type="checkbox" class="txn-sel-cb" data-id="${t.id}" ${selectedTxnIds.has(t.id)?'checked':''} onclick="event.stopPropagation()" onchange="toggleTxnSel('${t.id}',this.checked)" aria-label="Select transaction"></td>
       <td class="txn-td-date" style="width:100px;"><input type="date" class="txn-date-input" value="${t.date}" onchange="saveTxnDate('${t.id}',this.value)"></td>
-      <td class="txn-td-merchant" style="font-weight:500;"><span class="txn-edit-text" contenteditable="true" onblur="saveTxnMerchant('${t.id}',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(t.merchant)}</span></td>
+      <td class="txn-td-merchant" style="font-weight:500;"><span class="txn-edit-text" contenteditable="true" onblur="saveTxnMerchant('${t.id}',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(t.merchant)}</span>${labelChipHtml(t)}</td>
       <td class="txn-td-cat" style="position:relative;"><span class="txn-date-mob">${t.date ? t.date.slice(5).replace('-','/') : ''}</span>${catCell}</td>
       <td class="hide-mobile"><select onchange="savePerson('${t.id}',this.value)" style="border:none;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;outline:none;padding:2px 4px;border-radius:4px;">
         <option value="Michael" ${t.person==='Michael'?'selected':''}>Michael</option>
@@ -8325,7 +8505,7 @@ async function syncToSheets() {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes } }),
+      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -8416,6 +8596,8 @@ async function syncFromSheets() {
         cardTypes = [...new Set((data.txns || []).map(t => t.card).filter(Boolean))].sort();
       }
       localStorage.setItem('l3_card_types', JSON.stringify(cardTypes));
+      labels = Array.isArray(data.settings?.labels) ? data.settings.labels.slice() : [];
+      localStorage.setItem('l3_labels', JSON.stringify(labels));
       repairIncomeDates();
       persist();
       updateSyncDot('ok');
@@ -8435,7 +8617,7 @@ async function syncFromSheets() {
 
 function clearLocalData() {
   if (!confirm('This will wipe all local data from this device. Your Google Sheet data is unaffected. Use Pull to reload it. Continue?')) return;
-  txns = []; uploads = []; incomes = []; savAccts = []; contribs = []; learned = {}; trash = [];
+  txns = []; uploads = []; incomes = []; savAccts = []; contribs = []; learned = {}; trash = []; labels = [];
   persist();
   renderPills();
   renderDashboard();
@@ -8524,7 +8706,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes } }),
+        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
