@@ -8730,13 +8730,24 @@ function buildCfExclDrop() {
   }
 }
 
-function saveSheetUrl() {
+async function saveSheetUrl() {
   const val = document.getElementById('sheets-url').value.trim();
   if (!val) { showConnStatus('Please paste a URL first.', 'err'); return; }
   sheetsUrl = val;
   localStorage.setItem('l3_sheets_url', sheetsUrl);
   updateSyncDot('ok');
   showConnStatus('URL saved. Click Test to verify the connection.', 'ok');
+  // Conflict guard: if this device already has data, check whether the Sheet
+  // also has data. If so, force an explicit keep/replace choice before the next
+  // edit's auto-push can silently overwrite the Sheet. Best-effort — a bad or
+  // undeployed URL just fails quietly and the user can Test as prompted.
+  const localHasData = (txns?.length) || (incomes?.length) || (savAccts?.length) || (mortData?.length);
+  if (localHasData) {
+    try {
+      const sheetPayload = await fetchSheetPayload();
+      if (_sheetPayloadHasData(sheetPayload)) showSheetsConflictModal();
+    } catch (_) { /* unreachable/undeployed URL: leave it to Test */ }
+  }
 }
 
 async function testConnection() {
@@ -8789,7 +8800,9 @@ async function syncToSheets() {
 
 async function syncFromSheets() {
   if (!sheetsUrl) { alert('Please connect a Google Sheet in Settings first.'); goNav('settings'); return; }
-  if (!confirm('Pull will replace ALL local data with what is in Google Sheets. Continue?')) return;
+  // _sheetsForcePull: set when the user has already explicitly chosen "use my
+  // Sheets copy" (the connect-time conflict prompt), so skip the redundant confirm.
+  if (!_sheetsForcePull && !confirm('Pull will replace ALL local data with what is in Google Sheets. Continue?')) return;
   updateSyncDot('busy');
   setSyncLabel('Pulling...');
   try {
@@ -8966,8 +8979,68 @@ async function manualPush() {
   if (btn) { btn.disabled = false; btn.style.opacity = ''; }
 }
 
+// ── SHEETS SYNC CONFLICT GUARD ───────────────────────────
+// When you connect a Sheet on a device that already has local data AND the
+// Sheet also has real data, the two can't be merged. Rather than let the next
+// edit silently overwrite the Sheet, pause auto-push and make the user pick.
+let _sheetsSyncConflictPending = false;
+let _sheetsForcePull = false;
+
+function _sheetPayloadHasData(d) {
+  return !!(d && typeof d === 'object' && (
+    (Array.isArray(d.txns) && d.txns.length) ||
+    (Array.isArray(d.incomes) && d.incomes.length) ||
+    (Array.isArray(d.savAccts) && d.savAccts.length) ||
+    (d.settings && Array.isArray(d.settings.mortData) && d.settings.mortData.length)
+  ));
+}
+
+// Read the Sheet's current contents (pull action) without applying them locally.
+async function fetchSheetPayload() {
+  const res = await fetchWithTimeout(sheetsUrl, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'pull' }),
+  });
+  const data = await res.json();
+  return (data && data.ok) ? data : null;
+}
+
+// Forced two-choice prompt: keep this device (push) or use Sheets (pull).
+function showSheetsConflictModal() {
+  _sheetsSyncConflictPending = true;
+  if (document.getElementById('sheets-conflict-modal')) return;
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay open';
+  ov.id = 'sheets-conflict-modal';
+  ov.innerHTML = `
+    <div class="modal" style="max-width:440px;">
+      <div class="modal-title">You have two copies of your data</div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin:10px 0 18px;">
+        This device already has data, and your Google Sheet already has data. Only one copy is kept, they can't be merged. Which should win?
+      </p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn btn-primary" id="sheets-conflict-keep" style="text-align:left;line-height:1.35;">Keep this device's data<br><span style="font-weight:400;font-size:11.5px;opacity:.85;">Overwrites your Google Sheet</span></button>
+        <button class="btn btn-ghost" id="sheets-conflict-load" style="text-align:left;line-height:1.35;">Use my Google Sheets copy<br><span style="font-weight:400;font-size:11.5px;opacity:.75;">Replaces the data on this device</span></button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#sheets-conflict-keep').onclick = async () => {
+    ov.remove();
+    _sheetsSyncConflictPending = false;
+    try { await autoPush(); } catch (_) {}
+  };
+  ov.querySelector('#sheets-conflict-load').onclick = async () => {
+    ov.remove();
+    _sheetsSyncConflictPending = false;
+    _sheetsForcePull = true;
+    try { await syncFromSheets(); } finally { _sheetsForcePull = false; }
+  };
+}
+
 // Auto-push to sheets after every import if connected
 async function autoPush() {
+  // Don't silently overwrite the Sheet while a connect-time conflict is unresolved.
+  if (_sheetsSyncConflictPending) return;
   if (sheetsUrl) {
     updateSyncDot('busy');
     try {
