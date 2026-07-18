@@ -5795,6 +5795,7 @@ function renderLabelsCard() {
 // Recurring is treated as a property of a merchant: flagging (or unflagging) a
 // transaction propagates to every other transaction with the same merchant, so
 // identical expenses stay in sync. Returns how many OTHER txns changed.
+let _recurListOpen = false;
 function renderRecurringCard() {
   const section = document.getElementById('recurring-section');
   const body = document.getElementById('recurring-body');
@@ -5810,27 +5811,40 @@ function renderRecurringCard() {
   section.style.display = '';
   const total = rows.reduce((s, r) => s + r.commonAmount, 0);
   if (pill) pill.textContent = fmt(total);
+  const openCls = _recurListOpen ? ' open' : '';
   body.innerHTML = `
-    <div class="recur-summary" role="button" tabindex="0" onclick="toggleRecurringList(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRecurringList(this);}">
+    <div class="recur-summary${openCls}" role="button" tabindex="0" onclick="toggleRecurringList(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRecurringList(this);}">
       <span class="recur-summary-label">Show the ${rows.length} recurring expense${rows.length !== 1 ? 's' : ''} we found</span>
       <span class="recur-caret" aria-hidden="true">▸</span>
     </div>
-    <div class="recur-list">
+    <div class="recur-list${openCls}">
       ${rows.map(r => `<div class="recur-row"><span class="recur-m">${esc(r.merchant)}</span><span class="recur-meta">${r.frequency}×${r.varies ? ' · varies' : ''}</span><span class="recur-a">${fmt(r.commonAmount)}</span><button class="recur-rm" title="Not recurring — remove" data-m="${esc(r.merchant)}" onclick="event.stopPropagation();dismissRecurring(this.getAttribute('data-m'))">✕</button></div>`).join('')}
       <button type="button" class="recur-viewall" onclick="viewRecurring()">View all in Transactions →</button>
     </div>`;
 }
 function dismissRecurring(merchant) {
-  recurringDismissed.add(commitMerchantKey(merchant));
+  const key = commitMerchantKey(merchant);
+  _recurListOpen = true;
+  recurringDismissed.add(key);
   localStorage.setItem('l3_recurring_dismissed', JSON.stringify([...recurringDismissed]));
   if (typeof renderDashboard === 'function') renderDashboard();
   if (typeof renderTxns === 'function') renderTxns();
   if (typeof autoPush === 'function') autoPush();
+  if (typeof showUndoToast === 'function') {
+    showUndoToast(`Removed "${merchant}" from recurring`, () => {
+      recurringDismissed.delete(key);
+      localStorage.setItem('l3_recurring_dismissed', JSON.stringify([...recurringDismissed]));
+      if (typeof renderDashboard === 'function') renderDashboard();
+      if (typeof renderTxns === 'function') renderTxns();
+      if (typeof autoPush === 'function') autoPush();
+    });
+  }
 }
 function toggleRecurringList(el) {
   el.classList.toggle('open');
   const list = el.nextElementSibling;
   if (list && list.classList.contains('recur-list')) list.classList.toggle('open');
+  _recurListOpen = el.classList.contains('open');
 }
 function viewRecurring() {
   txnTypeFilter = 'expenses'; txnNeedsFilter = ''; txnCatFilter = new Set(); txnCardFilter = new Set();
