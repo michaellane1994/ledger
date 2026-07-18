@@ -2892,6 +2892,9 @@ let cardTypes = JSON.parse(localStorage.getItem('l3_card_types') || '[]');
 // User-created labels for grouping transactions across categories (e.g. a
 // trip). Each: { id, name, color }. A transaction references one via t.label.
 let labels = JSON.parse(localStorage.getItem('l3_labels') || '[]');
+// Merchants removed from the auto-detected Recurring card. Separate from
+// commitDismissedMerchants so removing here doesn't affect monthly commitments.
+let recurringDismissed = new Set(JSON.parse(localStorage.getItem('l3_recurring_dismissed') || '[]'));
 if (!cardTypes.length && txns.length) {
   cardTypes = [...new Set(txns.map(t => t.card).filter(Boolean))].sort();
   if (cardTypes.length) localStorage.setItem('l3_card_types', JSON.stringify(cardTypes));
@@ -2914,6 +2917,7 @@ function persist() {
   localStorage.setItem('l3_rental', JSON.stringify(rentalExpenses));
   localStorage.setItem('l3_card_types', JSON.stringify(cardTypes));
   localStorage.setItem('l3_labels',     JSON.stringify(labels));
+  localStorage.setItem('l3_recurring_dismissed', JSON.stringify([...recurringDismissed]));
 }
 
 // Returns a normalised merchant key for matching
@@ -4033,12 +4037,22 @@ function detectRecurring() {
   });
   return Object.values(byMerchant)
     .filter(r => r.months.size >= 3)
-    .map(r => ({
-      merchant: r.merchant,
-      category: r.category,
-      frequency: r.months.size,
-      avgAmount: r.amounts.reduce((s,a) => s + a, 0) / r.amounts.length,
-    }))
+    .map(r => {
+      // Most common amount (mode) — the "identical" recurring value. Falls back
+      // to the average when amounts are all different.
+      const counts = {};
+      r.amounts.forEach(a => { const k = a.toFixed(2); counts[k] = (counts[k] || 0) + 1; });
+      let common = r.amounts[0], best = 0;
+      Object.keys(counts).forEach(k => { if (counts[k] > best) { best = counts[k]; common = parseFloat(k); } });
+      return {
+        merchant: r.merchant,
+        category: r.category,
+        frequency: r.months.size,
+        avgAmount: r.amounts.reduce((s,a) => s + a, 0) / r.amounts.length,
+        commonAmount: common,
+        varies: best < r.amounts.length,
+      };
+    })
     .sort((a, b) => b.avgAmount - a.avgAmount);
 }
 
@@ -5787,12 +5801,14 @@ function renderRecurringCard() {
   const pill = document.getElementById('recurring-total-pill');
   if (!section || !body) return;
   // Auto-detected: merchants that recur across recent months (detectRecurring).
-  // Each row has an ✕ to remove a false positive (shared dismiss list with the
-  // Est. monthly commitments card).
-  const rows = detectRecurring();
+  // Its own dismiss list (recurringDismissed) — removing here does NOT touch the
+  // Est. monthly commitments card. Amount shown is the most common (mode) value.
+  const rows = detectRecurring()
+    .filter(r => !recurringDismissed.has(commitMerchantKey(r.merchant)))
+    .sort((a, b) => b.commonAmount - a.commonAmount);
   if (!rows.length) { section.style.display = 'none'; return; }
   section.style.display = '';
-  const total = rows.reduce((s, r) => s + r.avgAmount, 0);
+  const total = rows.reduce((s, r) => s + r.commonAmount, 0);
   if (pill) pill.textContent = fmt(total);
   body.innerHTML = `
     <div class="recur-summary" role="button" tabindex="0" onclick="toggleRecurringList(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRecurringList(this);}">
@@ -5800,9 +5816,16 @@ function renderRecurringCard() {
       <span class="recur-caret" aria-hidden="true">▸</span>
     </div>
     <div class="recur-list">
-      ${rows.map(r => `<div class="recur-row"><span class="recur-m">${esc(r.merchant)}</span><span class="recur-meta">${r.frequency}×${(CAT[r.category] && CAT[r.category].label) ? ' · ' + esc(CAT[r.category].label) : ''}</span><span class="recur-a">${fmt(r.avgAmount)}</span><button class="recur-rm" title="Not recurring — remove" data-m="${esc(r.merchant)}" onclick="event.stopPropagation();dismissCommitment(this.getAttribute('data-m'))">✕</button></div>`).join('')}
+      ${rows.map(r => `<div class="recur-row"><span class="recur-m">${esc(r.merchant)}</span><span class="recur-meta">${r.frequency}×${r.varies ? ' · varies' : ''}</span><span class="recur-a">${fmt(r.commonAmount)}</span><button class="recur-rm" title="Not recurring — remove" data-m="${esc(r.merchant)}" onclick="event.stopPropagation();dismissRecurring(this.getAttribute('data-m'))">✕</button></div>`).join('')}
       <button type="button" class="recur-viewall" onclick="viewRecurring()">View all in Transactions →</button>
     </div>`;
+}
+function dismissRecurring(merchant) {
+  recurringDismissed.add(commitMerchantKey(merchant));
+  localStorage.setItem('l3_recurring_dismissed', JSON.stringify([...recurringDismissed]));
+  if (typeof renderDashboard === 'function') renderDashboard();
+  if (typeof renderTxns === 'function') renderTxns();
+  if (typeof autoPush === 'function') autoPush();
 }
 function toggleRecurringList(el) {
   el.classList.toggle('open');
@@ -5907,8 +5930,9 @@ function bulkApply(field, value) {
 function renderTxns() {
   const s   = (document.getElementById('f-search').value || '').toLowerCase();
   const cpf = document.getElementById('f-person').value;
-  // Auto-detected recurring merchants (drives the ↻ chip + Recurring filter).
-  const _recurSet = new Set(detectRecurring().map(r => commitMerchantKey(r.merchant)));
+  // Auto-detected recurring merchants (drives the ↻ chip + Recurring filter),
+  // minus any the user removed from the Recurring card.
+  const _recurSet = new Set(detectRecurring().filter(r => !recurringDismissed.has(commitMerchantKey(r.merchant))).map(r => commitMerchantKey(r.merchant)));
 
   // Rebuild cat multi-select — items depend on the active type pill so the user sees
   // only the relevant set (e.g. income shows salary/bonus/rental, not expense categories).
@@ -8669,7 +8693,7 @@ async function syncToSheets() {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels } }),
+      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed] } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -8762,6 +8786,8 @@ async function syncFromSheets() {
       localStorage.setItem('l3_card_types', JSON.stringify(cardTypes));
       labels = Array.isArray(data.settings?.labels) ? data.settings.labels.slice() : [];
       localStorage.setItem('l3_labels', JSON.stringify(labels));
+      recurringDismissed = new Set(Array.isArray(data.settings?.recurringDismissed) ? data.settings.recurringDismissed : []);
+      localStorage.setItem('l3_recurring_dismissed', JSON.stringify([...recurringDismissed]));
       repairIncomeDates();
       persist();
       updateSyncDot('ok');
@@ -8781,7 +8807,7 @@ async function syncFromSheets() {
 
 function clearLocalData() {
   if (!confirm('This will wipe all local data from this device. Your Google Sheet data is unaffected. Use Pull to reload it. Continue?')) return;
-  txns = []; uploads = []; incomes = []; savAccts = []; contribs = []; learned = {}; trash = []; labels = [];
+  txns = []; uploads = []; incomes = []; savAccts = []; contribs = []; learned = {}; trash = []; labels = []; recurringDismissed = new Set();
   persist();
   renderPills();
   renderDashboard();
@@ -8870,7 +8896,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels } }),
+        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed] } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
