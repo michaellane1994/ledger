@@ -597,6 +597,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .recur-a{color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
 .recur-viewall{margin-top:8px;background:none;border:none;color:var(--accent);font-weight:600;font-size:12.5px;cursor:pointer;font-family:'Inter',sans-serif;text-align:left;padding:6px 2px;}
 .recur-x{font-size:10px;color:var(--faint);font-weight:600;margin-left:2px;}
+.recur-hidden-summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:6px 2px;margin-top:6px;border-top:1px solid var(--border);font-size:12px;color:var(--faint);font-weight:500;-webkit-tap-highlight-color:transparent;}
+.recur-hidden-summary.open .recur-caret{transform:rotate(90deg);}
+.recur-row-hidden .recur-m,.recur-row-hidden .recur-a{opacity:.6;}
+.recur-restore{background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;opacity:.75;transition:opacity .12s;}
+.recur-restore:hover{opacity:1;}
 .bulk-bar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2100;display:none;align-items:center;gap:8px;background:#1f1c15;color:#fff;padding:8px 10px 8px 16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.32);flex-wrap:wrap;max-width:94vw;}
 .bulk-bar .bulk-count{font-size:13px;font-weight:600;margin-right:2px;white-space:nowrap;}
 .bulk-bar select{font-size:12.5px;font-family:'Inter',sans-serif;padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;outline:none;}
@@ -953,6 +958,12 @@ textarea,select{color:var(--ink);}
   .mapper-grid{grid-template-columns:1fr;}
   .add-modal-grid{grid-template-columns:1fr;}
   .add-field.full{grid-column:1;}
+  /* On mobile bump every field to 16px so all fields render at one size (the
+     native date input was rendering larger than the 13px text fields) and iOS
+     doesn't auto-zoom on focus. Normalise the date input's native chrome so its
+     value doesn't overflow / overlap its box. */
+  .add-field input,.add-field select,.add-field textarea{font-size:16px;}
+  .add-field input[type="date"]{-webkit-appearance:none;appearance:none;min-height:44px;line-height:1.2;box-sizing:border-box;text-align:left;}
   .modal{padding:22px 18px;}
   .topbar-title{font-size:20px;}
   .txn-table table,.txn-table tbody{display:block;width:100%;}
@@ -1098,7 +1109,10 @@ textarea,select{color:var(--ink);}
 @media(max-width:700px){.mort-schedule .income-table{overflow-x:auto;}.mort-schedule table{min-width:760px;}.mort-extra-input{width:70px;}}
 .mort-card-add{background:transparent;border:2px dashed var(--border);border-radius:var(--radius);padding:18px 20px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px;font-weight:500;min-height:160px;}
 .mort-card-add:hover{border-color:var(--accent);color:var(--accent);}
-.mort-edit-btn{position:absolute;top:10px;left:10px;background:none;border:none;cursor:pointer;color:var(--faint);padding:3px;opacity:0;transition:opacity .15s;display:flex;align-items:center;}
+/* Always visible so the edit affordance is discoverable (esp. on mobile, where
+   there's no hover). Small bordered pill with an "Edit" label. */
+.mort-edit-btn{position:absolute;top:9px;left:9px;background:var(--surface);border:1px solid var(--border);cursor:pointer;color:var(--muted);padding:3px 8px;border-radius:100px;transition:color .15s,border-color .15s,background .15s;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'Inter',sans-serif;line-height:1;z-index:2;}
+.mort-edit-btn:hover{color:var(--accent);border-color:var(--accent);}
 .mort-card:hover .mort-edit-btn{opacity:1;}
 .mort-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px;}
 .mort-modal{background:var(--surface);border-radius:var(--radius);padding:28px 28px 20px;width:min(560px,100%);max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
@@ -2853,6 +2867,11 @@ rebuildCAT();
 const DEFAULT_KW = {};
 DEFAULT_CATS.forEach(c => { DEFAULT_KW[c.key] = c.kw || []; });
 
+// Heuristic: does this deposit look like a paycheque / salary? Used to
+// pre-flag credit rows as income during import (the user can still override).
+function looksLikePayroll(merchant) {
+  return /payroll|\bpay\s?deposit|direct dep|salary|paycheque|paycheck|\bwages?\b|\bpay\s?(run|cheque|check)\b/i.test(merchant || '');
+}
 function autoCat(merchant) {
   const key = merchantKey(merchant);
   // 1. Check learned overrides first (exact match)
@@ -2994,7 +3013,18 @@ function renderPills() {
   const mel = document.getElementById('mobile-month-pills');
   el.innerHTML = '';
   if (mel) mel.innerHTML = '';
-  if (!allMonths.length) return;
+  // No data yet: hide the pills rows and drop the reserved padding so an empty
+  // period bar doesn't leave a gap on the dashboard (most visible on mobile).
+  if (!allMonths.length) {
+    if (mel) mel.style.display = 'none';
+    el.style.display = 'none';
+    const bar = document.getElementById('dash-period-bar');
+    if (bar) bar.style.display = 'none';
+    const mainEl = document.querySelector('.main');
+    if (mainEl) mainEl.classList.remove('dash-bar-visible');
+    return;
+  }
+  el.style.display = '';
 
   const years = [...new Set(allMonths.map(m => m.substring(0,4)))].sort().reverse();
   // Snap selYear to a year that has data
@@ -5796,6 +5826,7 @@ function renderLabelsCard() {
 // transaction propagates to every other transaction with the same merchant, so
 // identical expenses stay in sync. Returns how many OTHER txns changed.
 let _recurListOpen = false;
+let _recurHiddenOpen = false;
 function renderRecurringCard() {
   const section = document.getElementById('recurring-section');
   const body = document.getElementById('recurring-body');
@@ -5804,15 +5835,29 @@ function renderRecurringCard() {
   // Auto-detected: merchants that recur across recent months (detectRecurring).
   // Its own dismiss list (recurringDismissed) — removing here does NOT touch the
   // Est. monthly commitments card. Amount shown is the most common (mode) value.
-  const rows = detectRecurring()
+  const detected = detectRecurring();
+  const rows = detected
     .filter(r => !recurringDismissed.has(commitMerchantKey(r.merchant)))
     .sort((a, b) => b.commonAmount - a.commonAmount);
-  if (!rows.length) { section.style.display = 'none'; return; }
+  // Dismissed merchants that are still detected as recurring — recoverable.
+  const hidden = detected
+    .filter(r => recurringDismissed.has(commitMerchantKey(r.merchant)))
+    .sort((a, b) => b.commonAmount - a.commonAmount);
+  if (!rows.length && !hidden.length) { section.style.display = 'none'; return; }
   section.style.display = '';
   const total = rows.reduce((s, r) => s + r.commonAmount, 0);
   if (pill) pill.textContent = fmt(total);
   const openCls = _recurListOpen ? ' open' : '';
-  body.innerHTML = `
+  const hiddenOpenCls = _recurHiddenOpen ? ' open' : '';
+  const hiddenBlock = hidden.length ? `
+    <div class="recur-hidden-summary${hiddenOpenCls}" role="button" tabindex="0" onclick="toggleRecurringHidden(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRecurringHidden(this);}">
+      <span>${hidden.length} hidden</span>
+      <span class="recur-caret" aria-hidden="true">▸</span>
+    </div>
+    <div class="recur-list${hiddenOpenCls}">
+      ${hidden.map(r => `<div class="recur-row recur-row-hidden"><span class="recur-m">${esc(r.merchant)}</span><span class="recur-meta">${r.frequency}×${r.varies ? ' · varies' : ''}</span><span class="recur-a">${fmt(r.commonAmount)}</span><button class="recur-restore" title="Restore — this is recurring" data-m="${esc(r.merchant)}" onclick="event.stopPropagation();restoreRecurring(this.getAttribute('data-m'))">↩</button></div>`).join('')}
+    </div>` : '';
+  const mainBlock = rows.length ? `
     <div class="recur-summary${openCls}" role="button" tabindex="0" onclick="toggleRecurringList(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRecurringList(this);}">
       <span class="recur-summary-label">Show the ${rows.length} recurring expense${rows.length !== 1 ? 's' : ''} we found</span>
       <span class="recur-caret" aria-hidden="true">▸</span>
@@ -5820,7 +5865,23 @@ function renderRecurringCard() {
     <div class="recur-list${openCls}">
       ${rows.map(r => `<div class="recur-row"><span class="recur-m">${esc(r.merchant)}</span><span class="recur-meta">${r.frequency}×${r.varies ? ' · varies' : ''}</span><span class="recur-a">${fmt(r.commonAmount)}</span><button class="recur-rm" title="Not recurring — remove" data-m="${esc(r.merchant)}" onclick="event.stopPropagation();dismissRecurring(this.getAttribute('data-m'))">✕</button></div>`).join('')}
       <button type="button" class="recur-viewall" onclick="viewRecurring()">View all in Transactions →</button>
-    </div>`;
+    </div>` : `<div class="recur-summary-label" style="padding:6px 2px;">No active recurring expenses.</div>`;
+  body.innerHTML = mainBlock + hiddenBlock;
+}
+function restoreRecurring(merchant) {
+  const key = commitMerchantKey(merchant);
+  _recurHiddenOpen = true;
+  recurringDismissed.delete(key);
+  localStorage.setItem('l3_recurring_dismissed', JSON.stringify([...recurringDismissed]));
+  if (typeof renderDashboard === 'function') renderDashboard();
+  if (typeof renderTxns === 'function') renderTxns();
+  if (typeof autoPush === 'function') autoPush();
+}
+function toggleRecurringHidden(el) {
+  el.classList.toggle('open');
+  const list = el.nextElementSibling;
+  if (list && list.classList.contains('recur-list')) list.classList.toggle('open');
+  _recurHiddenOpen = el.classList.contains('open');
 }
 function dismissRecurring(merchant) {
   const key = commitMerchantKey(merchant);
@@ -6847,7 +6908,8 @@ function parseImportRows() {
     if (Math.abs(amt) > 50000) { invalid.push({ idx, reason: 'Unreasonably large amount', dateStr, merchant, amount: amt }); return; }
     const date = normDate(dateStr);
     if (!date) { invalid.push({ idx, reason: 'Date unreadable', dateStr, merchant, amount: amt }); return; }
-    valid.push({ date, merchant, amount: amt, refund, category: autoCat(merchant) });
+    const autoIncome = refund && looksLikePayroll(merchant);
+    valid.push({ date, merchant, amount: amt, refund, category: autoIncome ? null : autoCat(merchant), isIncome: autoIncome });
   });
   return { valid, invalid, mappingIncomplete: false };
 }
@@ -7091,7 +7153,8 @@ async function doImport() {
       if (Math.abs(amt) > 50000) return;
       const date = normDate(dateStr);
       if (!date) return;
-      parsed.push({ id: uid(), date, merchant, amount: amt, category: null, person, card: cardName, note: '', refund });
+      const autoIncome = refund && looksLikePayroll(merchant);
+      parsed.push({ id: uid(), date, merchant, amount: amt, category: null, person, card: cardName, note: '', refund, isIncome: autoIncome });
     });
   }
 
@@ -9035,6 +9098,8 @@ function parsePdfTransactions() {
     t.id     = uid();
     t.note   = '';
     t.refund = t.amount < 0;
+    t.isIncome = t.refund && looksLikePayroll(t.merchant);
+    if (t.isIncome) t.category = null;
   });
 
   pdfParsedTxns = txns;
@@ -10477,7 +10542,7 @@ function renderMortgages() {
       ${stats.map(m => `
         <div class="mort-card${m.id === selectedMortId ? ' selected' : ''}" onclick="selectMort('${m.id}')" style="border-top-color:${m.color};">
           <button class="mort-edit-btn" onclick="event.stopPropagation();showMortForm('${m.id}')" title="Edit mortgage">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit
           </button>
           <span class="mort-term-badge">Term to ${m.termEnd.substring(0,7)}</span>
           ${rateTypeBadge(m)}
