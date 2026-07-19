@@ -597,6 +597,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .recur-a{color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
 .recur-viewall{margin-top:8px;background:none;border:none;color:var(--accent);font-weight:600;font-size:12.5px;cursor:pointer;font-family:'Inter',sans-serif;text-align:left;padding:6px 2px;}
 .recur-x{font-size:10px;color:var(--faint);font-weight:600;margin-left:2px;}
+.recur-empty-note{font-size:13px;color:var(--muted);line-height:1.55;padding:12px 4px;}
 .recur-hidden-summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:6px 2px;margin-top:6px;border-top:1px solid var(--border);font-size:12px;color:var(--faint);font-weight:500;-webkit-tap-highlight-color:transparent;}
 .recur-hidden-summary.open .recur-caret{transform:rotate(90deg);}
 .recur-row-hidden .recur-m,.recur-row-hidden .recur-a{opacity:.6;}
@@ -5832,6 +5833,22 @@ function renderRecurringCard() {
   const body = document.getElementById('recurring-body');
   const pill = document.getElementById('recurring-total-pill');
   if (!section || !body) return;
+  const sub = section.querySelector('.dash-section-sub');
+  // Recurring detection needs at least 3 months of expense history to spot a
+  // repeat. Until then, show the card with a disclaimer rather than hiding it.
+  const expenseMonths = new Set(
+    txns.filter(t => !t.incomeType && !t.savingsAccountId && t.amount > 0)
+        .map(t => t.date.substring(0, 7))
+  ).size;
+  if (expenseMonths < 3) {
+    section.style.display = '';
+    if (pill) pill.style.display = 'none';
+    if (sub) sub.textContent = 'Recurring bills appear here automatically once there is enough history to spot them.';
+    body.innerHTML = `<div class="recur-empty-note">Trove needs about 3 months of expenses to detect your recurring bills. Keep importing statements and they'll show up here automatically.</div>`;
+    return;
+  }
+  if (pill) pill.style.display = '';
+  if (sub) sub.textContent = 'Expenses we spotted recurring across recent months. Open the list and remove any that aren\'t.';
   // Auto-detected: merchants that recur across recent months (detectRecurring).
   // Its own dismiss list (recurringDismissed) — removing here does NOT touch the
   // Est. monthly commitments card. Amount shown is the most common (mode) value.
