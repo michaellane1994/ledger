@@ -5860,7 +5860,15 @@ function renderRecurringCard() {
   const hidden = detected
     .filter(r => recurringDismissed.has(commitMerchantKey(r.merchant)))
     .sort((a, b) => b.commonAmount - a.commonAmount);
-  if (!rows.length && !hidden.length) { section.style.display = 'none'; return; }
+  if (!rows.length && !hidden.length) {
+    // Enough history, but nothing repeats often enough yet — keep the card
+    // visible with a note so the feature is still discoverable.
+    section.style.display = '';
+    if (pill) pill.style.display = 'none';
+    if (sub) sub.textContent = 'Recurring bills show up here as soon as Trove spots an expense repeating across recent months.';
+    body.innerHTML = `<div class="recur-empty-note">No recurring bills found yet. As more statements come in, Trove will flag any expense that repeats across several months.</div>`;
+    return;
+  }
   section.style.display = '';
   const total = rows.reduce((s, r) => s + r.commonAmount, 0);
   if (pill) pill.textContent = fmt(total);
