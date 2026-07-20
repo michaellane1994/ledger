@@ -5316,8 +5316,10 @@ function renderDashboard() {
   if (commitCard && commitBody && recurring.length >= 3) {
     commitCard.style.display = '';
     if (commitSection) commitSection.style.display = '';
-    const shown = recurring.slice(0, 5);
-    const hasMore = recurring.length > 5;
+    // _commitExpanded persists across re-renders so dismissing a row keeps the
+    // list open, and the toggle can collapse it again (matches recurring card).
+    const shown = _commitExpanded ? recurring : recurring.slice(0, 5);
+    const canToggle = recurring.length > 5;
     commitTotal.textContent = 'Est. ' + fmt(recurring.reduce((s,r) => s + r.avgAmount, 0)) + '/mo';
     const rowHtml = (r) => {
       const c = CAT[r.category] || CAT.misc;
@@ -5335,9 +5337,10 @@ function renderDashboard() {
     const restoreLink = dismissedCount > 0
       ? `<div style="font-size:11.5px;color:var(--muted);padding:8px 0 2px;text-align:right;">${dismissedCount} hidden · <button type="button" onclick="restoreDismissedCommitments()" style="background:transparent;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;padding:0;">Restore</button></div>`
       : '';
-    commitBody.innerHTML = shown.map(rowHtml).join('')
-      + (hasMore ? `<div style="font-size:12px;color:var(--muted);padding:8px 0 2px;cursor:pointer;" onclick="this.parentElement.innerHTML += document.getElementById('commits-extra').innerHTML; this.remove();">+ ${recurring.length - 5} more</div><template id="commits-extra">${recurring.slice(5).map(rowHtml).join('')}</template>` : '')
-      + restoreLink;
+    const toggleLink = canToggle
+      ? `<div style="font-size:12px;color:var(--muted);padding:8px 0 2px;cursor:pointer;" onclick="_commitExpanded=${!_commitExpanded};renderDashboard();">${_commitExpanded ? 'Show less' : '+ ' + (recurring.length - 5) + ' more'}</div>`
+      : '';
+    commitBody.innerHTML = shown.map(rowHtml).join('') + toggleLink + restoreLink;
   } else if (commitCard) {
     commitCard.style.display = 'none';
     if (commitSection) commitSection.style.display = 'none';
@@ -5826,6 +5829,7 @@ function renderLabelsCard() {
 // Recurring is treated as a property of a merchant: flagging (or unflagging) a
 // transaction propagates to every other transaction with the same merchant, so
 // identical expenses stay in sync. Returns how many OTHER txns changed.
+let _commitExpanded = false;
 let _recurListOpen = false;
 let _recurHiddenOpen = false;
 function renderRecurringCard() {
