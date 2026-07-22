@@ -179,7 +179,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .main.dash-bar-visible{padding-top:94px;}
 .topbar-pills-row::-webkit-scrollbar{display:none;}
 .topbar-left{display:flex;align-items:center;gap:14px;min-width:0;}
-.topbar-title{font-family:'Fraunces',serif;font-size:38px;letter-spacing:-0.015em;white-space:nowrap;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none;outline:none;}
+.topbar-title{font-family:'Fraunces',serif;font-size:33px;letter-spacing:-0.015em;white-space:nowrap;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none;outline:none;}
 .topbar-title:focus{outline:none;}
 .topbar-title:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
 .month-pills{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;align-items:center;}
@@ -1119,7 +1119,7 @@ textarea,select{color:var(--ink);}
 .mort-traj-chart{display:block;width:100%;height:200px;max-width:100%;}
 .mort-traj-legend{display:flex;gap:18px;font-size:11px;color:var(--muted);margin-top:8px;flex-wrap:wrap;}
 .mort-traj-legend-swatch{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:6px;}
-@media(max-width:700px){.mort-schedule .income-table{overflow-x:auto;}.mort-schedule table{min-width:760px;}.mort-extra-input{width:70px;}}
+@media(max-width:700px){.mort-schedule .income-table{overflow-x:auto;}.mort-schedule table{min-width:0;width:100%;border-collapse:separate;border-spacing:0;}.mort-schedule th:nth-child(3),.mort-schedule td:nth-child(3),.mort-schedule th:nth-child(6),.mort-schedule td:nth-child(6),.mort-schedule th:nth-child(7),.mort-schedule td:nth-child(7),.mort-schedule th:nth-child(9),.mort-schedule td:nth-child(9){display:none;}.mort-schedule th,.mort-schedule td{padding:6px 7px;font-size:11px;}.mort-extra-input{width:70px;}}
 .mort-card-add{background:transparent;border:2px dashed var(--border);border-radius:var(--radius);padding:18px 20px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px;font-weight:500;min-height:160px;}
 .mort-card-add:hover{border-color:var(--accent);color:var(--accent);}
 /* Always visible so the edit affordance is discoverable (esp. on mobile, where
