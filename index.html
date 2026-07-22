@@ -1143,6 +1143,13 @@ textarea,select{color:var(--ink);}
   .mort-schedule tr.mort-open-row td::before{content:none;}
   .mort-schedule tr.mort-open-row td:first-child{border-bottom:none;margin-bottom:0;}
   .mort-schedule .mort-extra-input{width:110px;text-align:right;}
+  /* Expanded months are compact: date is the card title, then just Balance and
+     the extra-payment input — so a year's payments don't need endless scroll. */
+  .mort-schedule tr.mort-pmt-row.vis{padding:8px 12px;margin-bottom:6px;}
+  .mort-schedule tr.mort-pmt-row td:first-child{display:none;}
+  .mort-schedule tr.mort-pmt-row td:nth-child(4),.mort-schedule tr.mort-pmt-row td:nth-child(5){display:none;}
+  .mort-schedule tr.mort-pmt-row td:nth-child(2){justify-content:flex-start;font-size:13px;font-weight:600;color:var(--ink);border-bottom:1px solid var(--border);padding-bottom:5px;margin-bottom:4px;}
+  .mort-schedule tr.mort-pmt-row td:nth-child(2)::before{content:none;}
 }
 .mort-card-add{background:transparent;border:2px dashed var(--border);border-radius:var(--radius);padding:18px 20px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px;font-weight:500;min-height:160px;}
 .mort-card-add:hover{border-color:var(--accent);color:var(--accent);}
