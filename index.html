@@ -4102,7 +4102,7 @@ function renderCashflowChart() {
               const i = ctx.dataIndex;
               const tag = projected[i] ? ' (proj.)' : '';
               const v = ctx.raw;
-              const abs = n => '$' + Math.abs(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
+              const abs = n => '$' + Math.abs(n).toLocaleString('en-CA',{minimumFractionDigits:0,maximumFractionDigits:0});
               if (ctx.dataset.label === 'Income')           return ` Income: ${abs(v)}${tag}`;
               if (ctx.dataset.label === 'Bonus')            return ` Bonus: ${abs(v)}${tag}`;
               if (ctx.dataset.label === 'Needs')            return ` Needs: ${abs(v)}${tag}`;
