@@ -540,6 +540,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .card-head{padding:var(--s-5) var(--s-6) var(--s-3);display:flex;align-items:center;justify-content:space-between;}
 .card-head+.card-body{padding-top:0;}
 .card-title{font-family:'Fraunces',serif;font-size:23px;letter-spacing:-0.015em;font-weight:400;}
+#view-settings .card-title{font-size:18px;}
 .card-body{padding:12px 20px 18px;}
 .subcat-rows{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
 .subcat-row{display:flex;align-items:center;gap:10px;}
@@ -555,6 +556,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 
 /* ── TRANSACTIONS ── */
 .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+.txn-sort-mobile{display:none;}
 .filter-bar input,.filter-bar select,.filter-bar .ms-btn{padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;transition:border-color .15s ease, box-shadow .15s ease;}
 .filter-bar input:hover,.filter-bar select:hover,.filter-bar .ms-btn:hover{border-color:var(--border-2);}
 .filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,90,68,.14);}
@@ -964,6 +966,7 @@ textarea,select{color:var(--ink);}
   .group-grid{grid-template-columns:repeat(2,1fr);}
   .filter-bar{gap:6px;}
   .filter-bar input{min-width:100%;width:100%;}
+  .txn-sort-mobile{display:block;width:100%;}
   .mapper-grid{grid-template-columns:1fr;}
   .add-modal-grid{grid-template-columns:1fr;}
   .add-field.full{grid-column:1;}
@@ -1686,6 +1689,12 @@ textarea,select{color:var(--ink);}
       </div>
       <div class="filter-bar">
         <input type="text" id="f-search" placeholder="Search merchant..." oninput="renderTxns()">
+        <select id="txn-sort-mobile" class="txn-sort-mobile" onchange="setTxnSortValue(this.value)" aria-label="Sort transactions">
+          <option value="date-desc">Newest first</option>
+          <option value="date-asc">Oldest first</option>
+          <option value="amount-desc">Amount: high to low</option>
+          <option value="amount-asc">Amount: low to high</option>
+        </select>
         <div class="ms-wrap" id="ms-cat">
           <button class="ms-btn" id="ms-cat-btn" onclick="openMs(event,'ms-cat')">All categories</button>
           <div class="ms-drop" id="ms-cat-drop"></div>
@@ -2294,6 +2303,10 @@ function doGet(e) {
       <div class="add-field">
         <label><span id="as-goal-label">Savings Goal</span> (optional)</label>
         <input type="number" id="as-goal" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="add-field">
+        <label>Colour</label>
+        <input type="color" id="as-color" value="#2d6a4f" style="width:100%;height:38px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;">
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -4089,7 +4102,7 @@ function renderCashflowChart() {
               const i = ctx.dataIndex;
               const tag = projected[i] ? ' (proj.)' : '';
               const v = ctx.raw;
-              const abs = n => '$' + Math.abs(n).toLocaleString('en-CA',{minimumFractionDigits:0,maximumFractionDigits:0});
+              const abs = n => '$' + Math.abs(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
               if (ctx.dataset.label === 'Income')           return ` Income: ${abs(v)}${tag}`;
               if (ctx.dataset.label === 'Bonus')            return ` Bonus: ${abs(v)}${tag}`;
               if (ctx.dataset.label === 'Needs')            return ` Needs: ${abs(v)}${tag}`;
@@ -5642,6 +5655,10 @@ function setTxnSort(col) {
   else { txnSort = txnSort === 'amount-desc' ? 'amount-asc' : 'amount-desc'; }
   renderTxns();
 }
+function setTxnSortValue(v) {
+  if (v) txnSort = v;
+  renderTxns();
+}
 function setTxnCatPill(key) {
   txnTypeFilter = '';
   if (txnCatFilter.size === 1 && txnCatFilter.has(key)) txnCatFilter = new Set();
@@ -7099,7 +7116,7 @@ function renderImportPreview() {
     return `<tr data-row-idx="${i}" style="${rowStyle}">
       <td data-label="Date" style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editImportRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Merchant" style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}${curSym}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}${curSym}</span><input type="number" step="0.01" value="${amtAbs.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Category" style="padding:3px 6px;"><select class="imp-sel" onchange="editImportRow(${i},'category',this.value)">${catSelect}</select></td>
       <td data-label="Person" class="import-preview-person-cell" style="padding:3px 6px;">${personCell}</td>
       <td data-label="" style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
@@ -8002,7 +8019,7 @@ function renderSavings() {
     acctEl.innerHTML = '<div style="color:var(--faint);font-size:13px;padding:12px 0;">No accounts added yet — click Add / Update Account to get started.</div>';
   } else {
     acctEl.innerHTML = savAccts.map(a => {
-      const col  = ACCT_COLORS[a.type] || '#71717a';
+      const col  = a.color || ACCT_COLORS[a.type] || '#71717a';
       const bg   = ACCT_BGS[a.type]    || '#f4f4f5';
       const pct  = a.goal ? Math.min(a.balance/a.goal*100,100).toFixed(1) : null;
       const ccy  = a.currency && CURRENCIES[a.currency] ? a.currency : globalCurrency;
@@ -8050,7 +8067,7 @@ function renderSavings() {
   empty.style.display = 'none';
   body.innerHTML = list.map(c => {
     const acct = savAccts.find(a => a.id === c.accountId);
-    const col  = acct ? (ACCT_COLORS[acct.type]||'#71717a') : '#71717a';
+    const col  = acct ? (acct.color || ACCT_COLORS[acct.type]||'#71717a') : '#71717a';
     const isW  = c.type === 'withdrawal';
     return `<tr>
       <td style="width:120px;vertical-align:middle;"><input type="date" value="${c.date}" onchange="saveContribDate('${c.id}',this.value)" style="border:none;background:transparent;font-size:11.5px;color:var(--faint);font-family:'Inter',sans-serif;cursor:pointer;width:100%;padding:0;margin:0;line-height:1.3;vertical-align:middle;-webkit-appearance:none;appearance:none;box-sizing:border-box;"></td>
@@ -8097,6 +8114,7 @@ function openAddSavings() {
   document.getElementById('as-goal').value    = '';
   document.getElementById('as-balance-equiv').value = '';
   document.getElementById('as-type-custom').value = '';
+  { const c=document.getElementById('as-color'); if(c) c.value='#2d6a4f'; }
   document.getElementById('as-custom-type-field').style.display = 'none';
   document.getElementById('as-type').innerHTML = savingsTypeOptions();
   _populateAcctCurrencyDropdown();
@@ -8122,6 +8140,7 @@ function editSavings(id) {
   document.getElementById('as-goal').value    = a.goal || '';
   document.getElementById('as-currency').value = a.currency || globalCurrency;
   document.getElementById('as-balance-equiv').value = a.balanceEquiv || '';
+  document.getElementById('as-color').value = a.color || ACCT_COLORS[a.type] || '#2d6a4f';
   onAcctCurrencyChange();
   document.getElementById('add-savings-modal').dataset.editId = id;
   document.getElementById('savings-modal-title').textContent = 'Update Account';
@@ -8150,16 +8169,17 @@ function confirmAddSavings() {
       saveAcctTypes();
     }
   }
+  const color = document.getElementById('as-color').value;
   const editId = document.getElementById('add-savings-modal').dataset.editId;
   if (editId) {
     const a = savAccts.find(x => x.id === editId);
     if (a) {
       const fromContribs = contribs.filter(c => c.accountId === editId)
         .reduce((s, c) => s + (c.type === 'contribution' ? c.amount : -c.amount), 0);
-      Object.assign(a, { name, type, person, balance, baseBalance: balance - fromContribs, goal, currency, balanceEquiv });
+      Object.assign(a, { name, type, person, balance, baseBalance: balance - fromContribs, goal, currency, balanceEquiv, color });
     }
   } else {
-    savAccts.push({ id:uid(), name, type, person, balance, baseBalance: balance, goal, currency, balanceEquiv });
+    savAccts.push({ id:uid(), name, type, person, balance, baseBalance: balance, goal, currency, balanceEquiv, color });
   }
   persist(); closeAddSavings(); renderSavings(); renderDashboard(); autoPush();
 }
@@ -8811,7 +8831,8 @@ function toggleCfExcl(key, excluded) {
 function buildCfExclDrop() {
   const drop = document.getElementById('ms-cf-excl-drop');
   if (!drop) return;
-  drop.innerHTML = CATS.map(c => {
+  const doneHeader = `<div class="ms-drop-done"><span class="ms-drop-done-title">Exclude categories</span><button type="button" onclick="event.stopPropagation();closeAllMs();">Done</button></div>`;
+  drop.innerHTML = doneHeader + CATS.map(c => {
     const v = c.key.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     return `<label class="ms-opt" onclick="event.stopPropagation()"><input type="checkbox" ${cfExcludedCats.has(c.key) ? 'checked' : ''} onchange="toggleCfExcl('${v}', this.checked)"><span class="ms-check"></span><span>${esc(c.label)}</span></label>`;
   }).join('');
@@ -9316,7 +9337,7 @@ function renderPdfPreview() {
     return `<tr data-row-idx="${i}" style="${rowStyle}">
       <td data-label="Date" style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editPdfRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Merchant" style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editPdfRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}${curSym}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editPdfRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}${curSym}</span><input type="number" step="0.01" value="${amtAbs.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}" onchange="editPdfRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Category" style="padding:3px 6px;"><select class="imp-sel" onchange="editPdfRow(${i},'category',this.value)">${catSelect}</select></td>
       <td data-label="Person" style="padding:3px 6px;"><select class="imp-sel" onchange="editPdfRow(${i},'person',this.value)" title="Whose transaction" aria-label="Person">${_pdfPeople.map(p => `<option value="${esc(p)}"${(t.person || pdfGlobalPerson) === p ? ' selected' : ''}>${esc(p)}</option>`).join('')}</select></td>
       <td data-label="" style="padding:3px 4px;text-align:center;"><button onclick="deletePdfRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
