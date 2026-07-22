@@ -1073,6 +1073,9 @@ textarea,select{color:var(--ink);}
 .mort-sim-result-value{font-size:16px;font-weight:600;}
 .mort-sim-result-sub{font-size:11px;color:var(--muted);margin-top:2px;}
 .mort-schedule{border-top:1px solid var(--border);padding-top:20px;margin-top:20px;}
+/* Wide tables (e.g. savings contributions) scroll horizontally on mobile. */
+.tbl-scroll{width:100%;}
+@media(max-width:640px){.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}.tbl-scroll table{min-width:600px;}}
 .mort-sched-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
 .mort-sched-title{font-size:14px;font-weight:600;}
 .mort-yr-row{cursor:pointer;}
@@ -1801,6 +1804,7 @@ textarea,select{color:var(--ink);}
           </div>
           <button class="btn btn-ghost btn-sm" onclick="openAddContrib()">+ Log Contribution</button>
         </div>
+        <div class="tbl-scroll">
         <table>
           <thead>
             <tr>
@@ -1810,6 +1814,7 @@ textarea,select{color:var(--ink);}
           </thead>
           <tbody id="contrib-body"></tbody>
         </table>
+        </div>
         <div class="empty-state" id="contrib-empty">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
           <p>No contributions logged yet</p>
@@ -7977,7 +7982,7 @@ function renderSavings() {
         </div>
         <div style="display:flex;align-items:center;gap:12px;">
           <div style="text-align:right;">
-            <div style="font-family:'Fraunces',serif;font-size:20px;color:${col};">${fmt(a.balance, ccy)}</div>
+            <div style="font-family:var(--num);font-weight:400;font-variant-numeric:tabular-nums;font-size:22px;color:${col};">${fmt(a.balance, ccy)}</div>
             <div style="font-size:11px;color:var(--faint);">current balance</div>
             ${equivLine}
           </div>
@@ -8014,7 +8019,7 @@ function renderSavings() {
       <td><span class="cat-badge" style="background:${isW?'#faeaec':'#eaf4ef'};color:${isW?'#9b2335':'#2d6a4f'};">${isW ? 'Withdrawal' : 'Contribution'}</span></td>
       <td><span class="person-tag">${c.person||'—'}</span></td>
       <td><span class="txn-note" contenteditable="true" onblur="saveContribNote('${c.id}',this.textContent)">${esc(c.note||'')}</span></td>
-      <td style="text-align:right;font-weight:600;color:${isW?'#9b2335':'#2d6a4f'};">${isW?'-':''}${fmt(c.amount)}</td>
+      <td style="text-align:right;font-family:var(--num);font-weight:400;font-variant-numeric:tabular-nums;color:${isW?'#9b2335':'#2d6a4f'};">${isW?'-':''}${fmt(c.amount)}</td>
       <td style="text-align:right;"><button class="del-btn" onclick="deleteContrib('${c.id}')" title="Remove">✕</button></td>
     </tr>`;
   }).join('');
