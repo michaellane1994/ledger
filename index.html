@@ -1119,7 +1119,31 @@ textarea,select{color:var(--ink);}
 .mort-traj-chart{display:block;width:100%;height:200px;max-width:100%;}
 .mort-traj-legend{display:flex;gap:18px;font-size:11px;color:var(--muted);margin-top:8px;flex-wrap:wrap;}
 .mort-traj-legend-swatch{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:6px;}
-@media(max-width:700px){.mort-schedule{overflow-x:auto;-webkit-overflow-scrolling:touch;}.mort-schedule table{min-width:600px;border-collapse:separate;border-spacing:0;}.mort-schedule th,.mort-schedule td{padding:6px 8px;font-size:11px;white-space:nowrap;}.mort-schedule th:first-child,.mort-schedule td:first-child{position:sticky;left:0;background:var(--surface);z-index:2;box-shadow:1px 0 0 var(--border);}.mort-schedule tr.mort-yr-row td:first-child{background:var(--bg);}.mort-extra-input{width:70px;}}
+@media(max-width:700px){
+  /* Mobile card view: turn the wide amortization table into stacked cards. Each
+     year is a tap-to-expand card; each month/payment is its own card with the
+     extra-payment input inline. No sideways scrolling. */
+  .mort-schedule .income-table{overflow:visible;}
+  .mort-schedule table,.mort-schedule tbody{display:block;width:100%;}
+  .mort-schedule thead{display:none;}
+  .mort-schedule tr{display:block;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:9px 13px;margin-bottom:8px;}
+  .mort-schedule tr.mort-yr-row{background:var(--bg);cursor:pointer;}
+  .mort-schedule tr.mort-pmt-row{display:none;}
+  .mort-schedule tr.mort-pmt-row.vis{display:block;margin-left:14px;}
+  .mort-schedule td{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:3px 0;border:none;text-align:right;white-space:normal;font-size:12.5px;}
+  .mort-schedule td:nth-child(3),.mort-schedule td:nth-child(6),.mort-schedule td:nth-child(7){display:none;}
+  .mort-schedule td::before{color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;text-align:left;}
+  .mort-schedule td:nth-child(2)::before{content:"Period";}
+  .mort-schedule td:nth-child(4)::before{content:"Principal";}
+  .mort-schedule td:nth-child(5)::before{content:"Interest";}
+  .mort-schedule td:nth-child(8)::before{content:"Balance";}
+  .mort-schedule td:nth-child(9)::before{content:"Extra payment";}
+  .mort-schedule td:first-child{justify-content:flex-start;font-size:14px;font-weight:600;color:var(--ink);border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:5px;}
+  .mort-schedule td:first-child::before{content:none;}
+  .mort-schedule tr.mort-open-row td::before{content:none;}
+  .mort-schedule tr.mort-open-row td:first-child{border-bottom:none;margin-bottom:0;}
+  .mort-schedule .mort-extra-input{width:110px;text-align:right;}
+}
 .mort-card-add{background:transparent;border:2px dashed var(--border);border-radius:var(--radius);padding:18px 20px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px;font-weight:500;min-height:160px;}
 .mort-card-add:hover{border-color:var(--accent);color:var(--accent);}
 /* Always visible so the edit affordance is discoverable (esp. on mobile, where
@@ -10810,7 +10834,7 @@ function renderMortgages() {
               </tr>
             </thead>
             <tbody>
-              <tr style="background:var(--bg);">
+              <tr class="mort-open-row" style="background:var(--bg);">
                 <td colspan="2" style="font-size:12px;color:var(--muted);font-style:italic;">Opening Balance &mdash; ${sel.startDate}</td>
                 <td colspan="6" style="text-align:right;">
                   <input type="text" id="mort-opening-bal"
