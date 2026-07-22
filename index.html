@@ -1762,7 +1762,7 @@ textarea,select{color:var(--ink);}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <div>
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:4px;" id="income-page-period">All time</div>
-          <div style="font-family:'Fraunces',serif;font-size:28px;" id="income-page-total">$0.00</div>
+          <div style="font-family:var(--num);font-weight:400;font-variant-numeric:tabular-nums;font-size:28px;" id="income-page-total">$0.00</div>
         </div>
       </div>
       <div class="income-table">
@@ -3146,11 +3146,18 @@ function renderPills() {
   if (mel) buildPills(mel);
 }
 
+// Persist the dashboard period selection so a refresh returns to the same view
+// instead of snapping back to the latest month. Saved only on explicit user
+// period changes (never on boot renders, which would clobber the stored value).
+function _savePeriodState() {
+  try { localStorage.setItem('l3_dash_period', JSON.stringify({ dashPeriod, selMonth, selYear })); } catch (_) {}
+}
 function setSelYear(year) {
   selYear = year;
   dashPeriod = 'year';
   const yearMonths = getMonths().filter(m => m.startsWith(selYear + '-'));
   selMonth = yearMonths[0] || '';
+  _savePeriodState();
   renderPills();
   renderDashboard();
   txnMonthFilter = new Set();
@@ -4297,6 +4304,7 @@ function setMoneyflowPeriod(v) {
     selYear  = selMonth.substring(0, 4);
     if (typeof txnMonthFilter !== 'undefined') txnMonthFilter = new Set([selMonth]);
   }
+  _savePeriodState();
   if (typeof renderPills === 'function') renderPills();
   if (typeof renderDashboard === 'function') renderDashboard();
   if (typeof renderTxns === 'function') renderTxns();
@@ -5604,6 +5612,7 @@ function setDashPeriod(p) {
   } else if (dashPeriod === '3m' || dashPeriod === 'ytd') {
     selYear = String(new Date().getFullYear());
   }
+  _savePeriodState();
   if (typeof renderPills === 'function') renderPills();
   renderDashboard();
 }
@@ -8045,7 +8054,7 @@ function renderSavings() {
     const col  = acct ? (ACCT_COLORS[acct.type]||'#71717a') : '#71717a';
     const isW  = c.type === 'withdrawal';
     return `<tr>
-      <td style="width:110px;"><input type="date" value="${c.date}" onchange="saveContribDate('${c.id}',this.value)" style="border:none;background:transparent;font-size:12px;color:var(--faint);font-family:'Inter',sans-serif;cursor:pointer;width:100%;padding:0;"></td>
+      <td style="width:120px;vertical-align:middle;"><input type="date" value="${c.date}" onchange="saveContribDate('${c.id}',this.value)" style="border:none;background:transparent;font-size:11.5px;color:var(--faint);font-family:'Inter',sans-serif;cursor:pointer;width:100%;padding:0;margin:0;line-height:1.3;vertical-align:middle;-webkit-appearance:none;appearance:none;box-sizing:border-box;"></td>
       <td style="font-weight:500;">${esc(acct ? acct.name : '—')}</td>
       <td><span class="cat-badge" style="background:${isW?'#faeaec':'#eaf4ef'};color:${isW?'#9b2335':'#2d6a4f'};">${isW ? 'Withdrawal' : 'Contribution'}</span></td>
       <td><span class="person-tag">${c.person||'—'}</span></td>
@@ -11278,6 +11287,16 @@ setSyncLabel(sheetsUrl ? 'Connected' : 'Not connected');
 });
 document.querySelectorAll('input[name="stmt-type"]').forEach(r => r.addEventListener('change', updateImportPreview));
 applyJointSetting();
+// Restore the last dashboard period selection so a refresh returns to the same
+// view (renderPills still snaps selMonth to a valid month if the data changed).
+try {
+  const _sp = JSON.parse(localStorage.getItem('l3_dash_period') || 'null');
+  if (_sp && typeof _sp === 'object') {
+    if (typeof _sp.dashPeriod === 'string') dashPeriod = _sp.dashPeriod;
+    if (typeof _sp.selMonth === 'string') selMonth = _sp.selMonth;
+    if (typeof _sp.selYear === 'string' && _sp.selYear) selYear = _sp.selYear;
+  }
+} catch (_) {}
 const _validPages = ['dashboard','transactions','income','savings','upload','trash','rental','mortgages','settings'];
 const _savedPage = localStorage.getItem('l3_last_page');
 goNav(_validPages.includes(_savedPage) ? _savedPage : 'dashboard');
