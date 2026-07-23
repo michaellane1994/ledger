@@ -235,6 +235,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 
 /* ── DASH SECTIONS — comfortable rhythm without dominating viewport ── */
 .dash-section{margin-top:var(--s-10);display:flex;flex-direction:column;justify-content:center;padding:var(--s-2) 0;}
+#view-dashboard .dash-section:first-of-type{margin-top:var(--s-4);}
 .dash-section:first-of-type{margin-top:0;}
 .dash-section-head{margin-bottom:var(--s-3);display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-4);flex-wrap:wrap;}
 .dash-section-head-text{display:flex;flex-direction:column;gap:2px;}
@@ -2595,11 +2596,12 @@ function doGet(e) {
 
     <!-- Step 1: Extracted text review -->
     <div id="pdf-step-1">
-      <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-size:12px;color:var(--muted);">Review the extracted text below. If it looks correct, click Parse Transactions.</div>
+      <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div style="font-size:12px;color:var(--muted);">Trove reads only your transactions, the date, merchant and amount. Your name, account number and balances are never imported.</div>
         <span id="pdf-bank-detected" style="font-size:11px;background:#eaf4ef;color:#2d6a4f;padding:3px 9px;border-radius:100px;font-weight:600;display:none;"></span>
       </div>
-      <textarea id="pdf-raw-text" style="width:100%;height:220px;padding:10px;font-family:monospace;font-size:11px;border:1px solid var(--border);border-radius:var(--radius-sm);resize:vertical;outline:none;background:var(--bg);color:var(--ink);line-height:1.5;" readonly></textarea>
+      <div id="pdf-extract-status" style="padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-size:12.5px;color:var(--muted);line-height:1.5;display:flex;align-items:center;gap:8px;">Extracting text…</div>
+      <textarea id="pdf-raw-text" style="display:none;" readonly></textarea>
       <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div class="add-field">
           <label>Whose card is this?</label>
@@ -9200,6 +9202,8 @@ async function openPdfParser(file) {
   document.getElementById('pdf-step-1').style.display = 'block';
   document.getElementById('pdf-step-2').style.display = 'none';
   document.getElementById('pdf-raw-text').value = 'Extracting text...';
+  const _st0 = document.getElementById('pdf-extract-status');
+  if (_st0) { _st0.textContent = 'Extracting text…'; _st0.style.color = 'var(--muted)'; }
   document.getElementById('pdf-bank-detected').style.display = 'none';
   document.getElementById('pdf-modal').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -9235,6 +9239,8 @@ async function openPdfParser(file) {
       fullText += '\n--- PAGE BREAK ---\n\n';
     }
     document.getElementById('pdf-raw-text').value = fullText.trim();
+    const _stOk = document.getElementById('pdf-extract-status');
+    if (_stOk) { _stOk.innerHTML = '<span style="color:#2d6a4f;font-weight:700;">✓</span> Statement read. Only your transactions will be imported, nothing else.'; _stOk.style.color = 'var(--muted)'; }
 
     // Try to detect bank
     const bank = detectPdfBank(fullText);
@@ -9247,7 +9253,9 @@ async function openPdfParser(file) {
       if (sel && !sel.value && cardTypes.includes(bank)) sel.value = bank;
     }
   } catch (err) {
-    document.getElementById('pdf-raw-text').value = 'Error reading PDF: ' + err.message + '\n\nMake sure this is a valid PDF file.';
+    document.getElementById('pdf-raw-text').value = '';
+    const _stErr = document.getElementById('pdf-extract-status');
+    if (_stErr) { _stErr.textContent = 'Could not read this PDF. Make sure it is a valid statement file and try again.'; _stErr.style.color = '#c15c1e'; }
   }
 }
 
