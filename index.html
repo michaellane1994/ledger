@@ -9332,7 +9332,17 @@ let _pdfEdited = false;
 function renderPdfPreview() {
   const tbody = document.getElementById('pdf-parsed-rows');
   const summary = document.getElementById('pdf-parse-summary');
-  if (summary) summary.textContent = `${pdfParsedTxns.length} transaction${pdfParsedTxns.length !== 1 ? 's' : ''} ready to import. Review below.`;
+  if (summary) {
+    const _n = pdfParsedTxns.length;
+    if (!_n) {
+      summary.textContent = 'No transactions found.';
+    } else {
+      // Prominent count + total so the user can compare against their statement's
+      // own total at a glance, instead of hunting row-by-row for a missed line.
+      const _charges = pdfParsedTxns.filter(t => !t.isIncome && t.amount > 0).reduce((s, t) => s + t.amount, 0);
+      summary.innerHTML = `<strong style="color:var(--ink);font-size:14px;">${_n} transaction${_n !== 1 ? 's' : ''}</strong> parsed, totalling <strong style="color:var(--ink);">${fmt(_charges)}</strong> in charges. <span style="color:var(--faint);">Compare this against your statement's total to make sure none were missed.</span>`;
+    }
+  }
   if (!pdfParsedTxns.length) {
     tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--faint);line-height:1.6;">No transactions found in this PDF.<br><br><strong style="color:var(--ink);">Most banks let you export a CSV from web banking</strong> — that path is far more reliable than PDF parsing. Look for "Download" or "Export" on your statement page.</td></tr>';
     document.getElementById('pdf-totals').innerHTML = '';
