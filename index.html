@@ -839,6 +839,19 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 }
 .stmt-edit-hint{display:none;font-size:11.5px;color:var(--muted);margin:-2px 0 10px;line-height:1.4;}
 .mapper h3{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:12px;}
+/* Prominent statement-type chooser (credit card vs bank/debit) — first decision in
+   the import, since picking wrong flips income and spending. */
+.stmt-type-choice{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.stmt-type-opt{cursor:pointer;display:block;}
+.stmt-type-opt input{position:absolute;opacity:0;width:0;height:0;}
+.stmt-type-card{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);transition:border-color .15s,background .15s,box-shadow .15s;height:100%;}
+.stmt-type-opt:hover .stmt-type-card{border-color:var(--border-2);}
+.stmt-type-opt input:checked + .stmt-type-card{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent);}
+.stmt-type-opt input:focus-visible + .stmt-type-card{outline:2px solid var(--accent);outline-offset:2px;}
+.stmt-type-title{font-size:13.5px;font-weight:600;color:var(--ink);}
+.stmt-type-desc{font-size:11px;color:var(--muted);line-height:1.4;}
+.stmt-type-warn{font-size:11.5px;color:#c15c1e;margin:0 0 12px;line-height:1.45;}
+@media(max-width:520px){.stmt-type-choice{grid-template-columns:1fr;}}
 .mapper-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .mapper-field label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;}
 .mapper-field select{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;}
@@ -2507,19 +2520,30 @@ function doGet(e) {
     <div class="modal-title">Map CSV Columns</div>
     <div class="modal-sub" id="map-fn">Tell Ledger which column contains what</div>
     <div class="mapper">
-      <h3>Column Mapping</h3>
+      <h3 style="margin-top:0;">1 · What kind of statement is this?</h3>
+      <p class="stmt-type-warn">Getting this wrong flips income and spending. Pick the one that matches your file <strong>before</strong> checking the preview below.</p>
+      <div class="stmt-type-choice">
+        <label class="stmt-type-opt">
+          <input type="radio" name="stmt-type" value="credit" checked onchange="updateImportPreview()">
+          <span class="stmt-type-card">
+            <span class="stmt-type-title">Credit card</span>
+            <span class="stmt-type-desc">Purchases are the amount; payments &amp; refunds are credits.</span>
+          </span>
+        </label>
+        <label class="stmt-type-opt">
+          <input type="radio" name="stmt-type" value="bank" onchange="updateImportPreview()">
+          <span class="stmt-type-card">
+            <span class="stmt-type-title">Bank account (debit / chequing)</span>
+            <span class="stmt-type-desc">Deposits are income; withdrawals are spending.</span>
+          </span>
+        </label>
+      </div>
+      <h3>2 · Column Mapping</h3>
       <div class="mapper-grid">
         <div class="mapper-field"><label>Date column</label><select id="col-date"></select></div>
         <div class="mapper-field"><label>Merchant / Description</label><select id="col-merchant"></select></div>
         <div class="mapper-field"><label>Amount (debit / spend)</label><select id="col-amount"></select></div>
         <div class="mapper-field"><label>Credit column (optional)</label><select id="col-credit"></select></div>
-      </div>
-      <div style="margin-top:12px;">
-        <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Statement type</label>
-        <div class="person-row" style="gap:16px;">
-          <label><input type="radio" name="stmt-type" value="credit" checked> Credit card <span style="font-size:10.5px;color:var(--faint);">(spend = positive)</span></label>
-          <label><input type="radio" name="stmt-type" value="bank"> Bank account <span style="font-size:10.5px;color:var(--faint);">(spend = negative)</span></label>
-        </div>
       </div>
       <div style="margin-top:10px;">
         <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Whose card is this?</label>
@@ -7133,9 +7157,11 @@ function renderImportPreview() {
   const globalPerson = (_gpEl && _gpEl.value) || _personOptions[0] || '';
   body.innerHTML = rows.map((t, i) => {
     const amtAbs = Math.abs(t.amount);
-    const amtColor = t.refund ? 'color:#16a34a;' : '';
-    const sign = t.refund ? '-' : '';
     const isIncome = !!t.isIncome;
+    // Income and refunds/credits are inflows — show them green. Income gets a + to
+    // read as money in; a card refund keeps its - (a credit against spending).
+    const amtColor = (isIncome || t.refund) ? 'color:#16a34a;' : '';
+    const sign = isIncome ? '+' : (t.refund ? '-' : '');
     const catSelected = isIncome ? '__income__' : (CATS.some(c => c.key === t.category) ? t.category : 'misc');
     const catSelect = `<option value="__income__" ${isIncome ? 'selected' : ''}>Income ↗</option>` +
       CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
@@ -9376,9 +9402,10 @@ function renderPdfPreview() {
   const pdfGlobalPerson = (_pdfSel && _pdfSel.value) || _pdfPeople[0] || '';
   tbody.innerHTML = pdfParsedTxns.map((t, i) => {
     const amtAbs = Math.abs(t.amount);
-    const amtColor = t.amount < 0 ? 'color:#16a34a;' : '';
-    const sign = t.amount < 0 ? '-' : '';
     const isIncome = !!t.isIncome;
+    // Income and credits are inflows — green. Income gets + (money in); a credit keeps -.
+    const amtColor = (isIncome || t.amount < 0) ? 'color:#16a34a;' : '';
+    const sign = isIncome ? '+' : (t.amount < 0 ? '-' : '');
     const catSelected = isIncome ? '__income__' : (CATS.some(c => c.key === t.category) ? t.category : 'misc');
     // Prepend an "Income ↗" option so users can flag statement lines (e.g. salary
     // deposits) that should land in the Income ledger rather than as expenses.
