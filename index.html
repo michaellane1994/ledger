@@ -3603,6 +3603,8 @@ function renderChartSection() {
           txnCardFilter  = new Set();
           txnMonthFilter = new Set([month]);
           txnTypeFilter  = 'expenses';
+          txnNeedsFilter = '';
+          txnLabelFilter = '';
           goNav('transactions');
         },
         onHover: (e, elements) => {
@@ -3648,6 +3650,7 @@ function _heatGotoMonthCat(month, catKey) {
   txnMonthFilter = new Set([month]);
   txnTypeFilter  = 'expenses';
   txnNeedsFilter = '';
+  txnLabelFilter = '';
   goNav('transactions');
 }
 function _heatGotoMonthKind(month, kind) {
@@ -5697,6 +5700,7 @@ function currentDashboardMonths() {
 function goToCatFilter(catKey) {
   txnTypeFilter  = '';
   txnNeedsFilter = '';
+  txnLabelFilter = '';
   txnCatFilter   = new Set([catKey]);
   txnCardFilter  = new Set();
   txnMonthFilter = new Set(currentDashboardMonths());
@@ -5708,6 +5712,7 @@ function filterTxnsByKind(kind) {
   // kind: 'needs' or 'wants' — uses the Needs/Wants pill filter on the Transactions page.
   txnTypeFilter  = 'expenses';
   txnNeedsFilter = kind;
+  txnLabelFilter = '';
   txnCatFilter   = new Set();
   txnCardFilter  = new Set();
   txnMonthFilter = new Set(currentDashboardMonths());
@@ -5858,7 +5863,8 @@ function labelChipHtml(t) {
   if (!t.label) return '';
   const l = labelById(t.label);
   if (!l) return '';
-  return ` <span class="lbl-chip" style="--lc:${l.color};">${esc(l.name)}</span>`;
+  // Clickable: tapping a row's label chip filters the list to that label.
+  return ` <span class="lbl-chip" style="--lc:${l.color};cursor:pointer;" onclick="event.stopPropagation();filterByLabel('${l.id}')" title="Filter by ${esc(l.name)}">${esc(l.name)}</span>`;
 }
 function bulkPersonOptions() {
   const ppl = [...new Set(txns.map(t => t.person).filter(p => p && p !== 'Joint'))];
@@ -5869,7 +5875,17 @@ let txnSelectMode = false;
 let selectedTxnIds = new Set();
 let txnLabelFilter = '';
 function filterByLabel(id) {
+  // Reset the other orthogonal filters so a label view isn't intersected with a
+  // stale category/needs selection, and carry the dashboard's selected month(s)
+  // through so the label view matches the period you were looking at.
   txnLabelFilter = id || '';
+  txnTypeFilter  = '';
+  txnNeedsFilter = '';
+  txnCatFilter   = new Set();
+  txnCardFilter  = new Set();
+  txnMonthFilter = new Set(currentDashboardMonths());
+  const s = document.getElementById('f-search'); if (s) s.value = '';
+  const p = document.getElementById('f-person'); if (p) p.value = '';
   if (txnSelectMode) toggleTxnSelectMode();
   goNav('transactions');
   renderTxns();
