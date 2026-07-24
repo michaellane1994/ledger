@@ -8729,7 +8729,7 @@ function applyJointSetting() {
   });
 }
 
-const SEC_DEFAULTS = { appearance:true, people:false, cats:false, 'income-types':false, 'savings-types':false, sheets:true, sync:true, setup:false };
+const SEC_DEFAULTS = { appearance:true, people:false, cats:false, cardtypes:false, 'income-types':false, 'savings-types':false, sheets:true, sync:true, setup:false };
 
 function getSecStates() {
   try { return JSON.parse(localStorage.getItem('l3_sec_states') || '{}'); } catch(e) { return {}; }
