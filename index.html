@@ -9637,15 +9637,30 @@ function parseRBC(text) {
     if (m) {
       const date = normDate(m[1] + ' ' + m[2] + ' ' + yearFor(m[1], sy));
       if (!date) continue;
-      const merchant = m[3].replace(/\s+/g, ' ').trim();
-      // Look ahead past ref number to find the amount line
-      let amt = null;
-      for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
-        if (refNumRe.test(lines[j])) continue;
-        const am = lines[j].match(rbcAmtRe);
-        if (am) { amt = parseFloat(am[1].replace(/[$,]/g, '')); i = j; }
-        break;
+      let merchant = m[3].replace(/\s+/g, ' ').trim();
+      // Look ahead for the amount. A description can wrap onto a continuation line
+      // (e.g. the city, like "COQUITLAM BC" on its own line) with a reference-number
+      // line in between. The old lookahead broke at the first non-refnum line, so a
+      // wrapped row (e.g. Purdys "SQ *PURDYS... - PORT" / "COQUITLAM BC" / $7.35) lost
+      // its amount and was silently dropped. Scan a few lines: skip ref numbers,
+      // append one continuation line to the merchant, and stop at the next transaction.
+      let amt = null, cont = 0;
+      for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
+        const lj = lines[j];
+        if (refNumRe.test(lj)) { i = j; continue; }
+        if (rbcSingleRe.test(lj) || rbcDateRe.test(lj) || rbcChqRe.test(lj)) break;
+        let am = lj.match(rbcAmtRe);
+        if (am) { amt = parseFloat(am[1].replace(/[$,]/g, '')); i = j; break; }
+        am = lj.match(/^(.*?)\s+(-?\$[\d,]+\.\d{2})$/);
+        if (am) {
+          if (am[1].trim()) merchant += ' ' + am[1].replace(/\s+/g, ' ').trim();
+          amt = parseFloat(am[2].replace(/[$,]/g, '')); i = j; break;
+        }
+        if (cont >= 1) break;
+        merchant += ' ' + lj.replace(/\s+/g, ' ').trim();
+        cont++; i = j;
       }
+      merchant = merchant.replace(/\s+/g, ' ').trim();
       if (amt === null || isNaN(amt) || amt === 0) continue;
       if (isSkippable(merchant, amt)) continue;
       txns.push({ date, merchant, amount: amt });
