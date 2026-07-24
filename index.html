@@ -7024,9 +7024,21 @@ function parseImportRows() {
     if (/payment received|payment thank/i.test(merchant)) return;
     let refund = false;
     if (isBank) {
-      if (!isFinite(amt) || amt === 0) { invalid.push({ idx, reason: 'Zero or unreadable amount', dateStr, merchant }); return; }
-      if (amt > 0) refund = true;
-      amt = refund ? -Math.abs(amt) : Math.abs(amt);
+      // Bank account. Deposits = income/credits, withdrawals = expenses. Handles both
+      // a single signed Amount column (deposit +, withdrawal -) AND separate Withdrawal
+      // (Amount) + Deposit (Credit) columns, both positive. The old code only read the
+      // Amount column, so a chequing CSV with a separate Deposit column dropped every
+      // deposit as an "unreadable amount".
+      let cred = NaN;
+      if (ci >= 0) cred = parseFloat((cols[ci] || '').replace(/[$, "]/g, ''));
+      if (isFinite(cred) && cred !== 0) {
+        amt = -Math.abs(cred); refund = true;
+      } else if (isFinite(amt) && amt !== 0) {
+        if (ci >= 0) { amt = Math.abs(amt); refund = false; }
+        else { if (amt > 0) refund = true; amt = refund ? -Math.abs(amt) : Math.abs(amt); }
+      } else {
+        invalid.push({ idx, reason: 'Zero or unreadable amount', dateStr, merchant }); return;
+      }
     } else if (ci >= 0) {
       const cred = parseFloat((cols[ci] || '').replace(/[$, "]/g, ''));
       if (isFinite(cred) && cred > 0) { amt = -cred; refund = true; }
@@ -7039,8 +7051,12 @@ function parseImportRows() {
     if (Math.abs(amt) > 50000) { invalid.push({ idx, reason: 'Unreasonably large amount', dateStr, merchant, amount: amt }); return; }
     const date = normDate(dateStr);
     if (!date) { invalid.push({ idx, reason: 'Date unreadable', dateStr, merchant, amount: amt }); return; }
-    const autoIncome = refund && looksLikePayroll(merchant);
-    valid.push({ date, merchant, amount: amt, refund, category: autoIncome ? null : autoCat(merchant), isIncome: autoIncome });
+    // A deposit on a BANK statement defaults to income (importing a chequing account
+    // is mostly about capturing income); on a credit-card statement a credit is a
+    // refund unless it looks like payroll. Both are editable per row in the preview.
+    const isCredit = refund;
+    const autoIncome = isCredit && (isBank || looksLikePayroll(merchant));
+    valid.push({ date, merchant, amount: amt, refund: isCredit && !autoIncome, category: autoIncome ? null : autoCat(merchant), isIncome: autoIncome });
   });
   return { valid, invalid, mappingIncomplete: false };
 }
@@ -7267,10 +7283,12 @@ async function doImport() {
 
       let refund = false;
       if (isBank) {
-        if (amt === 0) return;
-        if (amt > 0) { refund = true; }
-        amt = Math.abs(amt);
-        if (refund) amt = -amt;
+        let cred = ci >= 0 ? (parseFloat((cols[ci] || '').replace(/[$, "]/g, '')) || NaN) : NaN;
+        if (isFinite(cred) && cred !== 0) { amt = -Math.abs(cred); refund = true; }
+        else if (amt !== 0) {
+          if (ci >= 0) { amt = Math.abs(amt); refund = false; }
+          else { if (amt > 0) refund = true; amt = refund ? -Math.abs(amt) : Math.abs(amt); }
+        } else return;
       } else if (ci >= 0) {
         const cred = parseFloat((cols[ci] || '0').replace(/[$, "]/g, '')) || 0;
         if (cred > 0) { amt = -cred; refund = true; }
@@ -7284,8 +7302,9 @@ async function doImport() {
       if (Math.abs(amt) > 50000) return;
       const date = normDate(dateStr);
       if (!date) return;
-      const autoIncome = refund && looksLikePayroll(merchant);
-      parsed.push({ id: uid(), date, merchant, amount: amt, category: null, person, card: cardName, note: '', refund, isIncome: autoIncome });
+      const isCredit = refund;
+      const autoIncome = isCredit && (isBank || looksLikePayroll(merchant));
+      parsed.push({ id: uid(), date, merchant, amount: amt, category: null, person, card: cardName, note: '', refund: isCredit && !autoIncome, isIncome: autoIncome });
     });
   }
 
