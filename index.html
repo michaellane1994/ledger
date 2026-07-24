@@ -851,10 +851,6 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .stmt-type-title{font-size:13.5px;font-weight:600;color:var(--ink);}
 .stmt-type-desc{font-size:11px;color:var(--muted);line-height:1.4;}
 .stmt-type-warn{font-size:11.5px;color:#c15c1e;margin:0 0 12px;line-height:1.45;}
-.stmt-type-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;margin-bottom:16px;background:var(--accent-soft);border:1px solid var(--border);border-radius:8px;font-size:12.5px;color:var(--ink-2);}
-.stmt-type-summary strong{color:var(--ink);font-weight:600;}
-.stmt-type-change{flex:none;background:transparent;border:1px solid var(--border-2);color:var(--ink-2);border-radius:100px;padding:4px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s,border-color .15s,color .15s;}
-.stmt-type-change:hover{background:var(--surface);color:var(--ink);border-color:var(--muted);}
 @media(max-width:520px){.stmt-type-choice{grid-template-columns:1fr;}}
 .mapper-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .mapper-field label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;}
@@ -2518,45 +2514,31 @@ function doGet(e) {
   </div>
 </div>
 
-<!-- STATEMENT TYPE GATE — shown before the column mapper / preview -->
-<div class="modal-overlay" id="stmt-type-modal">
-  <div class="modal" style="width:520px;max-width:95vw;">
-    <div class="modal-title">What kind of statement is this?</div>
-    <div class="modal-sub">This sets how deposits and withdrawals are read. Getting it wrong flips income and spending, so pick the one that matches your file.</div>
-    <div class="stmt-type-choice" style="margin-top:18px;">
-      <label class="stmt-type-opt">
-        <input type="radio" name="stmt-type" value="credit" onchange="onStmtTypePick()">
-        <span class="stmt-type-card">
-          <span class="stmt-type-title">Credit card</span>
-          <span class="stmt-type-desc">Purchases are the amount; payments &amp; refunds are credits.</span>
-        </span>
-      </label>
-      <label class="stmt-type-opt">
-        <input type="radio" name="stmt-type" value="bank" onchange="onStmtTypePick()">
-        <span class="stmt-type-card">
-          <span class="stmt-type-title">Bank account (debit / chequing)</span>
-          <span class="stmt-type-desc">Deposits are income; withdrawals are spending.</span>
-        </span>
-      </label>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
-      <button class="btn btn-ghost" onclick="cancelStmtType()">Cancel</button>
-      <button class="btn btn-primary" id="stmt-type-continue" onclick="confirmStmtType()" disabled>Continue to preview →</button>
-    </div>
-  </div>
-</div>
-
 <!-- COLUMN MAPPER MODAL -->
 <div class="modal-overlay" id="map-modal">
   <div class="modal">
     <div class="modal-title">Map CSV Columns</div>
     <div class="modal-sub" id="map-fn">Tell Ledger which column contains what</div>
     <div class="mapper">
-      <div class="stmt-type-summary">
-        <span>Statement type: <strong id="stmt-type-summary-val">—</strong></span>
-        <button type="button" class="stmt-type-change" onclick="changeStmtType()">Change</button>
+      <h3 style="margin-top:0;">1 · What kind of statement is this?</h3>
+      <p class="stmt-type-warn">Getting this wrong flips income and spending. Pick the one that matches your file <strong>before</strong> checking the preview below.</p>
+      <div class="stmt-type-choice">
+        <label class="stmt-type-opt">
+          <input type="radio" name="stmt-type" value="credit" checked onchange="updateImportPreview()">
+          <span class="stmt-type-card">
+            <span class="stmt-type-title">Credit card</span>
+            <span class="stmt-type-desc">Purchases are the amount; payments &amp; refunds are credits.</span>
+          </span>
+        </label>
+        <label class="stmt-type-opt">
+          <input type="radio" name="stmt-type" value="bank" onchange="updateImportPreview()">
+          <span class="stmt-type-card">
+            <span class="stmt-type-title">Bank account (debit / chequing)</span>
+            <span class="stmt-type-desc">Deposits are income; withdrawals are spending.</span>
+          </span>
+        </label>
       </div>
-      <h3>Column Mapping</h3>
+      <h3>2 · Column Mapping</h3>
       <div class="mapper-grid">
         <div class="mapper-field"><label>Date column</label><select id="col-date"></select></div>
         <div class="mapper-field"><label>Merchant / Description</label><select id="col-merchant"></select></div>
@@ -7005,7 +6987,6 @@ function openMapper(file) {
 
     // Try to detect a known bank preset first
     const preset = detectBankPreset(file.name, lines[0]);
-    let detectedStmtType = null;
     if (preset && BANK_PRESETS[preset]) {
       const p = BANK_PRESETS[preset];
       const c = p.cols;
@@ -7013,7 +6994,7 @@ function openMapper(file) {
       if (c.merchant !== undefined) document.getElementById('col-merchant').value = c.merchant;
       if (c.amount   !== undefined) document.getElementById('col-amount').value   = c.amount;
       if (c.credit   !== undefined) document.getElementById('col-credit').value   = c.credit;
-      if (p.stmtType) detectedStmtType = p.stmtType;
+      if (p.stmtType) document.querySelector(`input[name="stmt-type"][value="${p.stmtType}"]`).checked = true;
     } else {
       // Standard header-based guessing
       guess('col-date',     ['date','posted','trans date','transaction date','trx date']);
@@ -7026,49 +7007,14 @@ function openMapper(file) {
     const fn = file.name.toLowerCase();
     const cardGuess = fn.includes('cibc') ? 'CIBC' : fn.includes('chequing') ? 'RBC Chequing' : fn.includes('saving') ? 'RBC Savings' : fn.includes('amex') ? 'Amex' : fn.includes('scotia') ? 'Scotiabank' : '';
     populateCardTypeDropdown(cardGuess);
-    // Statement type is a separate gating step shown BEFORE the preview, so a wrong
-    // pick (which flips income vs spending) can't slip past. Pre-select a detected
-    // type but still require the user to confirm Continue.
-    document.querySelectorAll('input[name="stmt-type"]').forEach(r => { r.checked = (!!detectedStmtType && r.value === detectedStmtType); });
-    const _stmtCont = document.getElementById('stmt-type-continue');
-    if (_stmtCont) _stmtCont.disabled = !detectedStmtType;
-    document.getElementById('stmt-type-modal').classList.add('open');
+    document.getElementById('map-modal').classList.add('open');
+    // Lock background scroll so a touch drag inside the modal doesn't leak
+    // through and scroll the dashboard behind it — was making the mobile
+    // upload flow feel like the whole page was jumping around.
     document.body.style.overflow = 'hidden';
+    updateImportPreview();
   };
   reader.readAsText(file);
-}
-
-// ── Statement-type gate: chosen before the mapper/preview opens ──
-function _openMapperPreview() {
-  document.getElementById('map-modal').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  updateImportPreview();
-}
-function onStmtTypePick() {
-  const c = document.getElementById('stmt-type-continue'); if (c) c.disabled = false;
-}
-function confirmStmtType() {
-  if (!document.querySelector('input[name="stmt-type"]:checked')) return;
-  document.getElementById('stmt-type-modal').classList.remove('open');
-  renderStmtTypeSummary();
-  _openMapperPreview();
-}
-function cancelStmtType() {
-  document.getElementById('stmt-type-modal').classList.remove('open');
-  document.body.style.overflow = '';
-  pFile = null;
-}
-function changeStmtType() {
-  document.getElementById('map-modal').classList.remove('open');
-  const c = document.getElementById('stmt-type-continue');
-  if (c) c.disabled = !document.querySelector('input[name="stmt-type"]:checked');
-  document.getElementById('stmt-type-modal').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-function renderStmtTypeSummary() {
-  const el = document.getElementById('stmt-type-summary-val'); if (!el) return;
-  const v = (document.querySelector('input[name="stmt-type"]:checked') || {}).value;
-  el.textContent = v === 'bank' ? 'Bank account (debit / chequing)' : v === 'credit' ? 'Credit card' : '—';
 }
 function guess(id, hints) {
   const idx = pHeaders.findIndex(h => hints.some(hint => h.toLowerCase().includes(hint)));
