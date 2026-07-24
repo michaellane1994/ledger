@@ -9748,20 +9748,30 @@ function parseScotia(text) {
     if (!m) continue;
     const date = normDate(`${m[2]} ${m[3]} ${yearFor(m[2], sy)}`);
     if (!date) continue;
-    const merchant = m[4].trim();
+    let merchant = m[4].trim();
 
     let amt;
     if (m[5]) {
       amt = parseFloat(m[5].replace(/,/g, '')) * (m[6] === '-' ? -1 : 1);
     } else {
-      // Look ahead past AMT/USD lines and short location continuations
-      for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
-        if (foreignRe.test(lines[j])) continue;
-        const am = lines[j].match(amtRe);
+      // No inline amount: scan forward for it. Skip the foreign-currency "AMT x USD"
+      // line and any province code / short token, append at most one wrapped
+      // description line to the merchant, and stop at the next transaction header, so
+      // a wrapped row still reaches its amount. The old lookahead broke at the first
+      // continuation line (e.g. a city on its own line) and dropped the transaction.
+      let cont = 0;
+      for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
+        const lj = lines[j];
+        if (foreignRe.test(lj)) { i = j; continue; }
+        if (headerRe.test(lj)) break;
+        const am = lj.match(amtRe);
         if (am) { amt = parseFloat(am[1].replace(/,/g, '')) * (am[2] === '-' ? -1 : 1); i = j; break; }
-        if (/^[A-Z]{2}$/.test(lines[j]) || lines[j].length < 6) continue; // province/short continuation
-        break;
+        if (/^[A-Z]{2}$/.test(lj) || lj.length < 6) { i = j; continue; }
+        if (cont >= 1) break;
+        merchant += ' ' + lj.replace(/\s+/g, ' ').trim();
+        cont++; i = j;
       }
+      merchant = merchant.replace(/\s+/g, ' ').trim();
     }
 
     if (amt === undefined || isNaN(amt) || amt === 0) continue;
@@ -9885,18 +9895,21 @@ function parseGeneric(text) {
     let desc = (dm[2] || '').trim();
     let amtMatch = null;
     let amtLineIdx = -1;
-    for (let j = i + 1; j <= Math.min(i + 3, lines.length - 1); j++) {
+    for (let j = i + 1; j <= Math.min(i + 5, lines.length - 1); j++) {
       const next = lines[j];
       if (!next) continue;
+      // Stop before stealing the next record's amount (a new date/single-line entry).
+      if (dateOnlyRe.test(next) || singleRe.test(next)) break;
       const am = next.match(amtAtEndRe);
       if (am) {
         amtMatch = am;
         amtLineIdx = j;
         for (let k = i + 1; k < j; k++) {
-          if (lines[k]) desc += ' ' + lines[k];
+          // Append wrapped description lines, skipping pure reference numbers.
+          if (lines[k] && !/^\d{6,}$/.test(lines[k])) desc += ' ' + lines[k];
         }
         const prefix = (am[1] || '').trim();
-        if (prefix && prefix.length >= 2) desc += ' ' + prefix;
+        if (prefix && prefix.length >= 2 && !/^\d{6,}$/.test(prefix)) desc += ' ' + prefix;
         break;
       }
     }
