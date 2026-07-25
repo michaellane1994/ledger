@@ -866,6 +866,8 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .mapper-cols[open] > summary::before{transform:rotate(90deg);}
 .mapper-cols > summary span{text-transform:none;letter-spacing:0;font-weight:400;color:var(--faint);font-size:10.5px;}
 .mapper-cols .mapper-grid{margin-top:10px;}
+.map-actions{display:flex;gap:8px;justify-content:flex-end;}
+.map-actions-top{margin:12px 0 4px;}
 .mapper-field label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;}
 .mapper-field select{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;}
 .mapper-field select:focus{border-color:var(--accent);}
@@ -2557,14 +2559,28 @@ function doGet(e) {
   <div class="modal">
     <div class="modal-title">Map CSV Columns</div>
     <div class="modal-sub" id="map-fn">Tell Ledger which column contains what</div>
+    <div class="map-actions map-actions-top">
+      <button class="btn btn-ghost" onclick="closeMap()">Cancel</button>
+      <button class="btn btn-primary" onclick="doImport()">Import →</button>
+    </div>
     <div class="mapper">
-      <div class="stmt-type-summary">
-        <span>Statement type: <strong id="csv-stmt-summary">—</strong></span>
-        <button type="button" class="stmt-type-change" onclick="toggleCsvStmtType()">Switch</button>
+      <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Statement type</label>
+      <div class="stmt-type-choice">
+        <label class="stmt-type-opt">
+          <input type="radio" name="stmt-type" value="credit" checked onchange="onStmtTypeChange()">
+          <span class="stmt-type-card">
+            <span class="stmt-type-title">Credit card</span>
+            <span class="stmt-type-desc">Purchases (spending) are <b style="color:#c15c1e;">(+)</b>; payments &amp; refunds are credits <b style="color:#16a34a;">(−)</b>.</span>
+          </span>
+        </label>
+        <label class="stmt-type-opt">
+          <input type="radio" name="stmt-type" value="bank" onchange="onStmtTypeChange()">
+          <span class="stmt-type-card">
+            <span class="stmt-type-title">Bank account (debit / chequing)</span>
+            <span class="stmt-type-desc">Deposits are <b style="color:#16a34a;">(+)</b> income; withdrawals are <b style="color:#c15c1e;">(−)</b> spending.</span>
+          </span>
+        </label>
       </div>
-      <!-- Radios hold the state; the gate + Switch button set them. -->
-      <input type="radio" name="stmt-type" value="credit" checked hidden>
-      <input type="radio" name="stmt-type" value="bank" hidden>
       <details class="mapper-cols">
         <summary>Column mapping <span>(auto-detected — expand only if a column looks wrong)</span></summary>
         <div class="mapper-grid">
