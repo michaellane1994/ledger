@@ -1545,6 +1545,9 @@ textarea,select{color:var(--ink);}
             <div class="dash-section-title">Labels</div>
             <div class="dash-section-sub">Spending grouped by your labels, for this period. Tap one to see its transactions.</div>
           </div>
+          <div class="dash-section-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="labels-period-picker" class="moneyflow-period-picker" onchange="setMoneyflowPeriod(this.value)" title="Period · syncs the whole dashboard" aria-label="Period"></select>
+          </div>
         </div>
         <div class="card">
           <div class="card-body" id="labels-body"></div>
@@ -5198,6 +5201,7 @@ function renderBreakdown() {
   });
   // Period picker: mirrors the dashboard's current period (shared with Money flow).
   if (typeof renderMoneyflowPeriodPicker === 'function') renderMoneyflowPeriodPicker('breakdown-period-picker');
+  if (typeof renderMoneyflowPeriodPicker === 'function') renderMoneyflowPeriodPicker('labels-period-picker');
 
   // Custom category picker: visible only in custom mode.
   const picker  = document.getElementById('breakdown-custom-picker');
