@@ -9357,13 +9357,31 @@ async function openPdfParser(file) {
       const content = await page.getTextContent();
       // Get items with positions for better reconstruction
       const items = content.items;
+      // Detect a two-column "Withdrawals ... Deposits" layout (common on chequing/debit
+      // statements) by the header x-positions. When present, an amount sitting in the
+      // Deposits column is an inflow, so we prefix it with '-' to mark it a credit — the
+      // parser + bank-mode then treat it as income. Guarded: does nothing unless both
+      // headers are found, so it can't affect other statement formats.
+      const _amtTok = /^-?\$?[\d,]+\.\d{2}$/;
+      let _wX = null, _dX = null;
+      items.forEach(it => {
+        const s = (it.str || '').trim().toLowerCase();
+        if (_wX === null && /^withdrawals?\b/.test(s)) _wX = it.transform[4];
+        if (_dX === null && /^deposits?\b/.test(s)) _dX = it.transform[4];
+      });
+      const _colBoundary = (_wX !== null && _dX !== null && _dX > _wX) ? (_wX + _dX) / 2 : Infinity;
       let lastY = null, line = '';
       items.forEach(item => {
         if (lastY !== null && Math.abs(item.transform[5] - lastY) > 3) {
           fullText += line.trim() + '\n';
           line = '';
         }
-        line += item.str + ' ';
+        let str = item.str;
+        if (item.transform[4] >= _colBoundary) {
+          const t = (str || '').trim();
+          if (_amtTok.test(t) && t[0] !== '-') str = str.replace(t, '-' + t);
+        }
+        line += str + ' ';
         lastY = item.transform[5];
       });
       if (line.trim()) fullText += line.trim() + '\n';
