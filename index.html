@@ -9577,10 +9577,12 @@ function renderPdfPreview() {
     // Income and credits are inflows — green. Income gets + (money in); a credit keeps -.
     const amtColor = (isIncome || t.amount < 0) ? 'color:#16a34a;' : '';
     const sign = isIncome ? '+' : (t.amount < 0 ? '-' : '');
-    const catSelected = isIncome ? '__income__' : (CATS.some(c => c.key === t.category) ? t.category : 'misc');
-    // Prepend an "Income ↗" option so users can flag statement lines (e.g. salary
-    // deposits) that should land in the Income ledger rather than as expenses.
-    const catSelect = `<option value="__income__" ${isIncome ? 'selected' : ''}>Income ↗</option>` +
+    const catSelected = isIncome ? (t.transfer ? '__transfer__' : '__income__') : (CATS.some(c => c.key === t.category) ? t.category : 'misc');
+    // Prepend "Income ↗" / "Transfer ⇄" options so users can flag statement lines (e.g.
+    // salary deposits = income; moving money between own accounts = transfer, which is
+    // neutral) rather than as expenses.
+    const catSelect = `<option value="__income__" ${isIncome && !t.transfer ? 'selected' : ''}>Income ↗</option>` +
+      `<option value="__transfer__" ${t.transfer ? 'selected' : ''}>Transfer ⇄</option>` +
       CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
     const rowStyle = isIncome
       ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
@@ -9622,8 +9624,9 @@ function editPdfRow(idx, field, value) {
     row.merchant = value;
     if (!row._catManual) row.category = autoCat(value);
   } else if (field === 'category') {
-    if (value === '__income__') {
+    if (value === '__income__' || value === '__transfer__') {
       row.isIncome = true;
+      row.transfer = (value === '__transfer__');
       row.category = null;
     } else {
       row.isIncome = false;
