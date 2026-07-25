@@ -7227,7 +7227,7 @@ function updateImportPreview() {
   if (_pendingImportRows) {
     _pendingImportRows.forEach(r => {
       if (r.isIncome || r._catManual) {
-        prevEdits.set(`${r.date}|${r.merchant}`, { isIncome: !!r.isIncome, category: r._catManual ? r.category : null, _catManual: !!r._catManual });
+        prevEdits.set(`${r.date}|${r.merchant}`, { isIncome: !!r.isIncome, transfer: !!r.transfer, category: r._catManual ? r.category : null, _catManual: !!r._catManual });
       }
     });
   }
@@ -7235,7 +7235,7 @@ function updateImportPreview() {
     const copy = { ...r };
     const prev = prevEdits.get(`${r.date}|${r.merchant}`);
     if (prev) {
-      if (prev.isIncome) { copy.isIncome = true; copy.category = null; }
+      if (prev.isIncome) { copy.isIncome = true; copy.transfer = prev.transfer; copy.category = null; }
       else if (prev._catManual && prev.category) { copy.category = prev.category; }
       copy._catManual = prev._catManual;
     }
@@ -7281,8 +7281,9 @@ function renderImportPreview() {
     // read as money in; a card refund keeps its - (a credit against spending).
     const amtColor = (isIncome || t.refund) ? 'color:#16a34a;' : '';
     const sign = isIncome ? '+' : (t.refund ? '-' : '');
-    const catSelected = isIncome ? '__income__' : (CATS.some(c => c.key === t.category) ? t.category : 'misc');
-    const catSelect = `<option value="__income__" ${isIncome ? 'selected' : ''}>Income ↗</option>` +
+    const catSelected = isIncome ? (t.transfer ? '__transfer__' : '__income__') : (CATS.some(c => c.key === t.category) ? t.category : 'misc');
+    const catSelect = `<option value="__income__" ${isIncome && !t.transfer ? 'selected' : ''}>Income ↗</option>` +
+      `<option value="__transfer__" ${t.transfer ? 'selected' : ''}>Transfer ⇄</option>` +
       CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
     const rowStyle = isIncome
       ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
@@ -7312,17 +7313,20 @@ function renderImportPreview() {
 function renderImportPreviewFooter() {
   const rows = _pendingImportRows || [];
   const invalid = _pendingImportInvalid || [];
-  const incomeRows = rows.filter(t => t.isIncome);
+  const incomeRows = rows.filter(t => t.isIncome && !t.transfer);
+  const transferRows = rows.filter(t => t.isIncome && t.transfer);
   const expenseRows = rows.filter(t => !t.isIncome);
   const expenseTotal = expenseRows.filter(t => !t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
   const refundTotal = expenseRows.filter(t => t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
   const incomeTotal = incomeRows.reduce((s, t) => s + Math.abs(t.amount), 0);
+  const transferTotal = transferRows.reduce((s, t) => s + Math.abs(t.amount), 0);
   const net = expenseTotal - refundTotal;
   const footer = document.getElementById('import-preview-footer');
   footer.innerHTML = `
     <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Expenses</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(expenseTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${expenseRows.filter(t=>!t.refund).length} transaction${expenseRows.filter(t=>!t.refund).length===1?'':'s'}</div></div>
     ${refundTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Refunds / Credits</div><div style="font-size:14px;font-weight:600;color:#16a34a;">-${fmt(refundTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${expenseRows.filter(t=>t.refund).length} transaction${expenseRows.filter(t=>t.refund).length===1?'':'s'}</div></div>` : ''}
     ${incomeTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Income</div><div style="font-size:14px;font-weight:600;color:#16a34a;">+${fmt(incomeTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${incomeRows.length} row${incomeRows.length===1?'':'s'} → Income</div></div>` : ''}
+    ${transferTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Transfers</div><div style="font-size:14px;font-weight:600;color:var(--muted);">${fmt(transferTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${transferRows.length} row${transferRows.length===1?'':'s'} → not counted as income</div></div>` : ''}
     <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Net</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(net)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${rows.length} row${rows.length===1?'':'s'} to import</div></div>
     ${invalid.length ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:#b91c1c;font-weight:600;margin-bottom:3px;">Skipped</div><div style="font-size:14px;font-weight:600;color:#b91c1c;">${invalid.length}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;" title="${esc(invalid.slice(0,5).map(r=>r.reason).join(' · '))}">${esc(invalid[0].reason)}${invalid.length>1?' + others':''}</div></div>` : ''}
   `;
@@ -7338,8 +7342,9 @@ function editImportRow(idx, field, value) {
     row.merchant = value;
     if (!row._catManual) row.category = autoCat(value);
   } else if (field === 'category') {
-    if (value === '__income__') {
+    if (value === '__income__' || value === '__transfer__') {
       row.isIncome = true;
+      row.transfer = (value === '__transfer__'); // a transfer is a neutral inflow, not real income
       row.category = null;
       // Seed per-row person from the mapper's global picker when a row first
       // becomes income, so the picker in the preview has a sensible default.
@@ -7349,6 +7354,7 @@ function editImportRow(idx, field, value) {
       }
     } else {
       row.isIncome = false;
+      row.transfer = false;
       row.category = value;
     }
     row._catManual = true;
@@ -7413,7 +7419,8 @@ async function doImport() {
       card: cardName,
       note: '',
       refund: !!r.refund,
-      isIncome: !!r.isIncome
+      isIncome: !!r.isIncome,
+      transfer: !!r.transfer
     }));
   } else {
     parsed = [];
@@ -7550,14 +7557,14 @@ async function doImport() {
         person: t.person,
         card: t.card,
         note: '',
-        incomeType: 'income',
+        incomeType: t.transfer ? 'transfer' : 'income',
         refund: false,
       });
       incomes.push({
         id: incId,
         date: t.date,
         amount: Math.abs(t.amount),
-        type: 'income',
+        type: t.transfer ? 'transfer' : 'income',
         person: t.person,
         desc: t.merchant,
         note: '',
@@ -9620,6 +9627,7 @@ function editPdfRow(idx, field, value) {
       row.category = null;
     } else {
       row.isIncome = false;
+      row.transfer = false;
       row.category = value;
     }
     row._catManual = true;
@@ -9721,14 +9729,14 @@ async function importPdfTransactions() {
         person: t.person,
         card: t.card,
         note: '',
-        incomeType: 'income',
+        incomeType: t.transfer ? 'transfer' : 'income',
         refund: false,
       });
       incomes.push({
         id: incId,
         date: t.date,
         amount: Math.abs(t.amount),
-        type: 'income',
+        type: t.transfer ? 'transfer' : 'income',
         person: t.person,
         desc: t.merchant,
         note: '',
