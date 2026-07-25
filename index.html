@@ -858,6 +858,13 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .stmt-type-warn{font-size:11.5px;color:#c15c1e;margin:0 0 12px;line-height:1.45;}
 @media(max-width:520px){.stmt-type-choice{grid-template-columns:1fr;}}
 .mapper-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mapper-cols{margin-bottom:14px;}
+.mapper-cols > summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;list-style:none;display:flex;align-items:center;gap:6px;padding:4px 0;-webkit-tap-highlight-color:transparent;}
+.mapper-cols > summary::-webkit-details-marker{display:none;}
+.mapper-cols > summary::before{content:'▸';font-size:10px;color:var(--faint);transition:transform .15s;}
+.mapper-cols[open] > summary::before{transform:rotate(90deg);}
+.mapper-cols > summary span{text-transform:none;letter-spacing:0;font-weight:400;color:var(--faint);font-size:10.5px;}
+.mapper-cols .mapper-grid{margin-top:10px;}
 .mapper-field label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;}
 .mapper-field select{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;}
 .mapper-field select:focus{border-color:var(--accent);}
@@ -2550,31 +2557,22 @@ function doGet(e) {
     <div class="modal-title">Map CSV Columns</div>
     <div class="modal-sub" id="map-fn">Tell Ledger which column contains what</div>
     <div class="mapper">
-      <h3 style="margin-top:0;">Statement type</h3>
-      <p class="stmt-type-warn">Switch this if the preview below looks inverted (income showing as spending, or vice-versa).</p>
-      <div class="stmt-type-choice">
-        <label class="stmt-type-opt">
-          <input type="radio" name="stmt-type" value="credit" checked onchange="onStmtTypeChange()">
-          <span class="stmt-type-card">
-            <span class="stmt-type-title">Credit card</span>
-            <span class="stmt-type-desc">Purchases (spending) are <b style="color:#c15c1e;">(+)</b>; payments &amp; refunds are credits <b style="color:#16a34a;">(−)</b>.</span>
-          </span>
-        </label>
-        <label class="stmt-type-opt">
-          <input type="radio" name="stmt-type" value="bank" onchange="onStmtTypeChange()">
-          <span class="stmt-type-card">
-            <span class="stmt-type-title">Bank account (debit / chequing)</span>
-            <span class="stmt-type-desc">Deposits are <b style="color:#16a34a;">(+)</b> income; withdrawals are <b style="color:#c15c1e;">(−)</b> spending.</span>
-          </span>
-        </label>
+      <div class="stmt-type-summary">
+        <span>Statement type: <strong id="csv-stmt-summary">—</strong></span>
+        <button type="button" class="stmt-type-change" onclick="toggleCsvStmtType()">Switch</button>
       </div>
-      <h3>Column Mapping</h3>
-      <div class="mapper-grid">
-        <div class="mapper-field"><label>Date column</label><select id="col-date"></select></div>
-        <div class="mapper-field"><label>Merchant / Description</label><select id="col-merchant"></select></div>
-        <div class="mapper-field"><label>Amount (debit / spend)</label><select id="col-amount"></select></div>
-        <div class="mapper-field"><label>Credit column (optional)</label><select id="col-credit"></select></div>
-      </div>
+      <!-- Radios hold the state; the gate + Switch button set them. -->
+      <input type="radio" name="stmt-type" value="credit" checked hidden>
+      <input type="radio" name="stmt-type" value="bank" hidden>
+      <details class="mapper-cols">
+        <summary>Column mapping <span>(auto-detected — expand only if a column looks wrong)</span></summary>
+        <div class="mapper-grid">
+          <div class="mapper-field"><label>Date column</label><select id="col-date"></select></div>
+          <div class="mapper-field"><label>Merchant / Description</label><select id="col-merchant"></select></div>
+          <div class="mapper-field"><label>Amount (debit / spend)</label><select id="col-amount"></select></div>
+          <div class="mapper-field"><label>Credit column (optional)</label><select id="col-credit"></select></div>
+        </div>
+      </details>
       <div style="margin-top:10px;">
         <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Whose card is this?</label>
         <div class="person-row">
@@ -7162,7 +7160,19 @@ function onStmtTypeChange() {
   _pendingImportEdited = false;
   updateImportPreview();
 }
+function toggleCsvStmtType() {
+  const cur = (document.querySelector('input[name="stmt-type"]:checked') || {}).value;
+  const r = document.querySelector(`input[name="stmt-type"][value="${cur === 'bank' ? 'credit' : 'bank'}"]`);
+  if (r) r.checked = true;
+  onStmtTypeChange();
+}
+function renderCsvStmtSummary() {
+  const el = document.getElementById('csv-stmt-summary'); if (!el) return;
+  const v = (document.querySelector('input[name="stmt-type"]:checked') || {}).value;
+  el.textContent = v === 'bank' ? 'Bank account (debit / chequing)' : v === 'credit' ? 'Credit card' : '—';
+}
 function updateImportPreview() {
+  renderCsvStmtSummary();
   const panel = document.getElementById('import-preview');
   if (!panel) return;
   const { valid, invalid, mappingIncomplete } = parseImportRows();
