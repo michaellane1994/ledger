@@ -2707,16 +2707,12 @@ function doGet(e) {
           </label>
         </div>
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
-        <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="parsePdfTransactions()">Parse Transactions →</button>
-      </div>
+      <!-- Import happens from the preview section below (one-page flow). -->
     </div>
 
     <!-- Step 2: Parsed transactions review -->
     <div id="pdf-step-2" style="display:none;">
       <div class="map-actions map-actions-top">
-        <button class="btn btn-ghost" onclick="document.getElementById('pdf-step-1').style.display='block';document.getElementById('pdf-step-2').style.display='none';">← Back</button>
         <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
         <button class="btn btn-primary" onclick="importPdfTransactions()">Import All →</button>
       </div>
@@ -2760,7 +2756,6 @@ function doGet(e) {
       <div id="pdf-totals" style="display:flex;gap:20px;justify-content:flex-end;margin-top:10px;padding:10px 14px;background:var(--bg);border-radius:var(--radius-sm);font-size:12.5px;"></div>
       <div style="margin-top:8px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span>✓</span><span>Click any cell to edit. Use × to drop a row. Totals update as you change rows.</span></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
-        <button class="btn btn-ghost" onclick="document.getElementById('pdf-step-1').style.display='block';document.getElementById('pdf-step-2').style.display='none';">← Back</button>
         <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
         <button class="btn btn-primary" onclick="importPdfTransactions()">Import All →</button>
       </div>
@@ -9458,8 +9453,8 @@ async function openPdfParser(file) {
       if (sel && !sel.value && cardTypes.includes(bank)) sel.value = bank;
     }
     // Parse straight to the preview so a PDF behaves like a CSV (no separate
-    // "Parse Transactions" button press). Step 2 has a "← Back" if the user needs
-    // to change the person or card first.
+    // "Parse Transactions" button press). Options (person/card) stay visible above
+    // the preview on the same page.
     parsePdfTransactions();
   } catch (err) {
     document.getElementById('pdf-raw-text').value = '';
@@ -9534,8 +9529,8 @@ function parsePdfTransactions() {
 
   pdfParsedTxns = txns;
 
-  // Show preview
-  document.getElementById('pdf-step-1').style.display = 'none';
+  // Show preview below the options (one-page flow, like the CSV mapper — no separate
+  // step / Back button). Step 1 (extract status + person/card) stays visible.
   document.getElementById('pdf-step-2').style.display = 'block';
   _pdfOriginalParsed = txns.map(t => ({ ...t }));
   _pdfEdited = false;
