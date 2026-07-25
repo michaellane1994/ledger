@@ -3896,7 +3896,9 @@ function setCfStart(val) {
   localStorage.setItem('l3_cf_start', cfStartBalance);
   renderCashflowChart();
 }
+let _cfFromUserSet = false;
 function setCfFrom(val) {
+  _cfFromUserSet = true;
   cfFromMonth = val;
   localStorage.setItem('l3_cf_from', val);
   renderCashflowChart();
@@ -3955,7 +3957,9 @@ function renderCashflowChart() {
   // Populate From dropdown
   const fromSel = document.getElementById('cf-from-month');
   if (fromSel) {
-    const prev = fromSel.value || cfFromMonth;
+    // Default to the earliest month unless the user explicitly picked a From month
+    // this session (otherwise a stale value would stick at the latest month).
+    const prev = _cfFromUserSet ? (fromSel.value || cfFromMonth) : '';
     fromSel.innerHTML = allCfMonths.map(m => `<option value="${m}">${fmtOpt(m)}</option>`).join('');
     fromSel.value = allCfMonths.includes(prev) ? prev : allCfMonths[0];
     if (cfFromMonth !== fromSel.value) cfFromMonth = fromSel.value;
@@ -9514,6 +9518,12 @@ function parsePdfTransactions() {
   else if (bank === 'CIBC')  txns = parseCIBC(rawText);
   else if (bank === 'TD')    txns = parseTD(rawText);
   else                       txns = parseGeneric(rawText);
+  // If a bank-specific parser (e.g. the simple TD one) came up empty, fall back to the
+  // more robust generic parser before giving up — its format may not match the preset.
+  if (!txns.length && bank) {
+    const generic = parseGeneric(rawText);
+    if (generic.length) txns = generic;
+  }
 
   // Assign person, card, category
   txns.forEach(t => {
