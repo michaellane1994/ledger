@@ -9431,6 +9431,10 @@ async function openPdfParser(file) {
       const sel = document.getElementById('pdf-cardname-select');
       if (sel && !sel.value && cardTypes.includes(bank)) sel.value = bank;
     }
+    // Parse straight to the preview so a PDF behaves like a CSV (no separate
+    // "Parse Transactions" button press). Step 2 has a "← Back" if the user needs
+    // to change the person or card first.
+    parsePdfTransactions();
   } catch (err) {
     document.getElementById('pdf-raw-text').value = '';
     const _stErr = document.getElementById('pdf-extract-status');
