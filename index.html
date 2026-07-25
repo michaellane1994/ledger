@@ -2524,17 +2524,17 @@ function doGet(e) {
       <p class="stmt-type-warn">Getting this wrong flips income and spending. Pick the one that matches your file <strong>before</strong> checking the preview below.</p>
       <div class="stmt-type-choice">
         <label class="stmt-type-opt">
-          <input type="radio" name="stmt-type" value="credit" checked onchange="updateImportPreview()">
+          <input type="radio" name="stmt-type" value="credit" checked onchange="onStmtTypeChange()">
           <span class="stmt-type-card">
             <span class="stmt-type-title">Credit card</span>
-            <span class="stmt-type-desc">Purchases are the amount; payments &amp; refunds are credits.</span>
+            <span class="stmt-type-desc">Purchases are positive <b style="color:#16a34a;">(+)</b>; payments &amp; refunds are credits <b style="color:#c15c1e;">(−)</b>.</span>
           </span>
         </label>
         <label class="stmt-type-opt">
-          <input type="radio" name="stmt-type" value="bank" onchange="updateImportPreview()">
+          <input type="radio" name="stmt-type" value="bank" onchange="onStmtTypeChange()">
           <span class="stmt-type-card">
             <span class="stmt-type-title">Bank account (debit / chequing)</span>
-            <span class="stmt-type-desc">Deposits are income; withdrawals are spending.</span>
+            <span class="stmt-type-desc">Deposits are <b style="color:#16a34a;">(+)</b> income; withdrawals are <b style="color:#c15c1e;">(−)</b> spending.</span>
           </span>
         </label>
       </div>
@@ -7088,6 +7088,15 @@ function parseImportRows() {
 let _pendingImportRows = null;
 let _pendingImportInvalid = [];
 let _pendingImportEdited = false;
+// Statement type changed — re-parse from scratch. Without clearing the pending
+// rows, the previous type's auto-classification (e.g. bank deposits flagged as
+// income) is preserved on top of the new type's signs, which made everything read
+// as green credits when flipping from Bank to Credit card.
+function onStmtTypeChange() {
+  _pendingImportRows = null;
+  _pendingImportEdited = false;
+  updateImportPreview();
+}
 function updateImportPreview() {
   const panel = document.getElementById('import-preview');
   if (!panel) return;
@@ -11413,7 +11422,7 @@ setSyncLabel(sheetsUrl ? 'Connected' : 'Not connected');
 ['col-date','col-merchant','col-amount','col-credit'].forEach(id => {
   const el = document.getElementById(id); if (el) el.addEventListener('change', updateImportPreview);
 });
-document.querySelectorAll('input[name="stmt-type"]').forEach(r => r.addEventListener('change', updateImportPreview));
+document.querySelectorAll('input[name="stmt-type"]').forEach(r => r.addEventListener('change', onStmtTypeChange));
 applyJointSetting();
 // Restore the last dashboard period selection so a refresh returns to the same
 // view (renderPills still snaps selMonth to a valid month if the data changed).
