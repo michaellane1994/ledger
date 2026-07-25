@@ -2656,6 +2656,10 @@ function doGet(e) {
       </div>
       <div id="pdf-extract-status" style="padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-size:12.5px;color:var(--muted);line-height:1.5;display:flex;align-items:center;gap:8px;">Extracting text…</div>
       <textarea id="pdf-raw-text" style="display:none;" readonly></textarea>
+      <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="copyPdfRawText(this)" style="font-size:11px;padding:3px 9px;color:var(--muted);">Copy extracted text</button>
+        <span style="font-size:10.5px;color:var(--faint);">Some transactions missing? Copy this to see exactly what the parser read.</span>
+      </div>
       <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div class="add-field">
           <label>Whose card is this?</label>
@@ -9423,6 +9427,22 @@ function detectPdfBank(text) {
   return null;
 }
 
+// Copy the raw text the app extracted from the PDF (support/debug aid).
+function copyPdfRawText(btn) {
+  const ta = document.getElementById('pdf-raw-text');
+  const txt = (ta && ta.value) || '';
+  if (!txt) return;
+  const done = () => { if (btn) { const o = btn.textContent; btn.textContent = 'Copied ✓'; setTimeout(() => { btn.textContent = o; }, 1500); } };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(done).catch(() => { _copyPdfRawFallback(ta); done(); });
+  } else { _copyPdfRawFallback(ta); done(); }
+}
+function _copyPdfRawFallback(ta) {
+  if (!ta) return;
+  const prev = ta.style.display; ta.style.display = 'block'; ta.select();
+  try { document.execCommand('copy'); } catch (_) {}
+  ta.style.display = prev;
+}
 function togglePdfStmtType() {
   const cur = (document.querySelector('input[name="stmt-type"]:checked') || {}).value;
   const r = document.querySelector(`input[name="stmt-type"][value="${cur === 'bank' ? 'credit' : 'bank'}"]`);
