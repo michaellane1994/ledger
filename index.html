@@ -848,6 +848,9 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .stmt-type-opt:hover .stmt-type-card{border-color:var(--border-2);}
 .stmt-type-opt input:checked + .stmt-type-card{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent);}
 .stmt-type-opt input:focus-visible + .stmt-type-card{outline:2px solid var(--accent);outline-offset:2px;}
+.stmt-type-btn{display:block;width:100%;text-align:left;background:none;border:none;padding:0;margin:0;cursor:pointer;font-family:inherit;}
+.stmt-type-btn:hover .stmt-type-card{border-color:var(--accent);background:var(--accent-soft);}
+.stmt-type-btn:focus-visible .stmt-type-card{outline:2px solid var(--accent);outline-offset:2px;}
 .stmt-type-title{font-size:13.5px;font-weight:600;color:var(--ink);}
 .stmt-type-desc{font-size:11px;color:var(--muted);line-height:1.4;}
 .stmt-type-warn{font-size:11.5px;color:#c15c1e;margin:0 0 12px;line-height:1.45;}
@@ -2514,14 +2517,39 @@ function doGet(e) {
   </div>
 </div>
 
+<!-- STATEMENT TYPE GATE — mandatory initial pick before the mapper/preview -->
+<div class="modal-overlay" id="stmt-type-modal">
+  <div class="modal" style="width:520px;max-width:95vw;">
+    <div class="modal-title">What kind of statement is this?</div>
+    <div class="modal-sub">This sets how deposits and withdrawals are read. You can switch it on the next screen too.</div>
+    <div class="stmt-type-choice" style="margin-top:18px;">
+      <button type="button" class="stmt-type-btn" onclick="pickStmtType('credit')">
+        <span class="stmt-type-card">
+          <span class="stmt-type-title">Credit card</span>
+          <span class="stmt-type-desc">Purchases are positive <b style="color:#16a34a;">(+)</b>; payments &amp; refunds are credits <b style="color:#c15c1e;">(−)</b>.</span>
+        </span>
+      </button>
+      <button type="button" class="stmt-type-btn" onclick="pickStmtType('bank')">
+        <span class="stmt-type-card">
+          <span class="stmt-type-title">Bank account (debit / chequing)</span>
+          <span class="stmt-type-desc">Deposits are <b style="color:#16a34a;">(+)</b> income; withdrawals are <b style="color:#c15c1e;">(−)</b> spending.</span>
+        </span>
+      </button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+      <button class="btn btn-ghost" onclick="cancelStmtType()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- COLUMN MAPPER MODAL -->
 <div class="modal-overlay" id="map-modal">
   <div class="modal">
     <div class="modal-title">Map CSV Columns</div>
     <div class="modal-sub" id="map-fn">Tell Ledger which column contains what</div>
     <div class="mapper">
-      <h3 style="margin-top:0;">1 · What kind of statement is this?</h3>
-      <p class="stmt-type-warn">Getting this wrong flips income and spending. Pick the one that matches your file <strong>before</strong> checking the preview below.</p>
+      <h3 style="margin-top:0;">Statement type</h3>
+      <p class="stmt-type-warn">Switch this if the preview below looks inverted (income showing as spending, or vice-versa).</p>
       <div class="stmt-type-choice">
         <label class="stmt-type-opt">
           <input type="radio" name="stmt-type" value="credit" checked onchange="onStmtTypeChange()">
@@ -2538,7 +2566,7 @@ function doGet(e) {
           </span>
         </label>
       </div>
-      <h3>2 · Column Mapping</h3>
+      <h3>Column Mapping</h3>
       <div class="mapper-grid">
         <div class="mapper-field"><label>Date column</label><select id="col-date"></select></div>
         <div class="mapper-field"><label>Merchant / Description</label><select id="col-merchant"></select></div>
@@ -7007,14 +7035,33 @@ function openMapper(file) {
     const fn = file.name.toLowerCase();
     const cardGuess = fn.includes('cibc') ? 'CIBC' : fn.includes('chequing') ? 'RBC Chequing' : fn.includes('saving') ? 'RBC Savings' : fn.includes('amex') ? 'Amex' : fn.includes('scotia') ? 'Scotiabank' : '';
     populateCardTypeDropdown(cardGuess);
-    document.getElementById('map-modal').classList.add('open');
-    // Lock background scroll so a touch drag inside the modal doesn't leak
-    // through and scroll the dashboard behind it — was making the mobile
-    // upload flow feel like the whole page was jumping around.
+    // Force the statement-type choice up front via a gate, THEN open the mapper,
+    // where the same choice stays flickable via the inline toggle. Column detection
+    // has already pre-set the inline radio as a default; the gate click is final.
     document.body.style.overflow = 'hidden';
-    updateImportPreview();
+    document.getElementById('stmt-type-modal').classList.add('open');
   };
   reader.readAsText(file);
+}
+// Statement-type gate: mandatory initial pick, then the mapper (with a flickable
+// inline toggle) opens.
+function _openMapperPreview() {
+  document.getElementById('map-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  updateImportPreview();
+}
+function pickStmtType(type) {
+  const r = document.querySelector(`input[name="stmt-type"][value="${type}"]`);
+  if (r) r.checked = true;
+  _pendingImportRows = null;
+  _pendingImportEdited = false;
+  document.getElementById('stmt-type-modal').classList.remove('open');
+  _openMapperPreview();
+}
+function cancelStmtType() {
+  document.getElementById('stmt-type-modal').classList.remove('open');
+  document.body.style.overflow = '';
+  pFile = null;
 }
 function guess(id, hints) {
   const idx = pHeaders.findIndex(h => hints.some(hint => h.toLowerCase().includes(hint)));
