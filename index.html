@@ -742,7 +742,8 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .modal-overlay{position:fixed;inset:0;background:rgba(15,15,20,.55);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
 .modal-overlay.open{display:flex;animation:fadeIn .18s ease;}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--s-8);width:480px;max-width:90vw;box-shadow:var(--shadow-lg);animation:slideUp .26s cubic-bezier(.16,1,.3,1);}
-#map-modal .modal{max-height:calc(100dvh - 24px);overflow-y:auto;}
+/* Tall mapper can exceed the viewport on desktop; let the overlay scroll (top-aligned). */
+#map-modal.open{align-items:flex-start;overflow-y:auto;padding:24px 0;}
 @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 
 /* ── DUPLICATES ── */
