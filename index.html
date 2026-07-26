@@ -8588,6 +8588,7 @@ function confirmAddType() {
   else saveAcctTypes();
   closeAddType();
   renderTypeManagement();
+  if (typeof autoPush === 'function') autoPush();
 }
 
 function deleteType(context, key) {
@@ -8613,6 +8614,7 @@ function deleteType(context, key) {
   }
   renderTypeManagement();
   renderSavings();
+  if (typeof autoPush === 'function') autoPush();
 }
 
 document.addEventListener('input', e => {
@@ -8713,11 +8715,17 @@ function confirmAddCat() {
   const editKey = document.getElementById('add-cat-modal').dataset.editKey;
   const kw      = document.getElementById('new-cat-keywords').value.split(',').map(k => k.trim().toLowerCase()).filter(Boolean);
   if (!label) { alert('Please enter a category name.'); return; }
+  // Prevent duplicates: no two categories may share a name (case-insensitive), whether
+  // built-in or custom. Excludes the row being edited so re-saving it is allowed.
+  const dup = CATS.find(c => c.key !== editKey && c.label.trim().toLowerCase() === label.toLowerCase());
+  if (dup) { alert(`A category called "${dup.label}" already exists. Please choose a different name.`); return; }
   if (editKey) {
     const c = CATS.find(x => x.key === editKey);
     if (c) { c.label = label; c.color = color; c.bg = lightenColor(color); c.kw = kw; }
   } else {
     const key = 'custom_' + label.toLowerCase().replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
+    // Belt for near-duplicate names that normalise to the same key.
+    if (CATS.some(c => c.key === key)) { alert('That name is too similar to an existing category. Please choose a different name.'); return; }
     const miscIdx = CATS.findIndex(c => c.key === 'misc');
     CATS.splice(miscIdx, 0, normCat({ key, label, color, kw, budget: 0, fixed: false, custom: true }));
   }
@@ -8936,6 +8944,7 @@ function toggleJoint(val) {
   showJoint = val;
   localStorage.setItem('l3_show_joint', val);
   applyJointSetting();
+  if (typeof autoPush === 'function') autoPush();
 }
 
 function applyJointSetting() {
@@ -9136,7 +9145,7 @@ async function syncToSheets() {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed] } }),
+      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed] } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -9233,6 +9242,24 @@ async function syncFromSheets() {
       localStorage.setItem('l3_labels', JSON.stringify(labels));
       recurringDismissed = new Set(Array.isArray(data.settings?.recurringDismissed) ? data.settings.recurringDismissed : []);
       localStorage.setItem('l3_recurring_dismissed', JSON.stringify([...recurringDismissed]));
+      // Config editable in Settings — joint toggle, income types, savings types. (People
+      // are fixed on this site, so nothing to sync there.) Backward-compat: only overwrite
+      // when the Sheet carries the field, so an older Sheet doesn't wipe local config.
+      if (typeof data.settings?.showJoint === 'boolean') {
+        showJoint = data.settings.showJoint;
+        localStorage.setItem('l3_show_joint', String(showJoint));
+        const _tj = document.getElementById('toggle-joint'); if (_tj) _tj.checked = showJoint;
+      }
+      if (Array.isArray(data.settings?.incomeTypes)) {
+        INCOME_TYPES_ARR = data.settings.incomeTypes;
+        saveIncomeTypes();
+        if (typeof renderIncomeTypeList === 'function') renderIncomeTypeList();
+      }
+      if (Array.isArray(data.settings?.acctTypes)) {
+        ACCT_TYPES_ARR = data.settings.acctTypes;
+        saveAcctTypes();
+        if (typeof renderSavingsTypeList === 'function') renderSavingsTypeList();
+      }
       repairIncomeDates();
       persist();
       updateSyncDot('ok');
@@ -9401,7 +9428,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed] } }),
+        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed] } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
