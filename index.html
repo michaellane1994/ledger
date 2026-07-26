@@ -628,6 +628,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .lbl-card-name{font-size:13px;font-weight:600;color:var(--ink);}
 .lbl-card-amt{font-size:22px;font-weight:600;color:var(--ink);letter-spacing:-0.01em;font-variant-numeric:tabular-nums;}
 .lbl-card-sub{font-size:11px;color:var(--muted);}
+.lbl-more-btn{margin-top:12px;background:none;border:none;color:var(--accent);font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;padding:4px 2px;}
+.lbl-more-btn:hover{text-decoration:underline;}
 .lbl-filter-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 4px 3px 10px;border-radius:100px;background:color-mix(in srgb, var(--lc) 16%, transparent);color:var(--lc);margin-left:6px;vertical-align:middle;}
 .lbl-filter-chip button{background:none;border:none;color:inherit;cursor:pointer;font-size:12px;padding:2px 4px;line-height:1;border-radius:50%;}
 .lbl-filter-chip button:hover{background:color-mix(in srgb, var(--lc) 22%, transparent);}
@@ -1551,6 +1553,12 @@ textarea,select{color:var(--ink);}
             <div class="dash-section-sub">Spending grouped by your labels, for this period. Tap one to see its transactions.</div>
           </div>
           <div class="dash-section-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="labels-count-picker" class="moneyflow-period-picker" onchange="setLabelsTopN(this.value)" title="How many labels to show" aria-label="Labels to show">
+              <option value="3">Top 3</option>
+              <option value="5">Top 5</option>
+              <option value="10">Top 10</option>
+              <option value="all">All</option>
+            </select>
             <select id="labels-period-picker" class="moneyflow-period-picker" onchange="setMoneyflowPeriod(this.value)" title="Period · syncs the whole dashboard" aria-label="Period"></select>
           </div>
         </div>
@@ -6000,6 +6008,14 @@ function filterByLabel(id) {
 function clearLabelFilter() { txnLabelFilter = ''; renderTxns(); }
 let txnRecurringFilter = false;
 function toggleRecurringFilter() { txnRecurringFilter = !txnRecurringFilter; renderTxns(); }
+// How many label cards to show at once. Kept short by default so a period with many
+// labels doesn't make the section tower over the dashboard; user can bump it or show all.
+let _labelsTopN = localStorage.getItem('l3_labelsTopN') || '5';
+function setLabelsTopN(v) {
+  _labelsTopN = v;
+  try { localStorage.setItem('l3_labelsTopN', v); } catch (_) {}
+  renderLabelsCard();
+}
 function renderLabelsCard() {
   const section = document.getElementById('labels-section');
   const body = document.getElementById('labels-body');
@@ -6028,12 +6044,24 @@ function renderLabelsCard() {
     .sort((a, b) => b.sum - a.sum);
   if (!rows.length) { section.style.display = 'none'; return; }
   section.style.display = '';
-  body.innerHTML = `<div class="lbl-cards">` + rows.map(r => `
+  // Keep the count picker in sync with the active value.
+  const countPicker = document.getElementById('labels-count-picker');
+  if (countPicker) countPicker.value = _labelsTopN;
+  // Slice to the chosen top-N (rows are already sorted by spend, descending).
+  const limit = _labelsTopN === 'all' ? rows.length : Math.max(1, parseInt(_labelsTopN, 10) || 5);
+  const shown = rows.slice(0, limit);
+  const hiddenCount = rows.length - shown.length;
+  const moreBtn = hiddenCount > 0
+    ? `<button type="button" class="lbl-more-btn" onclick="setLabelsTopN('all')">Show all ${rows.length} labels →</button>`
+    : (_labelsTopN === 'all' && rows.length > 5
+        ? `<button type="button" class="lbl-more-btn" onclick="setLabelsTopN('5')">Show fewer</button>`
+        : '');
+  body.innerHTML = `<div class="lbl-cards">` + shown.map(r => `
     <button type="button" class="lbl-card" onclick="filterByLabel('${r.id}')" title="View these transactions">
       <span class="lbl-card-top"><span class="lbl-dot" style="background:${r.color};"></span><span class="lbl-card-name">${esc(r.name)}</span></span>
       <span class="lbl-card-amt">${fmt(r.sum)}</span>
       <span class="lbl-card-sub">${r.count} txn${r.count !== 1 ? 's' : ''}${r.min ? ' · ' + _lblRange(r.min, r.max) : ''}</span>
-    </button>`).join('') + `</div>`;
+    </button>`).join('') + `</div>` + moreBtn;
 }
 // Recurring is treated as a property of a merchant: flagging (or unflagging) a
 // transaction propagates to every other transaction with the same merchant, so
