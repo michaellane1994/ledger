@@ -9145,7 +9145,7 @@ async function syncToSheets() {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed] } }),
+      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed] } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -9259,6 +9259,10 @@ async function syncFromSheets() {
         ACCT_TYPES_ARR = data.settings.acctTypes;
         saveAcctTypes();
         if (typeof renderSavingsTypeList === 'function') renderSavingsTypeList();
+      }
+      if (typeof data.settings?.currency === 'string' && CURRENCIES[data.settings.currency]) {
+        globalCurrency = data.settings.currency;
+        localStorage.setItem('l3_currency', globalCurrency);
       }
       repairIncomeDates();
       persist();
@@ -9428,7 +9432,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed] } }),
+        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed] } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
@@ -10411,6 +10415,7 @@ function setGlobalCurrency(code) {
   if (typeof renderSavings      === 'function') renderSavings();
   if (typeof renderIncomes      === 'function') renderIncomes();
   if (typeof renderMortgageView === 'function') renderMortgageView();
+  if (typeof autoPush           === 'function') autoPush();
 }
 function toggleCurrencyDropdown(e) {
   e.stopPropagation();
