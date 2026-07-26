@@ -1525,6 +1525,7 @@ textarea,select{color:var(--ink);}
               <button id="breakdown-mode-person" class="moneyflow-mode-btn active" onclick="setBreakdownMode('person')" title="Group spending by person">By person</button>
               <button id="breakdown-mode-card" class="moneyflow-mode-btn" onclick="setBreakdownMode('card')" title="Group spending by card">By card</button>
             </div>
+            <select id="breakdown-groupn-picker" class="moneyflow-period-picker" onchange="setBreakdownGroupN(this.value)" title="How many cards to show" aria-label="Cards to show" style="display:none;"></select>
             <div class="moneyflow-mode-toggle" role="group" aria-label="Categories shown">
               <button id="breakdown-topn-3" class="moneyflow-mode-btn" onclick="setBreakdownTopN('3')" title="Top 3 categories">Top 3</button>
               <button id="breakdown-topn-5" class="moneyflow-mode-btn active" onclick="setBreakdownTopN('5')" title="Top 5 categories">Top 5</button>
@@ -1553,12 +1554,6 @@ textarea,select{color:var(--ink);}
             <div class="dash-section-sub">Spending grouped by your labels, for this period. Tap one to see its transactions.</div>
           </div>
           <div class="dash-section-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
-            <select id="labels-count-picker" class="moneyflow-period-picker" onchange="setLabelsTopN(this.value)" title="How many labels to show" aria-label="Labels to show">
-              <option value="3">Top 3</option>
-              <option value="5">Top 5</option>
-              <option value="10">Top 10</option>
-              <option value="all">All</option>
-            </select>
             <select id="labels-period-picker" class="moneyflow-period-picker" onchange="setMoneyflowPeriod(this.value)" title="Period · syncs the whole dashboard" aria-label="Period"></select>
           </div>
         </div>
@@ -5160,6 +5155,8 @@ function attachMoneyflowTooltips(container) {
 let breakdownMode = localStorage.getItem('l3_breakdown_mode') || 'person'; // 'person' | 'card'
 let breakdownTopN = localStorage.getItem('l3_breakdown_topn') || '5';      // '3'|'5'|'10'|'all'|'custom'
 let breakdownCustomCats = JSON.parse(localStorage.getItem('l3_breakdown_custom') || '[]');
+// How many top-level cards to show in "By card" mode — separate from the category Top-N.
+let breakdownGroupN = localStorage.getItem('l3_breakdown_groupn') || '5'; // '3'|'5'|'10'|'all'
 function setBreakdownMode(m) {
   if (m !== 'person' && m !== 'card') return;
   breakdownMode = m;
@@ -5169,6 +5166,11 @@ function setBreakdownMode(m) {
 function setBreakdownTopN(v) {
   breakdownTopN = v;
   localStorage.setItem('l3_breakdown_topn', v);
+  renderBreakdown();
+}
+function setBreakdownGroupN(v) {
+  breakdownGroupN = v;
+  localStorage.setItem('l3_breakdown_groupn', v);
   renderBreakdown();
 }
 function toggleBreakdownCustomCat(key) {
@@ -5217,6 +5219,19 @@ function renderBreakdown() {
     const b = document.getElementById('breakdown-topn-' + v);
     if (b) b.classList.toggle('active', v === breakdownTopN);
   });
+  // Card-count picker: only meaningful in "By card" mode (people are few). Populate its
+  // labels with the right noun and keep it hidden in person mode.
+  const groupPicker = document.getElementById('breakdown-groupn-picker');
+  if (groupPicker) {
+    if (breakdownMode === 'card') {
+      groupPicker.style.display = '';
+      groupPicker.innerHTML = ['3','5','10','all']
+        .map(v => `<option value="${v}">${v === 'all' ? 'All cards' : 'Top ' + v + ' cards'}</option>`).join('');
+      groupPicker.value = breakdownGroupN;
+    } else {
+      groupPicker.style.display = 'none';
+    }
+  }
   // Period picker: mirrors the dashboard's current period (shared with Money flow).
   if (typeof renderMoneyflowPeriodPicker === 'function') renderMoneyflowPeriodPicker('breakdown-period-picker');
   if (typeof renderMoneyflowPeriodPicker === 'function') renderMoneyflowPeriodPicker('labels-period-picker');
@@ -5260,6 +5275,14 @@ function renderBreakdown() {
   }
   section.style.display = '';
 
+  // Cap how many top-level cards are shown (its own control, only in card mode) so a
+  // period with many cards doesn't stack endlessly — especially on mobile. Category
+  // limiting inside each card is independent (the Top-N control).
+  const capGroups = breakdownMode === 'card' && breakdownGroupN !== 'all';
+  const groupCap = capGroups ? Math.max(1, parseInt(breakdownGroupN, 10) || 5) : rows.length;
+  const shownRows = rows.slice(0, groupCap);
+  const hiddenGroups = rows.length - shownRows.length;
+
   const catMeta = (key) => {
     const c = CATS.find(x => x.key === key);
     return { label: c ? c.label : (key === '__uncat' ? 'Uncategorised' : key), color: (c && c.color) || 'var(--border-2)' };
@@ -5267,7 +5290,7 @@ function renderBreakdown() {
   // Custom with nothing picked behaves like "all" so the card isn't empty.
   const customActive = breakdownTopN === 'custom' && breakdownCustomCats.length > 0;
 
-  const html = `<div class="bd-groups">` + rows.map(r => {
+  const html = `<div class="bd-groups">` + shownRows.map(r => {
     const catRows = Object.entries(r.cats)
       .map(([key, amount]) => ({ key, amount, ...catMeta(key) }))
       .sort((a, b) => b.amount - a.amount);
@@ -5309,7 +5332,12 @@ function renderBreakdown() {
         </div>
         <div class="bd-cat-list">${catListHtml}</div>
       </div>`;
-  }).join('') + `</div>`;
+  }).join('') + `</div>`
+    + (hiddenGroups > 0
+        ? `<button type="button" class="lbl-more-btn" onclick="setBreakdownGroupN('all')">Show all ${rows.length} cards →</button>`
+        : (breakdownMode === 'card' && breakdownGroupN === 'all' && rows.length > 5
+            ? `<button type="button" class="lbl-more-btn" onclick="setBreakdownGroupN('5')">Show fewer cards</button>`
+            : ''));
 
   body.innerHTML = html;
 }
@@ -6008,14 +6036,6 @@ function filterByLabel(id) {
 function clearLabelFilter() { txnLabelFilter = ''; renderTxns(); }
 let txnRecurringFilter = false;
 function toggleRecurringFilter() { txnRecurringFilter = !txnRecurringFilter; renderTxns(); }
-// How many label cards to show at once. Kept short by default so a period with many
-// labels doesn't make the section tower over the dashboard; user can bump it or show all.
-let _labelsTopN = localStorage.getItem('l3_labelsTopN') || '5';
-function setLabelsTopN(v) {
-  _labelsTopN = v;
-  try { localStorage.setItem('l3_labelsTopN', v); } catch (_) {}
-  renderLabelsCard();
-}
 function renderLabelsCard() {
   const section = document.getElementById('labels-section');
   const body = document.getElementById('labels-body');
@@ -6044,24 +6064,12 @@ function renderLabelsCard() {
     .sort((a, b) => b.sum - a.sum);
   if (!rows.length) { section.style.display = 'none'; return; }
   section.style.display = '';
-  // Keep the count picker in sync with the active value.
-  const countPicker = document.getElementById('labels-count-picker');
-  if (countPicker) countPicker.value = _labelsTopN;
-  // Slice to the chosen top-N (rows are already sorted by spend, descending).
-  const limit = _labelsTopN === 'all' ? rows.length : Math.max(1, parseInt(_labelsTopN, 10) || 5);
-  const shown = rows.slice(0, limit);
-  const hiddenCount = rows.length - shown.length;
-  const moreBtn = hiddenCount > 0
-    ? `<button type="button" class="lbl-more-btn" onclick="setLabelsTopN('all')">Show all ${rows.length} labels →</button>`
-    : (_labelsTopN === 'all' && rows.length > 5
-        ? `<button type="button" class="lbl-more-btn" onclick="setLabelsTopN('5')">Show fewer</button>`
-        : '');
-  body.innerHTML = `<div class="lbl-cards">` + shown.map(r => `
+  body.innerHTML = `<div class="lbl-cards">` + rows.map(r => `
     <button type="button" class="lbl-card" onclick="filterByLabel('${r.id}')" title="View these transactions">
       <span class="lbl-card-top"><span class="lbl-dot" style="background:${r.color};"></span><span class="lbl-card-name">${esc(r.name)}</span></span>
       <span class="lbl-card-amt">${fmt(r.sum)}</span>
       <span class="lbl-card-sub">${r.count} txn${r.count !== 1 ? 's' : ''}${r.min ? ' · ' + _lblRange(r.min, r.max) : ''}</span>
-    </button>`).join('') + `</div>` + moreBtn;
+    </button>`).join('') + `</div>`;
 }
 // Recurring is treated as a property of a merchant: flagging (or unflagging) a
 // transaction propagates to every other transaction with the same merchant, so
