@@ -2657,7 +2657,8 @@ function doGet(e) {
         </table>
       </div>
       <div id="import-preview-footer" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;font-size:12px;"></div>
-      <div id="import-preview-verify" style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span>✓</span><span>Click any cell to edit. Totals update as you change rows. Use × to drop bad rows. Income type can be changed later on the Income page.</span></div>
+      <div id="import-preview-income-note" style="display:none;margin-top:10px;font-size:12px;color:#15803d;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.25);border-radius:6px;padding:8px 10px;line-height:1.45;"></div>
+      <div id="import-preview-verify" style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span>✓</span><span>Click any cell to edit. Totals update as you change rows. Use × to drop bad rows.</span></div>
     </div>
 
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
@@ -2753,7 +2754,7 @@ function doGet(e) {
           </span>
         </label>
       </div>
-      <div class="stmt-edit-hint">Tap any date, merchant or amount to edit it before importing. Income type can be changed later on the Income page.</div>
+      <div class="stmt-edit-hint">Tap any date, merchant or amount to edit it before importing.</div>
       <div class="pdf-preview-wrap" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);">
         <table class="stmt-preview" style="width:100%;border-collapse:collapse;">
           <thead>
@@ -2770,6 +2771,7 @@ function doGet(e) {
         </table>
       </div>
       <div id="pdf-totals" style="display:flex;gap:20px;justify-content:flex-end;margin-top:10px;padding:10px 14px;background:var(--bg);border-radius:var(--radius-sm);font-size:12.5px;"></div>
+      <div id="pdf-income-note" style="display:none;margin-top:10px;font-size:12px;color:#15803d;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.25);border-radius:6px;padding:8px 10px;line-height:1.45;"></div>
       <div style="margin-top:8px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span>✓</span><span>Click any cell to edit. Use × to drop a row. Totals update as you change rows.</span></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
         <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
@@ -7379,6 +7381,16 @@ function renderImportPreviewFooter() {
     <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Net</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(net)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${rows.length} row${rows.length===1?'':'s'} to import</div></div>
     ${invalid.length ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:#b91c1c;font-weight:600;margin-bottom:3px;">Skipped</div><div style="font-size:14px;font-weight:600;color:#b91c1c;">${invalid.length}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;" title="${esc(invalid.slice(0,5).map(r=>r.reason).join(' · '))}">${esc(invalid[0].reason)}${invalid.length>1?' + others':''}</div></div>` : ''}
   `;
+  // Conditional heads-up shown only when rows were detected as income.
+  const incomeNote = document.getElementById('import-preview-income-note');
+  if (incomeNote) {
+    if (incomeRows.length) {
+      incomeNote.style.display = '';
+      incomeNote.innerHTML = `↗ <strong>${incomeRows.length} row${incomeRows.length===1?'':'s'}</strong> detected as income. Not right? Set the category here before importing — and you can always change the <strong>income type</strong> later on the Income page once these are uploaded.`;
+    } else {
+      incomeNote.style.display = 'none';
+    }
+  }
 }
 function editImportRow(idx, field, value) {
   if (!_pendingImportRows || !_pendingImportRows[idx]) return;
@@ -9694,6 +9706,15 @@ function renderPdfPreview() {
     ${credits < 0 ? `<span style="color:var(--muted);">Credits <strong class="clr-credit" style="margin-left:4px;">-${fmt(Math.abs(credits))}</strong></span>` : ''}
     ${incomeTotal > 0 ? `<span style="color:var(--muted);">Income <strong style="color:#16a34a;margin-left:4px;">+${fmt(incomeTotal)}</strong></span>` : ''}
     <span style="color:var(--muted);">Net <strong style="color:var(--ink);margin-left:4px;">${fmt(charges + credits)}</strong></span>`;
+  const incomeNote = document.getElementById('pdf-income-note');
+  if (incomeNote) {
+    if (incomeRows.length) {
+      incomeNote.style.display = '';
+      incomeNote.innerHTML = `↗ <strong>${incomeRows.length} row${incomeRows.length===1?'':'s'}</strong> detected as income. Not right? Set the category here before importing — and you can always change the <strong>income type</strong> later on the Income page once these are uploaded.`;
+    } else {
+      incomeNote.style.display = 'none';
+    }
+  }
   const resetBtn = document.getElementById('pdf-reset-edits-btn');
   if (resetBtn) resetBtn.style.display = _pdfEdited ? '' : 'none';
 }
