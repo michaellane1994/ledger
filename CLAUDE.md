@@ -34,6 +34,7 @@ Deploy: `git add . && git commit -m "description" && git push`
 - Always include `fromTxnId` and `category` in Income sheet writes
 - Always call `rebuildCAT()` after modifying `CATS`
 - **If you modify the Apps Script code block** (inside the `<pre id="apps-script-code">` element), always tell the user explicitly: "The Apps Script has changed — you need to copy the updated code from the Setup Guide into your Google Sheets Apps Script editor and redeploy."
+- **Keep the social/link-preview thumbnail in sync with material branding changes** (wordmark, product name, palette). The thumbnail is `ledger-saas/public/og-image.png` (1200×630, referenced by `og:image`/`twitter:image`). Its editable source is `ledger-saas/public/og-image-source.html` — after any branding change, re-render it to `og-image.png` with headless Chrome (`--headless=new --window-size=1200,630 --screenshot=og-image.png`, let webfonts load first) and verify the PNG visually before committing.
 
 ## General Template: Sample Data & Reset
 
