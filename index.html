@@ -88,9 +88,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 
 /* ── SIDEBAR ── */
 .sidebar{width:228px;min-height:100vh;background:linear-gradient(180deg,#0a0a0d 0%,#141417 100%);position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column;}
-.logo{padding:26px 22px 18px;border-bottom:1px solid rgba(255,255,255,.07);}
+.logo{padding:8px 22px 5px;border-bottom:1px solid rgba(255,255,255,.07);}
 .logo h1{font-family:'Fraunces',serif;font-size:36px;color:#fff;letter-spacing:-0.02em;line-height:1;}
-.logo span{font-size:11px;color:rgba(255,255,255,.4);letter-spacing:.8px;text-transform:uppercase;margin-top:6px;display:block;font-weight:500;}
+.logo span{font-size:11px;color:rgba(255,255,255,.4);letter-spacing:.8px;text-transform:uppercase;margin-top:6px;display:block;font-weight:500;line-height:1;}
 .nav{padding:14px 10px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;}
 .nav-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.25);padding:8px 12px 5px;font-weight:600;}
 .nav-item{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;color:rgba(255,255,255,.55);transition:all .15s ease;font-family:'Fraunces',Georgia,serif;font-optical-sizing:auto;font-size:15px;margin-bottom:2px;user-select:none;font-weight:450;}
@@ -159,7 +159,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 
 /* ── MAIN ── */
 .main{margin-left:228px;flex:1;display:flex;flex-direction:column;min-width:0;max-width:calc(100vw - 228px);padding-top:58px;}
-.topbar{background:var(--topbar-bg);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid transparent;height:64px;padding:0 var(--s-7);display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:228px;right:0;z-index:50;}
+.topbar{background:var(--topbar-bg);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--border-2);height:64px;padding:0 var(--s-7);display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:228px;right:0;z-index:50;}
 .help-btn{width:30px;height:30px;padding:0;background:transparent;border:1px solid var(--border);border-radius:50%;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s, color .15s, border-color .15s;flex-shrink:0;}
 .help-btn:hover{background:var(--bg);color:var(--ink);border-color:var(--muted);}
 .help-btn svg{width:16px;height:16px;}
