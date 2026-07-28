@@ -7802,6 +7802,12 @@ function openAddModal() {
 function openEditModal(id) {
   const t = txns.find(x => x.id === id);
   if (!t) return;
+  // Income rows have their own editor (income type, no expense category). Route them there
+  // so editing an income transaction never shows a bogus "Misc" expense category.
+  if (t.incomeType && t.incomeType !== 'transfer') {
+    const inc = incomes.find(i => i.fromTxnId === id);
+    if (inc) { openEditIncome(inc.id); return; }
+  }
   _editTxnId = id;
   const isRefund   = !!t.refund;
   const isTransfer = t.incomeType === 'transfer';
@@ -8139,7 +8145,7 @@ function confirmAddIncome() {
   } else {
     // Create a synthetic txn so this income shows on the transactions page
     const txnId = uid();
-    txns.push({ id: txnId, date, merchant: desc, amount, category: 'misc', person, card: card||'', note, incomeType: type, incomeCategory: category||undefined, manualIncome: true });
+    txns.push({ id: txnId, date, merchant: desc, amount, category: null, person, card: card||'', note, incomeType: type, incomeCategory: category||undefined, manualIncome: true });
     incomes.push({ id:uid(), date, amount, type, person, desc, note, card, category, fromTxnId: txnId });
   }
   persist(); closeAddIncome(); renderIncome(); renderDashboard(); renderTxns(); autoPush();
