@@ -148,10 +148,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .theme-option.tactive .theme-name{color:var(--ink);font-weight:600;}
 .custom-badge{font-size:10px;color:var(--accent);background:#fdf0e8;padding:2px 7px;border-radius:100px;font-weight:600;}
 [data-theme="dark"] .custom-badge{background:#2a1a02;}
-.btn-danger{color:#dc2626;border-color:#fecaca;}
-[data-theme="dark"] .btn-danger{color:#f87171;border-color:#7f1d1d;}
-.btn-warning{color:#7c3d12;border-color:#f5c07a;}
-[data-theme="dark"] .btn-warning{color:#fbbf24;border-color:#78350f;}
+.btn-danger{color:#dc2626;border-color:transparent;}
+[data-theme="dark"] .btn-danger{color:#f87171;border-color:transparent;}
+.btn-warning{color:#7c3d12;border-color:transparent;}
+[data-theme="dark"] .btn-warning{color:#fbbf24;border-color:transparent;}
 .clr-credit{color:#16a34a;}
 [data-theme="dark"] .clr-credit{color:#5dbd85;}
 .refund-row{background:#f7fdf8;}
@@ -200,8 +200,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .btn-primary{background:transparent;color:var(--accent);}
 @media (hover:hover){ .btn-primary:hover{background:var(--accent);color:#fff;transform:translateY(-1px);} }
 .btn-primary:active{background:var(--accent);color:#fff;}
-.btn-ghost{background:var(--surface);color:var(--ink-2);border:1px solid var(--border);box-shadow:var(--shadow-xs);}
-.btn-ghost:hover{background:var(--bg-2);border-color:var(--border-2);transform:translateY(-1px);}
+.btn-outline{border-color:var(--border);}
+.btn-outline:hover{border-color:var(--accent);}
+.btn-ghost{background:transparent;color:var(--ink-2);border:1px solid transparent;box-shadow:none;}
+.btn-ghost:hover{background:var(--bg-2);border-color:transparent;transform:translateY(-1px);}
 .btn-sm{padding:5px 11px;font-size:12px;}
 .btn svg{width:13px;height:13px;}
 .content{padding:24px 28px;min-width:0;overflow-x:hidden;}
@@ -1321,7 +1323,7 @@ textarea,select{color:var(--ink);}
       <button class="help-btn" onclick="openHelpModal()" title="Help &amp; FAQ" aria-label="Help">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.9.5c0 1.5-2.4 2-2.4 3.5"/><circle cx="12" cy="17" r="0.6" fill="currentColor"/></svg>
       </button>
-      <button class="btn btn-primary btn-sm" onclick="goNav('upload')" aria-label="Upload Data">
+      <button class="btn btn-primary btn-sm btn-outline" onclick="goNav('upload')" aria-label="Upload Data">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16m-8-8l8-8 8 8"/></svg>
         <span class="hide-mobile">Upload Data</span>
       </button>
