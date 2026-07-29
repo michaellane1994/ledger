@@ -627,6 +627,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .bulk-bar select{font-size:12.5px;font-family:'Inter',sans-serif;padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;outline:none;}
 .bulk-bar select option{color:#000;}
 .bulk-bar .bulk-done{font-size:12.5px;font-weight:600;background:#fff;color:#1f1c15;border:none;border-radius:8px;padding:7px 13px;cursor:pointer;}
+.bulk-bar .bulk-del{font-size:12.5px;font-weight:600;background:rgba(220,38,38,.92);color:#fff;border:none;border-radius:8px;padding:7px 13px;cursor:pointer;transition:background .15s;}
+.bulk-bar .bulk-del:hover{background:#dc2626;}
 .bulk-bar .bulk-selall{font-size:12.5px;font-weight:600;background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.28);border-radius:8px;padding:6px 11px;cursor:pointer;}
 .lbl-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;}
 .lbl-card{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;font-family:'Inter',sans-serif;transition:border-color .12s,box-shadow .12s;}
@@ -1769,6 +1771,7 @@ textarea,select{color:var(--ink);}
         <select id="bulk-person" onchange="bulkApply('person',this.value)" title="Set person"></select>
         <select id="bulk-card" onchange="bulkApply('card',this.value)" title="Set card"></select>
         <select id="bulk-label" onchange="bulkApply('label',this.value)" title="Set label"></select>
+        <button class="bulk-del" onclick="bulkDelete()" title="Delete selected transactions">Delete</button>
         <button class="bulk-done" onclick="toggleTxnSelectMode()">Done</button>
       </div>
       <div class="txn-table">
@@ -6240,6 +6243,54 @@ function renderBulkBar() {
   const allCards = [...new Set([...(cardTypes || []), ...txns.map(t => t.card).filter(Boolean)])].sort((a,b)=>a.localeCompare(b));
   document.getElementById('bulk-card').innerHTML = '<option value="">Set card…</option>' + allCards.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
   document.getElementById('bulk-label').innerHTML = '<option value="">Set label…</option>' + labels.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('') + '<option value="__none__">— Remove label —</option><option value="__new__">+ New label…</option>';
+}
+function bulkDelete() {
+  if (!selectedTxnIds.size) return;
+  const ids = [...selectedTxnIds];
+  const n = ids.length;
+  if (!confirm(`Delete ${n} selected transaction${n !== 1 ? 's' : ''}? You can undo this.`)) return;
+  // Snapshot each deleted row with its original index + any linked income rows,
+  // so undo restores position and cascade-linked incomes (matches deleteTxn).
+  const snaps = [];
+  ids.forEach(id => {
+    const idx = txns.findIndex(x => x.id === id);
+    if (idx === -1) return;
+    const linkedIncomes = incomes.filter(i => i.fromTxnId === id).map(i => ({ ...i }));
+    snaps.push({ idx, snapshot: { ...txns[idx] }, linkedIncomes });
+  });
+  if (!snaps.length) return;
+  const delIds = new Set(snaps.map(s => s.snapshot.id));
+  txns = txns.filter(x => !delIds.has(x.id));
+  incomes = incomes.filter(i => !delIds.has(i.fromTxnId));
+  selectedTxnIds.clear();
+  persist();
+  renderTxns();
+  if (typeof renderIncome === 'function') renderIncome();
+  renderDashboard();
+  renderBulkBar();
+  if (typeof autoPush === 'function') autoPush();
+  showUndoToast(`${n} transaction${n !== 1 ? 's' : ''} deleted.`, () => {
+    // Undo — reinsert in ascending original-index order so positions land right.
+    snaps.slice().sort((a, b) => a.idx - b.idx).forEach(s => {
+      txns.splice(Math.max(0, Math.min(s.idx, txns.length)), 0, s.snapshot);
+      s.linkedIncomes.forEach(li => incomes.push(li));
+    });
+    persist();
+    renderTxns();
+    if (typeof renderIncome === 'function') renderIncome();
+    renderDashboard();
+    if (typeof autoPush === 'function') autoPush();
+    showToast('Transactions restored.');
+  }, {
+    onCommit: () => {
+      // Commit — move all snapshots to the Bin now that undo has lapsed.
+      const now = new Date().toISOString();
+      snaps.forEach(s => trash.push({ ...s.snapshot, _type: 'txn', deletedAt: now }));
+      if (typeof pruneTrash === 'function') pruneTrash();
+      persist();
+      if (typeof autoPush === 'function') autoPush();
+    },
+  });
 }
 function bulkApply(field, value) {
   if (!value || !selectedTxnIds.size) { renderBulkBar(); return; }
