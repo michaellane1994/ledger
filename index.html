@@ -8098,7 +8098,7 @@ function openAddIncome() {
   document.getElementById('ai-desc').value   = '';
   document.getElementById('ai-note').value   = '';
   document.getElementById('ai-card').value   = '';
-  document.getElementById('ai-type').innerHTML = INCOME_TYPES_ARR.map(t => `<option value="${t.key}">${t.label}</option>`).join('');
+  document.getElementById('ai-type').innerHTML = INCOME_TYPES_ARR.map(t => `<option value="${esc(t.key)}">${esc(t.label)}</option>`).join('');
   document.getElementById('ai-category').innerHTML = CATS.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
   const cardDl = document.getElementById('ai-card-list');
   if (cardDl) cardDl.innerHTML = [...new Set(txns.map(t => t.card).filter(Boolean))].sort().map(c => `<option value="${esc(c)}">`).join('');
@@ -8113,7 +8113,7 @@ function openEditIncome(id) {
   document.getElementById('ai-modal-title').textContent = 'Edit Income';
   document.getElementById('ai-modal-sub').textContent = i.fromTxnId ? 'Linked to a transaction — amount and date also update the source transaction' : 'Edit income entry details';
   document.getElementById('ai-confirm-btn').textContent = 'Save →';
-  document.getElementById('ai-type').innerHTML = INCOME_TYPES_ARR.map(t => `<option value="${t.key}">${t.label}</option>`).join('');
+  document.getElementById('ai-type').innerHTML = INCOME_TYPES_ARR.map(t => `<option value="${esc(t.key)}">${esc(t.label)}</option>`).join('');
   document.getElementById('ai-category').innerHTML = CATS.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
   // Card/person can live on the linked transaction and drift from the income entry —
   // prefer the income's own value, then fall back to the linked transaction's.
@@ -8360,7 +8360,7 @@ function renderSavings() {
 }
 
 function savingsTypeOptions() {
-  return ACCT_TYPES_ARR.map(t => `<option value="${t.key}">${t.label}</option>`).join('') +
+  return ACCT_TYPES_ARR.map(t => `<option value="${esc(t.key)}">${esc(t.label)}</option>`).join('') +
     '<option value="__custom__">+ Custom type...</option>';
 }
 function toggleCustomAcctType() {
@@ -10533,7 +10533,7 @@ function fmtMonth(m) { const [y, mo] = m.split('-'); return new Date(y, mo - 1).
 function fmtDate(d) { if (!d) return '—'; const [y, mo, day] = d.split('-'); return new Date(+y, mo - 1, +day).toLocaleString('default', { month: 'short', day: 'numeric', year: 'numeric' }); }
 function uid() { return Math.random().toString(36).substring(2, 10); }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function splitCSV(line) {
   const r = []; let cur = '', q = false;
   for (const ch of (line || '')) { if (ch === '"') { q = !q; } else if (ch === ',' && !q) { r.push(cur); cur = ''; } else cur += ch; }
