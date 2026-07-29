@@ -9658,6 +9658,20 @@ function parsePdfTransactions() {
     if (t.isIncome) { t.refund = false; t.category = null; }
   });
 
+  // Safety net: a statement never contains future-dated transactions. If year
+  // inference produced a future date (e.g. an unrecognized statement-period
+  // format fell back to the current year), roll the year back so we never
+  // import a transaction dated in the future.
+  {
+    const _todayIso = new Date().toISOString().slice(0, 10);
+    txns.forEach(t => {
+      if (!t.date || t.date <= _todayIso) return;
+      const p = t.date.split('-');
+      let y = parseInt(p[0], 10);
+      while (y > 1990 && `${y}-${p[1]}-${p[2]}` > _todayIso) y--;
+      t.date = `${y}-${p[1]}-${p[2]}`;
+    });
+  }
   pdfParsedTxns = txns;
 
   // Show preview below the options (one-page flow, like the CSV mapper — no separate
@@ -9929,16 +9943,36 @@ async function importPdfTransactions() {
 // Extract statement start/end month+year from PDF text.
 // Handles: "DEC 23, 2025 TO JAN 21, 2026" (RBC) and "Dec 24, 2025 - Jan 23, 2026" (Scotia)
 function extractStatementYears(text) {
-  const re = /([A-Za-z]{3})\s+\d{1,2}[,.]?\s*(\d{4})\s*(?:to|-)\s*([A-Za-z]{3})\s+\d{1,2}[,.]?\s*(\d{4})/i;
-  const m = text.match(re);
-  if (!m) return null;
   const mos = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
-  return {
-    startMonth: mos[m[1].toLowerCase().substring(0,3)],
-    startYear:  parseInt(m[2]),
-    endMonth:   mos[m[3].toLowerCase().substring(0,3)],
-    endYear:    parseInt(m[4])
-  };
+  // Format A: both endpoints carry a year — "Aug 12, 2024 to Sep 11, 2024".
+  let m = text.match(/([A-Za-z]{3})\s+\d{1,2}[,.]?\s*(\d{4})\s*(?:to|-)\s*([A-Za-z]{3})\s+\d{1,2}[,.]?\s*(\d{4})/i);
+  if (m) {
+    return {
+      startMonth: mos[m[1].toLowerCase().substring(0,3)],
+      startYear:  parseInt(m[2]),
+      endMonth:   mos[m[3].toLowerCase().substring(0,3)],
+      endYear:    parseInt(m[4])
+    };
+  }
+  // Format B: single trailing year — "STATEMENT FROM JUL 18 TO AUG 19, 2024".
+  // The year applies to the end date; if the range crosses a year boundary
+  // (end month earlier than start month, e.g. Dec -> Jan) the start date is
+  // the previous year.
+  m = text.match(/([A-Za-z]{3})\s+\d{1,2}[,.]?\s*(?:to|-)\s*([A-Za-z]{3})\s+\d{1,2}[,.]?\s*(\d{4})/i);
+  if (m) {
+    const startMonth = mos[m[1].toLowerCase().substring(0,3)];
+    const endMonth   = mos[m[2].toLowerCase().substring(0,3)];
+    const endYear    = parseInt(m[3]);
+    if (startMonth && endMonth) {
+      return {
+        startMonth,
+        startYear: endMonth < startMonth ? endYear - 1 : endYear,
+        endMonth,
+        endYear
+      };
+    }
+  }
+  return null;
 }
 
 // Return the correct year for a month abbreviation given statement boundaries.
