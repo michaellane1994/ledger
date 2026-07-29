@@ -7057,18 +7057,29 @@ function populatePdfCardTypeDropdown(preselect) {
 }
 function onPdfCardNameSelectChange() {
   const sel = document.getElementById('pdf-cardname-select');
-  if (!sel || sel.value !== '__new__') return;
-  const raw = prompt('New card type (e.g. "Amex Gold", "TD Chequing"):', '');
-  const trimmed = (raw || '').trim();
-  if (!trimmed) { sel.value = ''; return; }
-  const existing = cardTypes.find(c => c.toLowerCase() === trimmed.toLowerCase());
-  const finalName = existing || trimmed;
-  if (!existing) {
-    cardTypes.push(trimmed);
-    cardTypes.sort((a, b) => a.localeCompare(b));
-    persist();
+  if (!sel) return;
+  if (sel.value === '__new__') {
+    const raw = prompt('New card type (e.g. "Amex Gold", "TD Chequing"):', '');
+    const trimmed = (raw || '').trim();
+    if (!trimmed) { sel.value = ''; }
+    else {
+      const existing = cardTypes.find(c => c.toLowerCase() === trimmed.toLowerCase());
+      const finalName = existing || trimmed;
+      if (!existing) {
+        cardTypes.push(trimmed);
+        cardTypes.sort((a, b) => a.localeCompare(b));
+        persist();
+      }
+      populatePdfCardTypeDropdown(finalName);
+    }
   }
-  populatePdfCardTypeDropdown(finalName);
+  // Re-stamp any already-parsed preview rows with the current selection so the
+  // card flows through whether it was chosen before or after the parse.
+  if (Array.isArray(pdfParsedTxns) && pdfParsedTxns.length) {
+    const card = getSelectedPdfCardName();
+    pdfParsedTxns.forEach(t => { t.card = card; });
+    renderPdfPreview();
+  }
 }
 function getSelectedPdfCardName() {
   const sel = document.getElementById('pdf-cardname-select');
@@ -9785,7 +9796,11 @@ async function importPdfTransactions() {
   const incomeDedupKey = t => `${t.date}|${Math.abs(t.amount)}|${t.person}|${(t.merchant||t.desc||'').toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,20)}`;
   const importMode = document.querySelector('input[name="pdf-import-mode"]:checked').value;
   const person   = pdfParsedTxns[0]?.person || '';
-  const cardName = pdfParsedTxns[0]?.card   || '';
+  // Card is authoritative from the live dropdown at import time — the user may
+  // have picked or created the card at the preview stage, after the AI parse
+  // stamped rows. Re-stamp every row so the selection actually reaches txns.
+  const cardName = getSelectedPdfCardName();
+  pdfParsedTxns.forEach(t => { t.card = cardName; });
 
   // Split rows: user-flagged income rows land in incomes[]; everything else
   // continues through the existing expense (txns[]) pipeline.
