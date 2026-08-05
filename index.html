@@ -2075,7 +2075,7 @@ textarea,select{color:var(--ink);}
 
       <div class="card" style="margin-bottom:18px;">
         <div class="card-head" onclick="toggleSettingsSec('savings-types')" style="cursor:pointer;">
-          <div class="card-title">Savings Account Types</div>
+          <div class="card-title">Savings Types</div>
           <div style="display:flex;align-items:center;gap:8px;">
           <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openAddType('savings')">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path d="M12 4v16m-8-8h16"/></svg>
@@ -3920,6 +3920,7 @@ function setCfStart(val) {
   renderCashflowChart();
 }
 let _cfFromUserSet = false;
+let _cfToUserSet = false;
 function setCfFrom(val) {
   _cfFromUserSet = true;
   cfFromMonth = val;
@@ -3927,6 +3928,7 @@ function setCfFrom(val) {
   renderCashflowChart();
 }
 function setCfTo(val) {
+  _cfToUserSet = true;
   cfToMonth = val;
   localStorage.setItem('l3_cf_to', val);
   renderCashflowChart();
@@ -3991,7 +3993,7 @@ function renderCashflowChart() {
   // Populate To dropdown
   const toSel = document.getElementById('cf-to-month');
   if (toSel) {
-    const prev = toSel.value || cfToMonth || defaultEnd;
+    const prev = _cfToUserSet ? (toSel.value || cfToMonth) : '';
     toSel.innerHTML = allCfMonths.map(m => `<option value="${m}">${fmtOpt(m)}</option>`).join('');
     toSel.value = allCfMonths.includes(prev) ? prev : allCfMonths[allCfMonths.length - 1];
     if (cfToMonth !== toSel.value) cfToMonth = toSel.value;
@@ -8681,8 +8683,8 @@ function renderSavingsTypeList() {
 function openAddType(context) {
   activeTypeContext = context;
   typeEditKey = '';
-  document.getElementById('type-modal-title').textContent = context === 'income' ? 'Add Income Type' : 'Add Savings Account Type';
-  document.getElementById('type-modal-sub').textContent   = context === 'income' ? 'Create a custom income category' : 'Create a custom savings account type';
+  document.getElementById('type-modal-title').textContent = context === 'income' ? 'Add Income Type' : 'Add Savings Type';
+  document.getElementById('type-modal-sub').textContent   = context === 'income' ? 'Create a custom income category' : 'Create a custom savings type';
   document.getElementById('new-type-label').value = '';
   document.getElementById('new-type-color').value = context === 'income' ? '#1d4e89' : '#b45309';
   updateTypePreview();
