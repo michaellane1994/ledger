@@ -201,6 +201,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .btn-primary{background:transparent;color:var(--accent);}
 @media (hover:hover){ .btn-primary:hover{background:var(--accent);color:#fff;transform:translateY(-1px);} }
 .btn-primary:active{background:var(--accent);color:#fff;}
+.btn-busy{background:var(--accent) !important;color:#fff !important;opacity:1 !important;cursor:progress !important;}
 .btn-outline{border-color:var(--border);}
 .btn-outline:hover{border-color:var(--accent);}
 .btn-ghost{background:transparent;color:var(--accent);border:1px solid transparent;box-shadow:none;}
@@ -2116,8 +2117,8 @@ textarea,select{color:var(--ink);}
         </div>
         <div class="card-body sec-body" id="sec-sync">
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-primary" onclick="syncToSheets()">↑ Push to Google Sheets</button>
-            <button class="btn btn-ghost" onclick="syncFromSheets()">↓ Pull from Google Sheets</button>
+            <button class="btn btn-primary" onclick="syncToSheets(this)">↑ Push to Google Sheets</button>
+            <button class="btn btn-ghost" onclick="syncFromSheets(this)">↓ Pull from Google Sheets</button>
             <button class="btn btn-ghost btn-danger" onclick="clearLocalData()">✕ Clear local data</button>
           </div>
           <p style="font-size:12px;color:var(--faint);margin-top:10px;line-height:1.6;">
@@ -9229,8 +9230,11 @@ function fetchWithTimeout(url, opts, ms = 60000) {
   return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
 }
 
-async function syncToSheets() {
+function _syncBtnBusy(btn, label){ if(!btn) return; if(btn.dataset.origHtml==null) btn.dataset.origHtml=btn.innerHTML; btn.classList.add('btn-busy'); btn.disabled=true; if(label) btn.innerHTML=label; }
+function _syncBtnDone(btn){ if(!btn) return; btn.classList.remove('btn-busy'); btn.disabled=false; if(btn.dataset.origHtml!=null){ btn.innerHTML=btn.dataset.origHtml; delete btn.dataset.origHtml; } }
+async function syncToSheets(btn) {
   if (!sheetsUrl) { alert('Please connect a Google Sheet in Settings first.'); goNav('settings'); return; }
+  _syncBtnBusy(btn, '↑ Pushing...');
   updateSyncDot('busy');
   setSyncLabel('Pushing...');
   try {
@@ -9250,14 +9254,15 @@ async function syncToSheets() {
     updateSyncDot('err');
     setSyncLabel('Sync failed');
     showConnStatus('Push failed: ' + e.message, 'err');
-  }
+  } finally { _syncBtnDone(btn); }
 }
 
-async function syncFromSheets() {
+async function syncFromSheets(btn) {
   if (!sheetsUrl) { alert('Please connect a Google Sheet in Settings first.'); goNav('settings'); return; }
   // _sheetsForcePull: set when the user has already explicitly chosen "use my
   // Sheets copy" (the connect-time conflict prompt), so skip the redundant confirm.
   if (!_sheetsForcePull && !confirm('Pull will replace ALL local data with what is in Google Sheets. Continue?')) return;
+  _syncBtnBusy(btn, '↓ Pulling...');
   updateSyncDot('busy');
   setSyncLabel('Pulling...');
   try {
@@ -9369,7 +9374,7 @@ async function syncFromSheets() {
     updateSyncDot('err');
     setSyncLabel('Sync failed');
     showConnStatus('Pull failed: ' + e.message, 'err');
-  }
+  } finally { _syncBtnDone(btn); }
 }
 
 function clearLocalData() {
