@@ -830,7 +830,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 #import-preview-table:not(.has-income-col) .import-preview-person-cell{display:none;}
 /* Import-preview dropdowns (Category, Person): persistent border + a caret
    so they read as tappable selects, not plain text. */
-.imp-sel{appearance:none;-webkit-appearance:none;background-color:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 22px 5px 8px;font-size:12px;color:var(--ink);font-family:'Inter',sans-serif;cursor:pointer;outline:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 12px) 52%,calc(100% - 7px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;}
+.imp-sel{appearance:none;-webkit-appearance:none;background-color:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 22px 5px 8px;font-size:12px;color:var(--ink);font-family:'Inter',sans-serif;cursor:pointer;outline:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 12px) 52%,calc(100% - 7px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;max-width:170px;text-overflow:ellipsis;}
 .imp-sel:focus{border-color:var(--accent);}
 /* Mobile: transform each preview row into a stacked labelled card (standard
    responsive-table pattern) so nothing squishes and no horizontal scroll.
@@ -7406,11 +7406,16 @@ function renderImportPreview() {
     const amtColor = (isIncome || t.refund) ? 'color:#16a34a;' : '';
     const sign = isIncome ? '+' : (t.refund ? '-' : '');
     const catSelected = isIncome ? (t.transfer ? '__transfer__' : '__income__') : (CATS.some(c => c.key === t.category) ? t.category : 'misc');
-    const savOptions = (savAccts || []).map(a => `<option value="__savings__${a.id}" ${isSavings && t.savingsAccountId === a.id ? 'selected' : ''}>→ Savings: ${esc(a.name)}</option>`).join('');
-    const catSelect = `<option value="__income__" ${isIncome && !t.transfer ? 'selected' : ''}>Income ↗</option>` +
-      `<option value="__transfer__" ${t.transfer ? 'selected' : ''}>Transfer ⇄</option>` +
-      savOptions +
-      CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && !isSavings && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
+    const selIncomeKey = isIncome ? ((t.incomeType && t.incomeType !== 'income') ? t.incomeType : (t.transfer ? 'transfer' : '__generic__')) : null;
+    const savOptions = (savAccts && savAccts.length) ? `<optgroup label="Savings">` + savAccts.map(a => `<option value="__savings__${a.id}" ${isSavings && t.savingsAccountId === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('') + `</optgroup>` : '';
+    const catSelect =
+      `<optgroup label="Expense">` +
+      CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && !isSavings && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('') +
+      `</optgroup><optgroup label="Income">` +
+      `<option value="__income__" ${selIncomeKey === '__generic__' ? 'selected' : ''}>Income ↗</option>` +
+      INCOME_TYPES_ARR.map(it => `<option value="__income__${esc(it.key)}" ${selIncomeKey === it.key ? 'selected' : ''}>${esc(it.label)}</option>`).join('') +
+      `</optgroup>` +
+      savOptions;
     const rowStyle = isIncome
       ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
       : isSavings
@@ -7480,9 +7485,11 @@ function editImportRow(idx, field, value) {
     row.merchant = value;
     if (!row._catManual) row.category = autoCat(value);
   } else if (field === 'category') {
-    if (value === '__income__' || value === '__transfer__') {
+    if (value.indexOf('__income__') === 0) {
+      const typeKey = value.slice(11);
       row.isIncome = true;
-      row.transfer = (value === '__transfer__'); // a transfer is a neutral inflow, not real income
+      row.incomeType = typeKey || null;
+      row.transfer = (typeKey === 'transfer');
       row.category = null;
       // Seed per-row person from the mapper's global picker when a row first
       // becomes income, so the picker in the preview has a sensible default.
@@ -7569,6 +7576,7 @@ async function doImport() {
       note: '',
       refund: !!r.refund,
       isIncome: !!r.isIncome,
+      incomeType: r.incomeType || null,
       transfer: !!r.transfer,
       savingsAccountId: r.savingsAccountId || null
     }));
@@ -7708,14 +7716,14 @@ async function doImport() {
         person: t.person,
         card: t.card,
         note: '',
-        incomeType: t.transfer ? 'transfer' : 'income',
+        incomeType: t.incomeType || (t.transfer ? 'transfer' : 'income'),
         refund: false,
       });
       incomes.push({
         id: incId,
         date: t.date,
         amount: Math.abs(t.amount),
-        type: t.transfer ? 'transfer' : 'income',
+        type: t.incomeType || (t.transfer ? 'transfer' : 'income'),
         person: t.person,
         desc: t.merchant,
         note: '',
@@ -9810,11 +9818,16 @@ function renderPdfPreview() {
     // Prepend "Income ↗" / "Transfer ⇄" options so users can flag statement lines (e.g.
     // salary deposits = income; moving money between own accounts = transfer, which is
     // neutral) rather than as expenses.
-    const savOptions = (savAccts || []).map(a => `<option value="__savings__${a.id}" ${isSavings && t.savingsAccountId === a.id ? 'selected' : ''}>→ Savings: ${esc(a.name)}</option>`).join('');
-    const catSelect = `<option value="__income__" ${isIncome && !t.transfer ? 'selected' : ''}>Income ↗</option>` +
-      `<option value="__transfer__" ${t.transfer ? 'selected' : ''}>Transfer ⇄</option>` +
-      savOptions +
-      CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && !isSavings && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
+    const selIncomeKey = isIncome ? ((t.incomeType && t.incomeType !== 'income') ? t.incomeType : (t.transfer ? 'transfer' : '__generic__')) : null;
+    const savOptions = (savAccts && savAccts.length) ? `<optgroup label="Savings">` + savAccts.map(a => `<option value="__savings__${a.id}" ${isSavings && t.savingsAccountId === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('') + `</optgroup>` : '';
+    const catSelect =
+      `<optgroup label="Expense">` +
+      CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && !isSavings && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('') +
+      `</optgroup><optgroup label="Income">` +
+      `<option value="__income__" ${selIncomeKey === '__generic__' ? 'selected' : ''}>Income ↗</option>` +
+      INCOME_TYPES_ARR.map(it => `<option value="__income__${esc(it.key)}" ${selIncomeKey === it.key ? 'selected' : ''}>${esc(it.label)}</option>`).join('') +
+      `</optgroup>` +
+      savOptions;
     const rowStyle = isIncome
       ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
       : isSavings
@@ -9866,9 +9879,11 @@ function editPdfRow(idx, field, value) {
     row.merchant = value;
     if (!row._catManual) row.category = autoCat(value);
   } else if (field === 'category') {
-    if (value === '__income__' || value === '__transfer__') {
+    if (value.indexOf('__income__') === 0) {
+      const typeKey = value.slice(11);
       row.isIncome = true;
-      row.transfer = (value === '__transfer__');
+      row.incomeType = typeKey || null;
+      row.transfer = (typeKey === 'transfer');
       row.category = null;
       delete row.savingsAccountId;
     } else if (value.indexOf('__savings__') === 0) {
@@ -9986,14 +10001,14 @@ async function importPdfTransactions() {
         person: t.person,
         card: t.card,
         note: '',
-        incomeType: t.transfer ? 'transfer' : 'income',
+        incomeType: t.incomeType || (t.transfer ? 'transfer' : 'income'),
         refund: false,
       });
       incomes.push({
         id: incId,
         date: t.date,
         amount: Math.abs(t.amount),
-        type: t.transfer ? 'transfer' : 'income',
+        type: t.incomeType || (t.transfer ? 'transfer' : 'income'),
         person: t.person,
         desc: t.merchant,
         note: '',
