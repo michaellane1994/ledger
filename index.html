@@ -733,6 +733,11 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .cat-opt{display:flex;align-items:center;gap:8px;padding:8px 13px;cursor:pointer;font-size:13px;transition:background .1s;}
 .cat-opt:hover{background:var(--bg);}
 .cat-opt-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.cat-grp-hdr{cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;}
+.cat-grp-chev{display:inline-block;transition:transform .15s ease;font-size:9px;color:var(--muted);}
+.cat-grp.open > .cat-grp-hdr .cat-grp-chev{transform:rotate(90deg);}
+.cat-grp-body{display:none;}
+.cat-grp.open > .cat-grp-body{display:block;}
 .empty-state{text-align:center;padding:48px;color:var(--faint);}
 .empty-state svg{width:40px;height:40px;margin:0 auto 10px;opacity:.25;}
 
@@ -6551,21 +6556,23 @@ function _positionCatDropdown(e) {
 
 function openDD(e, id) {
   e.stopPropagation();
-  const savingsOpts = savAccts.length
+  const savingsBody = savAccts.length
     ? savAccts.map(a => `<div class="cat-opt" onclick="flagSavings('${id}','${a.id}')"><div class="cat-opt-dot" style="background:#b45309;"></div>${esc(a.name)}</div>`).join('')
     : `<div class="cat-opt" style="color:var(--faint);cursor:default;">No accounts yet — add one in Savings tab</div>`;
-  const incomeSection = `
-    <div class="cat-opt-group" style="color:#1d4e89;">Flag as Income</div>
-    ${INCOME_TYPES_ARR.map(t => `<div class="cat-opt" onclick="flagIncome('${id}','${t.key}')"><div class="cat-opt-dot" style="background:${t.color};"></div>${t.label}</div>`).join('')}
-    <div class="cat-opt-group" style="color:#b45309;">Flag as Savings Contribution</div>
-    ${savingsOpts}
-    <div class="cat-opt-group">Expense Category</div>`;
-  dd.innerHTML = incomeSection + CATS.map(c =>
-    `<div class="cat-opt" onclick="setCat('${id}','${c.key}')">
-      <div class="cat-opt-dot" style="background:${c.color};"></div>${c.label}
-    </div>`
-  ).join('');
+  const incomeBody = INCOME_TYPES_ARR.map(t => `<div class="cat-opt" onclick="flagIncome('${id}','${t.key}')"><div class="cat-opt-dot" style="background:${t.color};"></div>${t.label}</div>`).join('');
+  const catBody = CATS.map(c => `<div class="cat-opt" onclick="setCat('${id}','${c.key}')"><div class="cat-opt-dot" style="background:${c.color};"></div>${c.label}</div>`).join('');
+  // Collapsible groups. Expense open by default; Income and Savings collapsed
+  // so you don't scroll past them to reach a category.
+  dd.innerHTML =
+    `<div class="cat-grp open"><div class="cat-opt-group cat-grp-hdr" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Expense Category</div><div class="cat-grp-body">${catBody}</div></div>` +
+    `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" style="color:#1d4e89;" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Flag as Income</div><div class="cat-grp-body">${incomeBody}</div></div>` +
+    `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" style="color:#b45309;" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Flag as Savings Contribution</div><div class="cat-grp-body">${savingsBody}</div></div>`;
   _positionCatDropdown(e);
+}
+function _toggleCatGrp(e, hdr) {
+  e.stopPropagation(); // keep the dropdown open when toggling a section
+  const grp = hdr.closest('.cat-grp');
+  if (grp) grp.classList.toggle('open');
 }
 
 function setCat(id, key) {
