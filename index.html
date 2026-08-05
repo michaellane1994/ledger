@@ -10140,43 +10140,40 @@ function yearFor(monthAbbr, sy) {
 }
 
 function parseChase(text) {
-  // Chase UK credit-card statements. Each row starts "DD Mon YYYY <merchant>";
-  // named merchants carry "<Type> £Amount" on the NEXT line (Purchase / Refund),
-  // while anonymised rows are inline ("Outgoing transaction £3.75",
-  // "Incoming transaction +£149.99"). Dates already include the year, so no
-  // year inference. Purchases/outgoing are outflows (+); refunds/incoming are
-  // credits (-); repayments to the card are skipped.
+  // Chase UK credit-card statements. Each transaction is "DD Mon YYYY <merchant>"
+  // on one line, with the amount on ITS OWN line 1-2 rows below. Named merchants
+  // have a type line (Purchase / Refund / Repayment) between merchant and amount;
+  // "Outgoing/Incoming transaction" rows put the amount directly on the next line.
+  // Dates already carry the year. Purchases/outgoing are outflows (+); refunds and
+  // incoming credits are inflows (-); repayments and balance rows are skipped.
   const txns = [];
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  const dateRe = /^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})\b(.*)$/;
+  const dateRe = /^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})\s+(.+)$/;
+  const amtRe = /^([+]?)£([\d,]+\.\d{2})$/;
+  const typeRe = /^(Purchase|Refund|Repayment|Payment)$/i;
   for (let i = 0; i < lines.length; i++) {
     const m = lines[i].match(dateRe);
     if (!m) continue;
     const date = normDate(`${m[1]} ${m[2]} ${m[3]}`);
     if (!date) continue;
-    const rest = (m[4] || '').trim();
-    if (!rest || /^(closing balance|opening balance)/i.test(rest)) continue;
+    const merchant = m[4].trim();
+    if (/^(closing balance|opening balance)/i.test(merchant)) continue;
 
-    let merchant, amount, isCredit;
-    const inline = rest.match(/^(.*?)\s+([+]?)£([\d,]+\.\d{2})\s*$/);
-    if (inline) {
-      merchant = inline[1].trim();
-      isCredit = inline[2] === '+';
-      amount = parseFloat(inline[3].replace(/,/g, ''));
-    } else {
-      merchant = rest;
-      const next = lines[i + 1] || '';
-      const na = next.match(/^([A-Za-z][A-Za-z ]*?)\s+([+]?)£([\d,]+\.\d{2})\s*$/);
-      if (!na) continue;
-      const type = na[1].trim().toLowerCase();
-      isCredit = na[2] === '+';
-      amount = parseFloat(na[3].replace(/,/g, ''));
-      i++; // consume the amount line
-      if (/repayment|payment received|payment thank/.test(type)) continue;
+    // Amount is on its own line just below; skip past an optional type line.
+    let type = '', amtLine = null;
+    if (i + 1 < lines.length) {
+      if (amtRe.test(lines[i + 1])) { amtLine = lines[i + 1]; i += 1; }
+      else if (typeRe.test(lines[i + 1]) && i + 2 < lines.length && amtRe.test(lines[i + 2])) {
+        type = lines[i + 1]; amtLine = lines[i + 2]; i += 2;
+      }
     }
+    if (!amtLine) continue;
+    const am = amtLine.match(amtRe);
+    const isCredit = am[1] === '+';
+    const amount = parseFloat(am[2].replace(/,/g, ''));
     if (!isFinite(amount) || amount === 0) continue;
-    if (/^from /i.test(merchant) && isCredit) continue; // "From <name>" repayment
-    if (!merchant) merchant = 'Transaction';
+    if (/repayment|payment/i.test(type)) continue; // repayment to the card
+    if (/^from /i.test(merchant)) continue;         // "From <name>" repayment
     txns.push({ date, merchant, amount: isCredit ? -Math.abs(amount) : Math.abs(amount) });
   }
   return txns;
