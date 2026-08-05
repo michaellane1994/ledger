@@ -9696,6 +9696,7 @@ function detectPdfBank(text) {
   if (t.includes('scotiabank') || t.includes('bank of nova scotia')) return 'Scotiabank';
   if (t.includes('cibc') || t.includes('canadian imperial')) return 'CIBC';
   if (t.includes('td bank') || t.includes('toronto-dominion') || t.includes('td canada')) return 'TD';
+  if (t.includes('chase.co.uk') || t.includes('j.p. morgan europe') || t.includes('the chase app')) return 'Chase';
   return null;
 }
 
@@ -9734,6 +9735,7 @@ function parsePdfTransactions() {
   else if (bank === 'Scotiabank') txns = parseScotia(rawText);
   else if (bank === 'CIBC')  txns = parseCIBC(rawText);
   else if (bank === 'TD')    txns = parseTD(rawText);
+  else if (bank === 'Chase') txns = parseChase(rawText);
   else                       txns = parseGeneric(rawText);
   // If a bank-specific parser (e.g. the simple TD one) came up empty, fall back to the
   // more robust generic parser before giving up — its format may not match the preset.
@@ -10113,6 +10115,49 @@ function yearFor(monthAbbr, sy) {
   const mos = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
   const mn = mos[monthAbbr.toLowerCase().substring(0,3)];
   return mn >= sy.startMonth ? sy.startYear : sy.endYear;
+}
+
+function parseChase(text) {
+  // Chase UK credit-card statements. Each row starts "DD Mon YYYY <merchant>";
+  // named merchants carry "<Type> £Amount" on the NEXT line (Purchase / Refund),
+  // while anonymised rows are inline ("Outgoing transaction £3.75",
+  // "Incoming transaction +£149.99"). Dates already include the year, so no
+  // year inference. Purchases/outgoing are outflows (+); refunds/incoming are
+  // credits (-); repayments to the card are skipped.
+  const txns = [];
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const dateRe = /^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})\b(.*)$/;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(dateRe);
+    if (!m) continue;
+    const date = normDate(`${m[1]} ${m[2]} ${m[3]}`);
+    if (!date) continue;
+    const rest = (m[4] || '').trim();
+    if (!rest || /^(closing balance|opening balance)/i.test(rest)) continue;
+
+    let merchant, amount, isCredit;
+    const inline = rest.match(/^(.*?)\s+([+]?)£([\d,]+\.\d{2})\s*$/);
+    if (inline) {
+      merchant = inline[1].trim();
+      isCredit = inline[2] === '+';
+      amount = parseFloat(inline[3].replace(/,/g, ''));
+    } else {
+      merchant = rest;
+      const next = lines[i + 1] || '';
+      const na = next.match(/^([A-Za-z][A-Za-z ]*?)\s+([+]?)£([\d,]+\.\d{2})\s*$/);
+      if (!na) continue;
+      const type = na[1].trim().toLowerCase();
+      isCredit = na[2] === '+';
+      amount = parseFloat(na[3].replace(/,/g, ''));
+      i++; // consume the amount line
+      if (/repayment|payment received|payment thank/.test(type)) continue;
+    }
+    if (!isFinite(amount) || amount === 0) continue;
+    if (/^from /i.test(merchant) && isCredit) continue; // "From <name>" repayment
+    if (!merchant) merchant = 'Transaction';
+    txns.push({ date, merchant, amount: isCredit ? -Math.abs(amount) : Math.abs(amount) });
+  }
+  return txns;
 }
 
 function parseRBC(text) {
