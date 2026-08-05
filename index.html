@@ -738,6 +738,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .cat-grp.open > .cat-grp-hdr .cat-grp-chev{transform:rotate(90deg);}
 .cat-grp-body{display:none;}
 .cat-grp.open > .cat-grp-body{display:block;}
+.imp-catbtn{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
 .empty-state{text-align:center;padding:48px;color:var(--faint);}
 .empty-state svg{width:40px;height:40px;margin:0 auto 10px;opacity:.25;}
 
@@ -6574,6 +6575,30 @@ function _toggleCatGrp(e, hdr) {
   const grp = hdr.closest('.cat-grp');
   if (grp) grp.classList.toggle('open');
 }
+// Preview category picker: the same collapsible custom menu the Transactions page
+// uses, wired to editImportRow (CSV) / editPdfRow (PDF) instead of a native select.
+function openPreviewDD(e, idx, isPdf) {
+  e.stopPropagation();
+  const rows = isPdf ? pdfParsedTxns : _pendingImportRows;
+  if (!rows || !rows[idx]) return;
+  const t = rows[idx];
+  const isSavings = !!t.savingsAccountId;
+  const isIncome = !!t.isIncome;
+  const selIncomeKey = isIncome ? ((t.incomeType && t.incomeType !== 'income') ? t.incomeType : (t.transfer ? 'transfer' : '__generic__')) : null;
+  const fn = isPdf ? 'editPdfRow' : 'editImportRow';
+  const catBody = CATS.map(c => `<div class="cat-opt" onclick="${fn}(${idx},'category','${c.key}');closeCatDropdown();"><div class="cat-opt-dot" style="background:${c.color};"></div>${esc(c.label)}</div>`).join('');
+  const incomeBody =
+    `<div class="cat-opt" onclick="${fn}(${idx},'category','__income__');closeCatDropdown();"><div class="cat-opt-dot" style="background:#1d4e89;"></div>Income ↗</div>` +
+    INCOME_TYPES_ARR.map(it => `<div class="cat-opt" onclick="${fn}(${idx},'category','__income__${it.key}');closeCatDropdown();"><div class="cat-opt-dot" style="background:${it.color};"></div>${esc(it.label)}</div>`).join('');
+  const savBody = (savAccts && savAccts.length)
+    ? savAccts.map(a => `<div class="cat-opt" onclick="${fn}(${idx},'category','__savings__${a.id}');closeCatDropdown();"><div class="cat-opt-dot" style="background:#b45309;"></div>${esc(a.name)}</div>`).join('')
+    : `<div class="cat-opt" style="color:var(--faint);cursor:default;">No savings accounts yet</div>`;
+  dd.innerHTML =
+    `<div class="cat-grp open"><div class="cat-opt-group cat-grp-hdr" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Expense Category</div><div class="cat-grp-body">${catBody}</div></div>` +
+    `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" style="color:#1d4e89;" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Income</div><div class="cat-grp-body">${incomeBody}</div></div>` +
+    `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" style="color:#b45309;" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Savings Contribution</div><div class="cat-grp-body">${savBody}</div></div>`;
+  _positionCatDropdown(e);
+}
 
 function setCat(id, key) {
   const t = txns.find(x => x.id === id);
@@ -7414,15 +7439,10 @@ function renderImportPreview() {
     const sign = isIncome ? '+' : (t.refund ? '-' : '');
     const catSelected = isIncome ? (t.transfer ? '__transfer__' : '__income__') : (CATS.some(c => c.key === t.category) ? t.category : 'misc');
     const selIncomeKey = isIncome ? ((t.incomeType && t.incomeType !== 'income') ? t.incomeType : (t.transfer ? 'transfer' : '__generic__')) : null;
-    const savOptions = (savAccts && savAccts.length) ? `<optgroup label="Savings">` + savAccts.map(a => `<option value="__savings__${a.id}" ${isSavings && t.savingsAccountId === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('') + `</optgroup>` : '';
-    const catSelect =
-      `<optgroup label="Expense">` +
-      CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && !isSavings && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('') +
-      `</optgroup><optgroup label="Income">` +
-      `<option value="__income__" ${selIncomeKey === '__generic__' ? 'selected' : ''}>Income ↗</option>` +
-      INCOME_TYPES_ARR.map(it => `<option value="__income__${esc(it.key)}" ${selIncomeKey === it.key ? 'selected' : ''}>${esc(it.label)}</option>`).join('') +
-      `</optgroup>` +
-      savOptions;
+    let catBtnLabel;
+    if (isSavings) { const _acc = (savAccts||[]).find(a => a.id === t.savingsAccountId); catBtnLabel = '→ ' + (_acc ? _acc.name : 'Savings'); }
+    else if (isIncome) { const _it = INCOME_TYPES_ARR.find(x => x.key === selIncomeKey); catBtnLabel = _it ? _it.label : 'Income ↗'; }
+    else { const _cc = CATS.find(c => c.key === t.category); catBtnLabel = _cc ? _cc.label : 'Set category'; }
     const rowStyle = isIncome
       ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
       : isSavings
@@ -7437,7 +7457,7 @@ function renderImportPreview() {
       <td data-label="Date" style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editImportRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Merchant" style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}${curSym}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td data-label="Category" style="padding:3px 6px;"><select class="imp-sel" onchange="editImportRow(${i},'category',this.value)">${catSelect}</select></td>
+      <td data-label="Category" style="padding:3px 6px;"><button type="button" class="imp-sel imp-catbtn" onclick="openPreviewDD(event,${i},false)">${esc(catBtnLabel)}</button></td>
       <td data-label="Person" class="import-preview-person-cell" style="padding:3px 6px;">${personCell}</td>
       <td data-label="" style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
@@ -9828,15 +9848,10 @@ function renderPdfPreview() {
     // salary deposits = income; moving money between own accounts = transfer, which is
     // neutral) rather than as expenses.
     const selIncomeKey = isIncome ? ((t.incomeType && t.incomeType !== 'income') ? t.incomeType : (t.transfer ? 'transfer' : '__generic__')) : null;
-    const savOptions = (savAccts && savAccts.length) ? `<optgroup label="Savings">` + savAccts.map(a => `<option value="__savings__${a.id}" ${isSavings && t.savingsAccountId === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('') + `</optgroup>` : '';
-    const catSelect =
-      `<optgroup label="Expense">` +
-      CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && !isSavings && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('') +
-      `</optgroup><optgroup label="Income">` +
-      `<option value="__income__" ${selIncomeKey === '__generic__' ? 'selected' : ''}>Income ↗</option>` +
-      INCOME_TYPES_ARR.map(it => `<option value="__income__${esc(it.key)}" ${selIncomeKey === it.key ? 'selected' : ''}>${esc(it.label)}</option>`).join('') +
-      `</optgroup>` +
-      savOptions;
+    let catBtnLabel;
+    if (isSavings) { const _acc = (savAccts||[]).find(a => a.id === t.savingsAccountId); catBtnLabel = '→ ' + (_acc ? _acc.name : 'Savings'); }
+    else if (isIncome) { const _it = INCOME_TYPES_ARR.find(x => x.key === selIncomeKey); catBtnLabel = _it ? _it.label : 'Income ↗'; }
+    else { const _cc = CATS.find(c => c.key === t.category); catBtnLabel = _cc ? _cc.label : 'Set category'; }
     const rowStyle = isIncome
       ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
       : isSavings
@@ -9846,7 +9861,7 @@ function renderPdfPreview() {
       <td data-label="Date" style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editPdfRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Merchant" style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editPdfRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}${curSym}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editPdfRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td data-label="Category" style="padding:3px 6px;"><select class="imp-sel" onchange="editPdfRow(${i},'category',this.value)">${catSelect}</select></td>
+      <td data-label="Category" style="padding:3px 6px;"><button type="button" class="imp-sel imp-catbtn" onclick="openPreviewDD(event,${i},true)">${esc(catBtnLabel)}</button></td>
       <td data-label="Person" style="padding:3px 6px;"><select class="imp-sel" onchange="editPdfRow(${i},'person',this.value)" title="Whose transaction" aria-label="Person">${_pdfPeople.map(p => `<option value="${esc(p)}"${(t.person || pdfGlobalPerson) === p ? ' selected' : ''}>${esc(p)}</option>`).join('')}</select></td>
       <td data-label="" style="padding:3px 4px;text-align:center;"><button onclick="deletePdfRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
