@@ -704,11 +704,11 @@ tbody tr:hover .del-btn{opacity:1;}
 .del-btn.rental-btn.on{opacity:1;color:#2d6a4f;background:#e9f5ec;border:1px solid #b7dbc3;}
 tr.rental-tagged{background:linear-gradient(90deg, rgba(45,106,79,.05), transparent 40%);}
 tr.rental-tagged .txn-td-date{border-left:2px solid #2d6a4f;}
-.cat-dropdown{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:500;min-width:200px;overflow:hidden;display:none;max-height:360px;overflow-y:auto;}
+.cat-dropdown{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:2200;min-width:200px;overflow:hidden;display:none;max-height:360px;overflow-y:auto;}
 /* Mobile: present the category picker as a bottom sheet instead of a
    fiddly anchored-at-tap dropdown. Closes on select or backdrop tap. */
 @media (max-width:600px){
-  .cat-dd-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:499;display:none;}
+  .cat-dd-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2200;display:none;}
   .cat-dd-backdrop.open{display:block;}
   .cat-dropdown{position:fixed !important;left:0 !important;right:0 !important;bottom:0 !important;top:auto !important;width:100%;min-width:0;max-width:none;max-height:70vh;border-radius:16px 16px 0 0;border-bottom:none;padding-bottom:env(safe-area-inset-bottom);}
   .cat-dropdown.open{animation:sheetUp .2s cubic-bezier(.16,1,.3,1);}
@@ -733,8 +733,9 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .cat-opt{display:flex;align-items:center;gap:8px;padding:8px 13px;cursor:pointer;font-size:13px;transition:background .1s;}
 .cat-opt:hover{background:var(--bg);}
 .cat-opt-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.cat-grp-hdr{cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;}
-.cat-grp-chev{display:inline-block;transition:transform .15s ease;font-size:9px;color:var(--muted);}
+.cat-grp-hdr{cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none;font-weight:600;transition:background .12s;}
+.cat-grp-hdr:hover{background:var(--bg);}
+.cat-grp-chev{display:inline-block;transition:transform .15s ease;font-size:11px;color:var(--accent);width:10px;text-align:center;}
 .cat-grp.open > .cat-grp-hdr .cat-grp-chev{transform:rotate(90deg);}
 .cat-grp-body{display:none;}
 .cat-grp.open > .cat-grp-body{display:block;}
@@ -6565,7 +6566,7 @@ function openDD(e, id) {
   // Collapsible groups. Expense open by default; Income and Savings collapsed
   // so you don't scroll past them to reach a category.
   dd.innerHTML =
-    `<div class="cat-grp open"><div class="cat-opt-group cat-grp-hdr" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Expense Category</div><div class="cat-grp-body">${catBody}</div></div>` +
+    `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Expense Category</div><div class="cat-grp-body">${catBody}</div></div>` +
     `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" style="color:#1d4e89;" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Flag as Income</div><div class="cat-grp-body">${incomeBody}</div></div>` +
     `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" style="color:#b45309;" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Flag as Savings Contribution</div><div class="cat-grp-body">${savingsBody}</div></div>`;
   _positionCatDropdown(e);
@@ -6594,7 +6595,7 @@ function openPreviewDD(e, idx, isPdf) {
     ? savAccts.map(a => `<div class="cat-opt" onclick="${fn}(${idx},'category','__savings__${a.id}');closeCatDropdown();"><div class="cat-opt-dot" style="background:#b45309;"></div>${esc(a.name)}</div>`).join('')
     : `<div class="cat-opt" style="color:var(--faint);cursor:default;">No savings accounts yet</div>`;
   dd.innerHTML =
-    `<div class="cat-grp open"><div class="cat-opt-group cat-grp-hdr" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Expense Category</div><div class="cat-grp-body">${catBody}</div></div>` +
+    `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Expense Category</div><div class="cat-grp-body">${catBody}</div></div>` +
     `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" style="color:#1d4e89;" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Income</div><div class="cat-grp-body">${incomeBody}</div></div>` +
     `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" style="color:#b45309;" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Savings Contribution</div><div class="cat-grp-body">${savBody}</div></div>`;
   _positionCatDropdown(e);
