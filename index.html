@@ -7348,8 +7348,8 @@ function updateImportPreview() {
   const prevEdits = new Map();
   if (_pendingImportRows) {
     _pendingImportRows.forEach(r => {
-      if (r.isIncome || r._catManual) {
-        prevEdits.set(`${r.date}|${r.merchant}`, { isIncome: !!r.isIncome, transfer: !!r.transfer, category: r._catManual ? r.category : null, _catManual: !!r._catManual });
+      if (r.isIncome || r._catManual || r.savingsAccountId) {
+        prevEdits.set(`${r.date}|${r.merchant}`, { isIncome: !!r.isIncome, transfer: !!r.transfer, category: r._catManual ? r.category : null, _catManual: !!r._catManual, savingsAccountId: r.savingsAccountId || null });
       }
     });
   }
@@ -7358,6 +7358,7 @@ function updateImportPreview() {
     const prev = prevEdits.get(`${r.date}|${r.merchant}`);
     if (prev) {
       if (prev.isIncome) { copy.isIncome = true; copy.transfer = prev.transfer; copy.category = null; }
+      else if (prev.savingsAccountId) { copy.savingsAccountId = prev.savingsAccountId; copy.isIncome = false; copy.category = null; }
       else if (prev._catManual && prev.category) { copy.category = prev.category; }
       copy._catManual = prev._catManual;
     }
@@ -7399,16 +7400,21 @@ function renderImportPreview() {
   body.innerHTML = rows.map((t, i) => {
     const amtAbs = Math.abs(t.amount);
     const isIncome = !!t.isIncome;
+    const isSavings = !!t.savingsAccountId;
     // Income and refunds/credits are inflows — show them green. Income gets a + to
     // read as money in; a card refund keeps its - (a credit against spending).
     const amtColor = (isIncome || t.refund) ? 'color:#16a34a;' : '';
     const sign = isIncome ? '+' : (t.refund ? '-' : '');
     const catSelected = isIncome ? (t.transfer ? '__transfer__' : '__income__') : (CATS.some(c => c.key === t.category) ? t.category : 'misc');
+    const savOptions = (savAccts || []).map(a => `<option value="__savings__${a.id}" ${isSavings && t.savingsAccountId === a.id ? 'selected' : ''}>→ Savings: ${esc(a.name)}</option>`).join('');
     const catSelect = `<option value="__income__" ${isIncome && !t.transfer ? 'selected' : ''}>Income ↗</option>` +
       `<option value="__transfer__" ${t.transfer ? 'selected' : ''}>Transfer ⇄</option>` +
-      CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
+      savOptions +
+      CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && !isSavings && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
     const rowStyle = isIncome
       ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
+      : isSavings
+      ? 'border-bottom:1px solid var(--border);background:rgba(180,83,9,.07);'
       : 'border-bottom:1px solid var(--border);';
     // Every row gets a person picker so any transaction can be reassigned to a
     // different person, defaulting to the row's person (falls back to the
@@ -7484,10 +7490,21 @@ function editImportRow(idx, field, value) {
         const globalPerson = document.querySelector('input[name="person"]:checked');
         if (globalPerson) row.person = globalPerson.value;
       }
+      delete row.savingsAccountId;
+    } else if (value.indexOf('__savings__') === 0) {
+      row.isIncome = false;
+      row.transfer = false;
+      row.category = null;
+      row.savingsAccountId = value.slice(11);
+      if (!row.person) {
+        const globalPerson = document.querySelector('input[name="person"]:checked');
+        if (globalPerson) row.person = globalPerson.value;
+      }
     } else {
       row.isIncome = false;
       row.transfer = false;
       row.category = value;
+      delete row.savingsAccountId;
     }
     row._catManual = true;
   } else if (field === 'date') {
@@ -7552,7 +7569,8 @@ async function doImport() {
       note: '',
       refund: !!r.refund,
       isIncome: !!r.isIncome,
-      transfer: !!r.transfer
+      transfer: !!r.transfer,
+      savingsAccountId: r.savingsAccountId || null
     }));
   } else {
     parsed = [];
@@ -7616,6 +7634,7 @@ async function doImport() {
   let fresh, skipped, removedCount = 0;
   const removedTxnSnapshots = [];
   const removedIncomeSnapshots = [];
+  const freshContribIds = [];
 
   if (importMode === 'replace') {
     // Find all months covered by the incoming CSV
@@ -7705,6 +7724,14 @@ async function doImport() {
     });
   }
 
+  fresh.forEach(t => {
+    if (!t.savingsAccountId) return;
+    const cId = uid();
+    freshContribIds.push(cId);
+    contribs.push({ id: cId, date: t.date, amount: Math.abs(t.amount), accountId: t.savingsAccountId, type: 'contribution', person: t.person, note: t.note || '', fromTxnId: t.id });
+  });
+  if (freshContribIds.length && typeof recalcAllBalances === 'function') recalcAllBalances();
+
   const modeNote = importMode === 'replace' ? ` (replaced ${removedCount} existing)` : '';
   const freshTxnIds = [...fresh.map(t => t.id), ...freshIncomeLinkedTxnIds];
   uploads.unshift({ name: pFile.name, count: fresh.length, skipped, person, card: cardName, date: new Date().toLocaleDateString('en-CA'), mode: importMode });
@@ -7729,6 +7756,11 @@ async function doImport() {
     const freshIncSet = new Set(freshIncomeIds);
     txns = txns.filter(t => !freshTxnSet.has(t.id));
     incomes = incomes.filter(i => !freshIncSet.has(i.id));
+    if (freshContribIds.length) {
+      const freshContribSet = new Set(freshContribIds);
+      contribs = contribs.filter(c => !freshContribSet.has(c.id));
+      if (typeof recalcAllBalances === 'function') recalcAllBalances();
+    }
     removedTxnSnapshots.forEach(t => txns.push({ ...t }));
     removedIncomeSnapshots.forEach(i => incomes.push({ ...i }));
     if (uploads[0] && uploads[0].name === pFile.name) uploads.shift();
@@ -9770,6 +9802,7 @@ function renderPdfPreview() {
   tbody.innerHTML = pdfParsedTxns.map((t, i) => {
     const amtAbs = Math.abs(t.amount);
     const isIncome = !!t.isIncome;
+    const isSavings = !!t.savingsAccountId;
     // Income and credits are inflows — green. Income gets + (money in); a credit keeps -.
     const amtColor = (isIncome || t.amount < 0) ? 'color:#16a34a;' : '';
     const sign = isIncome ? '+' : (t.amount < 0 ? '-' : '');
@@ -9777,11 +9810,15 @@ function renderPdfPreview() {
     // Prepend "Income ↗" / "Transfer ⇄" options so users can flag statement lines (e.g.
     // salary deposits = income; moving money between own accounts = transfer, which is
     // neutral) rather than as expenses.
+    const savOptions = (savAccts || []).map(a => `<option value="__savings__${a.id}" ${isSavings && t.savingsAccountId === a.id ? 'selected' : ''}>→ Savings: ${esc(a.name)}</option>`).join('');
     const catSelect = `<option value="__income__" ${isIncome && !t.transfer ? 'selected' : ''}>Income ↗</option>` +
       `<option value="__transfer__" ${t.transfer ? 'selected' : ''}>Transfer ⇄</option>` +
-      CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
+      savOptions +
+      CATS.map(c => `<option value="${esc(c.key)}" ${!isIncome && !isSavings && c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
     const rowStyle = isIncome
       ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
+      : isSavings
+      ? 'border-bottom:1px solid var(--border);background:rgba(180,83,9,.07);'
       : 'border-bottom:1px solid var(--border);';
     return `<tr data-row-idx="${i}" style="${rowStyle}">
       <td data-label="Date" style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editPdfRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
@@ -9833,10 +9870,17 @@ function editPdfRow(idx, field, value) {
       row.isIncome = true;
       row.transfer = (value === '__transfer__');
       row.category = null;
+      delete row.savingsAccountId;
+    } else if (value.indexOf('__savings__') === 0) {
+      row.isIncome = false;
+      row.transfer = false;
+      row.category = null;
+      row.savingsAccountId = value.slice(11);
     } else {
       row.isIncome = false;
       row.transfer = false;
       row.category = value;
+      delete row.savingsAccountId;
     }
     row._catManual = true;
   } else if (field === 'date') {
@@ -9881,6 +9925,7 @@ async function importPdfTransactions() {
   const removedTxnSnapshots = [];
   const removedIncomeSnapshots = [];
   const freshIncomeIds = [];
+  const freshContribIds = [];
 
   if (importMode === 'replace') {
     const incomingMonths = new Set(pdfParsedTxns.map(t => t.date.substring(0,7)));
@@ -9957,6 +10002,16 @@ async function importPdfTransactions() {
     });
   }
 
+  // Savings-flagged rows rode expenseRows into txns[] carrying savingsAccountId;
+  // create their linked contributions, then derive balances from contributions.
+  fresh.forEach(t => {
+    if (!t.savingsAccountId) return;
+    const cId = uid();
+    freshContribIds.push(cId);
+    contribs.push({ id: cId, date: t.date, amount: Math.abs(t.amount), accountId: t.savingsAccountId, type: 'contribution', person: t.person, note: t.note || '', fromTxnId: t.id });
+  });
+  if (freshContribIds.length && typeof recalcAllBalances === 'function') recalcAllBalances();
+
   const uploadName = pdfFile ? pdfFile.name : 'PDF Statement';
   const freshTxnIds = [...fresh.map(t => t.id), ...freshIncomeLinkedTxnIds];
   uploads.unshift({
@@ -9979,6 +10034,11 @@ async function importPdfTransactions() {
     const freshIncSet = new Set(freshIncomeIds);
     txns = txns.filter(t => !freshTxnSet.has(t.id));
     incomes = incomes.filter(i => !freshIncSet.has(i.id));
+    if (freshContribIds.length) {
+      const freshContribSet = new Set(freshContribIds);
+      contribs = contribs.filter(c => !freshContribSet.has(c.id));
+      if (typeof recalcAllBalances === 'function') recalcAllBalances();
+    }
     removedTxnSnapshots.forEach(t => txns.push({ ...t }));
     removedIncomeSnapshots.forEach(i => incomes.push({ ...i }));
     if (uploads[0] && uploads[0].name === uploadName) uploads.shift();
