@@ -2109,16 +2109,7 @@ textarea,select{color:var(--ink);}
             <button class="btn btn-ghost" onclick="testConnection()">Test</button>
           </div>
           <div id="conn-status" style="margin-top:10px;font-size:12.5px;"></div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-bottom:18px;">
-        <div class="card-head" onclick="toggleSettingsSec('sync')" style="cursor:pointer;">
-          <div class="card-title">Google Sheet Sync Controls</div>
-          <span class="sec-toggle" id="chev-sync">▾</span>
-        </div>
-        <div class="card-body sec-body" id="sec-sync">
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
             <button class="btn btn-primary" onclick="syncToSheets(this)">↑ Push to Google Sheets</button>
             <button class="btn btn-ghost" onclick="syncFromSheets(this)">↓ Pull from Google Sheets</button>
             <button class="btn btn-ghost btn-danger" onclick="clearLocalData()">✕ Clear local data</button>
