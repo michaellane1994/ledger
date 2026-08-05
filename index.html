@@ -1611,13 +1611,13 @@ textarea,select{color:var(--ink);}
         </div>
       </section>
 
-      <!-- Slide 3: Cash flow forecast -->
+      <!-- Slide 3: Cashflow trend -->
       <section class="dash-section">
         <div class="dash-section-head">
           <div class="dash-section-head-text">
-            <div class="dash-section-eyebrow">Looking ahead</div>
-            <div class="dash-section-title">Cash flow forecast</div>
-            <div class="dash-section-sub">Projected balance from your historical income and spending. Adjust the avg-from window or exclude categories to refine.</div>
+            <div class="dash-section-eyebrow">Over time</div>
+            <div class="dash-section-title">Cashflow trend</div>
+            <div class="dash-section-sub">Your income, spending and running balance month by month. Adjust the range or exclude categories to refine.</div>
           </div>
         </div>
         <div class="card">
@@ -1637,11 +1637,6 @@ textarea,select{color:var(--ink);}
                 <input type="number" id="cf-start-bal" step="1000" placeholder="auto"
                   style="width:88px;font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);"
                   onchange="setCfStart(this.value)">
-              </div>
-              <div style="display:flex;align-items:center;gap:5px;">
-                <label style="font-size:11px;color:var(--muted);white-space:nowrap;">Avg from</label>
-                <select id="cf-avg-from" onchange="setCfAvgFrom(this.value)"
-                  style="font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;"></select>
               </div>
               <button id="cf-bonus-btn" class="btn btn-ghost btn-sm" onclick="toggleCfBonus()" style="font-size:11px;padding:2px 8px;">Bonus: on</button>
               <div class="ms-wrap" id="ms-cf-excl" style="position:relative;">
@@ -3977,7 +3972,7 @@ function renderCashflowChart() {
   const latestData   = allDataMonths.length ? allDataMonths.reduce((a,b) => a > b ? a : b) : currentMonthStr;
   // Default end: December of latest recorded year
   const latestYear   = latestData.substring(0,4);
-  const defaultEnd   = `${latestYear}-12`;
+  const defaultEnd   = latestData;
 
   // Build full month list from earliest data through end of latest recorded year
   const allCfMonths = [];
@@ -4074,16 +4069,15 @@ function renderCashflowChart() {
 
   const incData=[], fixedData=[], discData=[], capData=[], projected=[], bonusData=[];
   yearMonths.forEach(m => {
-    const isFuture = m > currentMonthStr;
-    const inc   = isFuture ? avgInc   : (incByMonth[m]||0);
-    const fixed = isFuture ? avgFixed : (fixedByMonth[m]||0);
-    const disc  = isFuture ? avgDisc  : (discByMonth[m]||0);
-    const bonus = isFuture ? 0 : (bonusByMonth[m]||0);
+    const inc   = (incByMonth[m]||0);
+    const fixed = (fixedByMonth[m]||0);
+    const disc  = (discByMonth[m]||0);
+    const bonus = (bonusByMonth[m]||0);
     incData.push(inc);
     fixedData.push(-fixed);        // negative = bar goes down
     discData.push(-disc);          // negative = bar goes down (transfers already negative so double-neg = positive reduction)
     capData.push(inc + (cfBonusVisible ? bonus : 0) - fixed); // spending capacity includes actual bonus for past months
-    projected.push(isFuture);
+    projected.push(false);
     bonusData.push(bonus);
   });
 
@@ -4111,9 +4105,7 @@ function renderCashflowChart() {
   const a         = (solid, faded, i) => projected[i] ? faded : solid;
 
   const subEl = document.getElementById('cashflow-sub');
-  if (subEl) subEl.textContent = pastComplete.length
-    ? `Faded = projected · capacity = income − needs`
-    : `${currentYear} — add income entries for projections`;
+  if (subEl) subEl.textContent = `Capacity = income − needs`;
 
   const canvas = document.getElementById('cashflowChart');
   canvas.style.height    = '300px';
