@@ -8653,7 +8653,7 @@ function renderIncomeTypeList() {
       </div>
       <div style="display:flex;gap:6px;">
         <button class="btn btn-ghost btn-sm" onclick="openEditType('income','${t.key}')">Edit</button>
-        ${t.key !== 'other' ? `<button class="del-btn always-on" onclick="deleteType('income','${t.key}')" title="Remove">✕</button>` : ''}
+        ${(t.key !== 'other' || count === 0) ? `<button class="del-btn always-on" onclick="deleteType('income','${t.key}')" title="Remove">✕</button>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -8664,20 +8664,38 @@ function renderSavingsTypeList() {
   if (!el) return;
   el.innerHTML = ACCT_TYPES_ARR.map(t => {
     const isDefault = DEFAULT_ACCT_TYPES.some(d => d.key === t.key);
-    const count = savAccts.filter(a => a.type === t.key).length;
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:12px;height:12px;border-radius:50%;background:${t.color};flex-shrink:0;"></div>
-        <span style="font-weight:500;font-size:13.5px;">${esc(t.label)}</span>
-        <span style="font-size:11px;color:var(--faint);background:var(--bg);padding:2px 7px;border-radius:100px;">${count} account${count!==1?'s':''}</span>
-        ${!isDefault ? '<span class="custom-badge">Custom</span>' : ''}
+    const accts = savAccts.filter(a => a.type === t.key);
+    const count = accts.length;
+    const acctList = count ? `<div class="savtype-accts" style="display:none;padding:2px 0 10px 22px;">${accts.map(a => `<div style="font-size:12.5px;color:var(--muted);padding:3px 0;">${esc(a.name)}</div>`).join('')}</div>` : '';
+    const countBadge = count
+      ? `<span onclick="_toggleSavTypeAccts(this)" style="cursor:pointer;font-size:11px;color:var(--faint);background:var(--bg);padding:2px 8px;border-radius:100px;user-select:none;" title="Show accounts">${count} account${count!==1?'s':''} <span class="savtype-chev" style="display:inline-block;transition:transform .15s ease;font-size:8px;">▸</span></span>`
+      : `<span style="font-size:11px;color:var(--faint);background:var(--bg);padding:2px 8px;border-radius:100px;">0 accounts</span>`;
+    return `<div class="savtype-item" style="border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:12px;height:12px;border-radius:50%;background:${t.color};flex-shrink:0;"></div>
+          <span style="font-weight:500;font-size:13.5px;">${esc(t.label)}</span>
+          ${countBadge}
+          ${!isDefault ? '<span class="custom-badge">Custom</span>' : ''}
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost btn-sm" onclick="openEditType('savings','${t.key}')">Edit</button>
+          ${(t.key !== 'other' || count === 0) ? `<button class="del-btn always-on" onclick="deleteType('savings','${t.key}')" title="Remove">✕</button>` : ''}
+        </div>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-ghost btn-sm" onclick="openEditType('savings','${t.key}')">Edit</button>
-        ${t.key !== 'other' ? `<button class="del-btn always-on" onclick="deleteType('savings','${t.key}')" title="Remove">✕</button>` : ''}
-      </div>
+      ${acctList}
     </div>`;
   }).join('');
+}
+function _toggleSavTypeAccts(badge) {
+  const item = badge.closest('.savtype-item');
+  if (!item) return;
+  const list = item.querySelector('.savtype-accts');
+  if (!list) return;
+  const open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'block';
+  const chev = badge.querySelector('.savtype-chev');
+  if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
 }
 
 function openAddType(context) {
@@ -8749,10 +8767,18 @@ function deleteType(context, key) {
     : `Remove type "${t.label}"?`;
   if (!confirm(msg)) return;
   if (context === 'income') {
+    if (count > 0 && !INCOME_TYPES_ARR.some(x => x.key === 'other')) {
+      const _def = DEFAULT_INCOME_TYPES.find(x => x.key === 'other');
+      if (_def) INCOME_TYPES_ARR.push({ ..._def });
+    }
     incomes.forEach(i => { if (i.type === key) i.type = fallback; });
     INCOME_TYPES_ARR.splice(INCOME_TYPES_ARR.findIndex(x=>x.key===key), 1);
     saveIncomeTypes(); persist();
   } else {
+    if (count > 0 && !ACCT_TYPES_ARR.some(x => x.key === 'other')) {
+      const _def = DEFAULT_ACCT_TYPES.find(x => x.key === 'other');
+      if (_def) ACCT_TYPES_ARR.push({ ..._def });
+    }
     savAccts.forEach(a => { if (a.type === key) a.type = fallback; });
     ACCT_TYPES_ARR.splice(ACCT_TYPES_ARR.findIndex(x=>x.key===key), 1);
     saveAcctTypes(); persist();
