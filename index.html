@@ -7499,7 +7499,7 @@ function editImportRow(idx, field, value) {
     if (!row._catManual) row.category = autoCat(value);
   } else if (field === 'category') {
     if (value.indexOf('__income__') === 0) {
-      const typeKey = value.slice(11);
+      const typeKey = value.slice('__income__'.length);
       row.isIncome = true;
       row.incomeType = typeKey || null;
       row.transfer = (typeKey === 'transfer');
@@ -7515,7 +7515,7 @@ function editImportRow(idx, field, value) {
       row.isIncome = false;
       row.transfer = false;
       row.category = null;
-      row.savingsAccountId = value.slice(11);
+      row.savingsAccountId = value.slice('__savings__'.length);
       if (!row.person) {
         const globalPerson = document.querySelector('input[name="person"]:checked');
         if (globalPerson) row.person = globalPerson.value;
@@ -9916,7 +9916,7 @@ function editPdfRow(idx, field, value) {
     if (!row._catManual) row.category = autoCat(value);
   } else if (field === 'category') {
     if (value.indexOf('__income__') === 0) {
-      const typeKey = value.slice(11);
+      const typeKey = value.slice('__income__'.length);
       row.isIncome = true;
       row.incomeType = typeKey || null;
       row.transfer = (typeKey === 'transfer');
@@ -9926,7 +9926,7 @@ function editPdfRow(idx, field, value) {
       row.isIncome = false;
       row.transfer = false;
       row.category = null;
-      row.savingsAccountId = value.slice(11);
+      row.savingsAccountId = value.slice('__savings__'.length);
     } else {
       row.isIncome = false;
       row.transfer = false;
