@@ -88,7 +88,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 
 /* ── SIDEBAR ── */
 .sidebar{width:228px;min-height:100vh;background:linear-gradient(180deg,#0a0a0d 0%,#141417 100%);position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column;}
-.logo{padding:8px 22px 5px;border-bottom:1px solid rgba(255,255,255,.07);}
+.logo{height:64px;display:flex;flex-direction:column;justify-content:center;padding:0 22px;border-bottom:1px solid rgba(255,255,255,.07);}
 .logo h1{font-family:'Fraunces',serif;font-size:36px;color:#fff;letter-spacing:-0.02em;line-height:1;}
 .logo span{font-size:11px;color:rgba(255,255,255,.4);letter-spacing:.8px;text-transform:uppercase;margin-top:6px;display:block;font-weight:500;line-height:1;}
 .nav{padding:14px 10px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;}
@@ -10873,7 +10873,7 @@ function setTheme(key) {
 function toggleDark() {
   const current = localStorage.getItem('l3_theme') || 'light';
   const t = THEMES[current];
-  if (t && t.dark) applyTheme(localStorage.getItem('l3_lastLight') || 'light');
+  if (t && t.dark) setTheme(localStorage.getItem('l3_lastLight') || 'light');
   else             setTheme(localStorage.getItem('l3_lastDark')  || 'dark-warm');
 }
 function openHelpModal() {
