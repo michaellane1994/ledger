@@ -952,6 +952,12 @@ textarea,select{color:var(--ink);}
 .g-stat b{font-family:var(--num);font-size:19px;color:var(--ink);font-weight:400;letter-spacing:-0.01em;font-variant-numeric:tabular-nums;line-height:1.05;}
 .g-stat span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;}
 .g-sdiv{width:1px;background:var(--border);}
+.g-overall{padding:0 2px 18px;}
+.g-overall-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:7px;}
+.g-overall-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600;}
+.g-overall-pct{font-family:var(--num);font-size:14px;font-weight:400;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+.g-overall-bar{height:9px;background:var(--bg);border:1px solid var(--border);border-radius:99px;overflow:hidden;}
+.g-overall-fill{height:100%;background:var(--accent);border-radius:99px;width:0;transition:width .7s cubic-bezier(.4,0,.2,1);}
 .g-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:11px;}
 .g-tile{position:relative;border:1px solid var(--border);border-radius:14px;padding:16px 12px 13px;background:var(--surface);display:flex;flex-direction:column;align-items:center;text-align:center;transition:transform .16s ease,box-shadow .2s ease,border-color .16s;}
 .g-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--border-2);}
@@ -4106,11 +4112,14 @@ function renderSavingsGoals(){
       + '</div>';
   }).join('');
   const addTile = '<div class="g-tile add" onclick="openAddGoal()"><div class="g-plus">+</div><div>Add a goal</div></div>';
-  const sum = arr => _gmoney(arr.reduce((s,g)=>s+g.saved,0));
-  const summary = visible.length ? '<div class="g-summary"><div class="g-stat"><b>'+sum(visible)+'</b><span>Saved</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+_gmoney(visible.reduce((s,g)=>s+g.target,0))+'</b><span>Target</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+visible.length+'</b><span>Goals</span></div></div>' : '';
+  const tSaved  = visible.reduce((s,g)=>s+g.saved,0);
+  const tTarget = visible.reduce((s,g)=>s+g.target,0);
+  const oPct    = tTarget > 0 ? Math.min(tSaved/tTarget, 1) : 0;
+  const summary = visible.length ? '<div class="g-summary"><div class="g-stat"><b>'+_gmoney(tSaved)+'</b><span>Saved</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+_gmoney(tTarget)+'</b><span>Target</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+visible.length+'</b><span>Goals</span></div></div>'
+    + '<div class="g-overall"><div class="g-overall-head"><span class="g-overall-lbl">Overall progress</span><span class="g-overall-pct">'+_gmoney(tSaved)+' of '+_gmoney(tTarget)+' · '+Math.round(oPct*100)+'%</span></div><div class="g-overall-bar"><div class="g-overall-fill" data-w="'+(oPct*100).toFixed(1)+'%"></div></div></div>' : '';
   const hiddenRow = hidden.length ? '<div class="g-hidden"><span class="g-hidden-lbl">Hidden</span>'+hidden.map(g=>'<span class="g-hidden-pill">'+esc(g.name)+'<button onclick="showGoalTile(\''+g.key+'\')">Show</button></span>').join('')+'</div>' : '';
   el.innerHTML = summary + '<div class="g-grid">'+tiles+addTile+'</div>' + hiddenRow;
-  requestAnimationFrame(() => el.querySelectorAll('.g-ring-fill').forEach(c => c.style.strokeDashoffset = c.dataset.off));
+  requestAnimationFrame(() => { el.querySelectorAll('.g-ring-fill').forEach(c => c.style.strokeDashoffset = c.dataset.off); const ob = el.querySelector('.g-overall-fill'); if (ob) ob.style.width = ob.dataset.w; });
   document.body.classList.toggle('goals-editing', _goalsEdit);
 }
 function toggleGoalsEdit(){ _goalsEdit = !_goalsEdit; const b = document.getElementById('goals-customize-btn'); if (b) b.textContent = _goalsEdit ? 'Done' : 'Customize'; document.body.classList.toggle('goals-editing', _goalsEdit); }
