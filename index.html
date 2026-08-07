@@ -7587,7 +7587,7 @@ function parseImportRows() {
     let merchant = (cols[mi] || 'Unknown').trim();
     merchant = merchant.replace(/\s{2,}.*$/, '').trim().replace(/\*[A-Z0-9]+$/, '').trim();
     if (!merchant) merchant = 'Unknown';
-    let amt = parseFloat((cols[ai] || '').replace(/[$, "]/g, ''));
+    let amt = parseFloat((cols[ai] || '').replace(/[^0-9.-]/g, ''));
     if (/payment received|payment thank/i.test(merchant)) return;
     let refund = false;
     if (isBank) {
@@ -7597,7 +7597,7 @@ function parseImportRows() {
       // Amount column, so a chequing CSV with a separate Deposit column dropped every
       // deposit as an "unreadable amount".
       let cred = NaN;
-      if (ci >= 0) cred = parseFloat((cols[ci] || '').replace(/[$, "]/g, ''));
+      if (ci >= 0) cred = parseFloat((cols[ci] || '').replace(/[^0-9.-]/g, ''));
       if (isFinite(cred) && cred !== 0) {
         amt = -Math.abs(cred); refund = true;
       } else if (isFinite(amt) && amt !== 0) {
@@ -7607,7 +7607,7 @@ function parseImportRows() {
         invalid.push({ idx, reason: 'Zero or unreadable amount', dateStr, merchant }); return;
       }
     } else if (ci >= 0) {
-      const cred = parseFloat((cols[ci] || '').replace(/[$, "]/g, ''));
+      const cred = parseFloat((cols[ci] || '').replace(/[^0-9.-]/g, ''));
       if (isFinite(cred) && cred > 0) { amt = -cred; refund = true; }
       else if (!isFinite(amt) || amt === 0) { invalid.push({ idx, reason: 'Zero or unreadable amount', dateStr, merchant }); return; }
       else amt = Math.abs(amt);
@@ -7906,19 +7906,19 @@ async function doImport() {
       merchant = merchant.replace(/\s{2,}.*$/, '').trim();
       merchant = merchant.replace(/\*[A-Z0-9]+$/, '').trim();
       if (!merchant) merchant = 'Unknown';
-      let amt = parseFloat((cols[ai] || '0').replace(/[$, "]/g, '')) || 0;
+      let amt = parseFloat((cols[ai] || '0').replace(/[^0-9.-]/g, '')) || 0;
       if (/payment received|payment thank/i.test(merchant)) return;
 
       let refund = false;
       if (isBank) {
-        let cred = ci >= 0 ? (parseFloat((cols[ci] || '').replace(/[$, "]/g, '')) || NaN) : NaN;
+        let cred = ci >= 0 ? (parseFloat((cols[ci] || '').replace(/[^0-9.-]/g, '')) || NaN) : NaN;
         if (isFinite(cred) && cred !== 0) { amt = -Math.abs(cred); refund = true; }
         else if (amt !== 0) {
           if (ci >= 0) { amt = Math.abs(amt); refund = false; }
           else { if (amt > 0) refund = true; amt = refund ? -Math.abs(amt) : Math.abs(amt); }
         } else return;
       } else if (ci >= 0) {
-        const cred = parseFloat((cols[ci] || '0').replace(/[$, "]/g, '')) || 0;
+        const cred = parseFloat((cols[ci] || '0').replace(/[^0-9.-]/g, '')) || 0;
         if (cred > 0) { amt = -cred; refund = true; }
         else if (amt === 0) return;
         else amt = Math.abs(amt);
@@ -11119,13 +11119,20 @@ function normDate(s) {
     const mo = mos[m[1].substring(0,3).toLowerCase()]; if (!mo) return null;
     return `${m[3]}-${String(mo).padStart(2,'0')}-${m[2].padStart(2,'0')}`;
   }
-  // M/D/YYYY or MM/DD/YYYY — treat as North American (month first)
-  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  // D/M/YYYY vs M/D/YYYY is ambiguous. Use the selected currency's region to decide
+  // (GBP/EUR/AUD/NZD/INR write day-first; USD/CAD write month-first), and let an
+  // out-of-range part override the guess (a "13" can only be a day).
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
   if (m) {
-    const y  = m[3].length === 2 ? '20' + m[3] : m[3];
-    const mo = m[1].padStart(2,'0'); // month first for NA banks
-    const d  = m[2].padStart(2,'0');
-    return `${y}-${mo}-${d}`;
+    const y = m[3].length === 2 ? '20' + m[3] : m[3];
+    const a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+    const dayFirstCcy = ['GBP', 'EUR', 'AUD', 'NZD', 'INR'];
+    let dayFirst = (typeof globalCurrency !== 'undefined' && dayFirstCcy.indexOf(globalCurrency) >= 0);
+    if (a > 12 && b <= 12) dayFirst = true;
+    else if (b > 12 && a <= 12) dayFirst = false;
+    const mo = dayFirst ? b : a, d = dayFirst ? a : b;
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   }
   return null;
 }
