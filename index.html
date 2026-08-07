@@ -964,6 +964,9 @@ textarea,select{color:var(--ink);}
 .g-overall-cap i{flex:none;width:20px;height:9px;border-radius:3px;border:1px solid var(--border);background-color:var(--bg);background-image:repeating-linear-gradient(45deg,var(--border-2) 0,var(--border-2) 1.5px,transparent 1.5px,transparent 5px);}
 .g-goalinput{font-family:var(--num);font-size:17px;font-weight:400;color:var(--ink);background:var(--surface);border:1px solid var(--accent);border-radius:6px;padding:1px 6px;width:120px;outline:none;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
 .g-goalinput:focus{box-shadow:0 0 0 3px rgba(47,90,68,.12);}
+.reorder-btn{border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:5px;width:24px;height:16px;line-height:1;font-size:9px;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;transition:border-color .12s,color .12s;}
+.reorder-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.reorder-btn:disabled{opacity:.3;cursor:default;}
 .g-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:11px;}
 .g-tile{position:relative;border:1px solid var(--border);border-radius:14px;padding:16px 12px 13px;background:var(--surface);display:flex;flex-direction:column;align-items:center;text-align:center;transition:transform .16s ease,box-shadow .2s ease,border-color .16s;}
 .g-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--border-2);}
@@ -980,6 +983,8 @@ textarea,select{color:var(--ink);}
 .g-amt{font-size:11.5px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums;}
 .g-amt-edit{cursor:pointer;border-bottom:1px dashed var(--border-2);}
 .g-ed{cursor:pointer;border-bottom:1px dashed var(--border-2);}
+.g-tile-link{cursor:pointer;}
+.g-tile-link:hover{border-color:var(--accent);}
 .g-togo{font-size:10.5px;margin-top:6px;font-weight:600;}
 .g-togo.togo{color:var(--muted);}
 .g-togo.reached{color:var(--accent);}
@@ -4105,10 +4110,11 @@ function renderSavingsGoals(){
   const hidden  = all.filter(g =>  _goalsHidden.has(g.key));
   const tiles = visible.map(g => {
     const pct = g.target > 0 ? g.saved/g.target : 0, done = pct >= 1;
-    const savedTxt  = g.std ? '<span class="g-ed" onclick="updateStdSaved(\''+g.key+'\')" title="Edit saved amount">'+_gmoney(g.saved)+'</span>' : _gmoney(g.saved);
-    const targetTxt = '<span class="g-ed" onclick="updateGoalTarget(\''+g.key+'\')" title="Edit goal target">'+_gmoney(g.target)+'</span>';
+    const ed = _goalsEdit;
+    const savedTxt  = ed ? '<span class="g-ed" onclick="'+(g.std?'updateStdSaved':'updateAcctBalance')+'(\''+g.key+'\')" title="Edit current balance">'+_gmoney(g.saved)+'</span>' : _gmoney(g.saved);
+    const targetTxt = ed ? '<span class="g-ed" onclick="updateGoalTarget(\''+g.key+'\')" title="Edit goal target">'+_gmoney(g.target)+'</span>' : _gmoney(g.target);
     const amt = '<div class="g-amt">'+savedTxt+' of '+targetTxt+'</div>';
-    return '<div class="g-tile'+(done?' done':'')+'">'
+    return '<div class="g-tile'+(done?' done':'')+(ed?'':' g-tile-link')+'"'+(ed?'':' onclick="goNav(\'savings\')" title="Open in Savings"')+'>'
       + '<div class="g-ctrls">'
       +   '<button class="g-ctrl" title="Move left" onclick="moveGoal(\''+g.key+'\',-1)">‹</button>'
       +   '<button class="g-ctrl" title="Move right" onclick="moveGoal(\''+g.key+'\',1)">›</button>'
@@ -4116,7 +4122,7 @@ function renderSavingsGoals(){
       +   (g.std ? '<button class="g-ctrl rm" title="Remove goal" onclick="removeStdGoal(\''+g.key+'\')">✕</button>' : '')
       + '</div>'
       + _goalRing(pct, g.color)
-      + '<div class="g-name g-name-edit" title="Rename goal" onclick="renameGoal(\''+g.key+'\')">'+esc(g.name)+'</div>'
+      + (ed ? '<div class="g-name g-name-edit" title="Rename goal" onclick="renameGoal(\''+g.key+'\')">'+esc(g.name)+'</div>' : '<div class="g-name">'+esc(g.name)+'</div>')
       + amt
       + '<div class="g-togo '+(done?'reached':'togo')+'">'+(done?'Reached 🎉':_gmoney(g.target-g.saved)+' to go')+'</div>'
       + '<div class="g-chip'+(g.std?' custom':'')+'">'+(g.std?'✦ Custom goal':'<span class="g-dot" style="background:'+g.color+'"></span>'+esc(g.sub))+'</div>'
@@ -4230,6 +4236,16 @@ function updateGoalTarget(k){
       if (typeof renderSavings === 'function') renderSavings();
       if (typeof autoPush === 'function') autoPush(); }
   }
+}
+function updateAcctBalance(k){
+  const id = k.slice(5); const a = (savAccts || []).find(x => String(x.id) === id); if (!a) return;
+  const v = prompt('Current balance for "' + a.name + '":', a.balance); if (v === null) return;
+  const n = parseFloat(v); if (!isFinite(n) || n < 0) return;
+  const fromContribs = (contribs || []).filter(c => c.accountId === id).reduce((s, c) => s + (c.type === 'contribution' ? c.amount : -c.amount), 0);
+  a.balance = n; a.baseBalance = n - fromContribs;
+  persist(); renderSavingsGoals();
+  if (typeof renderSavings === 'function') renderSavings();
+  if (typeof autoPush === 'function') autoPush();
 }
 function updateStdSaved(k){
   const id = k.slice(4); const g = _stdGoals.find(x => String(x.id) === id); if (!g) return;
@@ -8690,7 +8706,7 @@ function renderSavings() {
   if (!savAccts.length) {
     acctEl.innerHTML = '<div style="color:var(--faint);font-size:13px;padding:12px 0;">No accounts added yet — click Add / Update Account to get started.</div>';
   } else {
-    acctEl.innerHTML = savAccts.map(a => {
+    acctEl.innerHTML = savAccts.map((a, idx) => {
       const col  = a.color || ACCT_COLORS[a.type] || '#71717a';
       const bg   = ACCT_BGS[a.type]    || '#f4f4f5';
       const pct  = a.goal ? Math.min(a.balance/a.goal*100,100).toFixed(1) : null;
@@ -8709,6 +8725,10 @@ function renderSavings() {
           <div class="goal-pct">${pct}% of ${fmt(a.goal, ccy)} goal</div>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:12px;">
+          <div class="acct-reorder" style="display:flex;flex-direction:column;gap:2px;">
+            <button class="reorder-btn" onclick="moveSavingsAccount('${a.id}',-1)" title="Move up"${idx===0?' disabled':''}>▲</button>
+            <button class="reorder-btn" onclick="moveSavingsAccount('${a.id}',1)" title="Move down"${idx===savAccts.length-1?' disabled':''}>▼</button>
+          </div>
           <div style="text-align:right;">
             <div style="font-family:var(--num);font-weight:400;font-variant-numeric:tabular-nums;font-size:22px;color:${col};">${fmt(a.balance, ccy)}</div>
             <div style="font-size:11px;color:var(--faint);">current balance</div>
@@ -8856,6 +8876,14 @@ function confirmAddSavings() {
   persist(); closeAddSavings(); renderSavings(); renderDashboard(); autoPush();
 }
 
+function moveSavingsAccount(id, dir) {
+  const i = savAccts.findIndex(a => a.id === id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= savAccts.length) return;
+  const tmp = savAccts[i]; savAccts[i] = savAccts[j]; savAccts[j] = tmp;
+  persist(); renderSavings(); renderDashboard();
+  if (typeof autoPush === 'function') autoPush();
+}
 function deleteSavings(id) {
   const a = savAccts.find(x => x.id === id);
   if (!a) return;
