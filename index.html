@@ -945,6 +945,67 @@ textarea,select{color:var(--ink);}
 .goal-bar{height:100%;border-radius:3px;background:#2d6a4f;transition:width .5s ease;}
 .goal-pct{font-size:10.5px;color:var(--faint);margin-top:3px;}
 
+/* ── Savings goals (dashboard) ── */
+.goals-head-actions{display:flex;align-items:center;gap:8px;}
+.g-summary{display:flex;gap:20px;padding:2px 2px 16px;flex-wrap:wrap;}
+.g-stat{display:flex;flex-direction:column;gap:1px;}
+.g-stat b{font-family:'Fraunces',serif;font-size:18px;color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums;line-height:1.1;}
+.g-stat span{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.6px;font-weight:600;}
+.g-sdiv{width:1px;background:var(--border);}
+.g-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:11px;}
+.g-tile{position:relative;border:1px solid var(--border);border-radius:14px;padding:16px 12px 13px;background:var(--surface);display:flex;flex-direction:column;align-items:center;text-align:center;transition:transform .16s ease,box-shadow .2s ease,border-color .16s;}
+.g-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--border-2);}
+.g-tile.done{background:linear-gradient(180deg,var(--accent-soft),var(--surface));}
+.g-ring-wrap{position:relative;width:92px;height:92px;margin-bottom:11px;}
+.g-ring{width:92px;height:92px;transform:rotate(-90deg);}
+.g-ring-track{fill:none;stroke:var(--border);stroke-width:8;}
+.g-ring-fill{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .9s cubic-bezier(.22,1,.36,1);}
+.g-ring-center{position:absolute;inset:0;display:grid;place-items:center;}
+.g-ring-pct{font-family:'Fraunces',serif;font-size:22px;font-weight:500;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums;}
+.g-ring-pct small{font-size:11px;color:var(--muted);margin-left:1px;}
+.g-ring-check{font-size:25px;color:var(--accent);}
+.g-name{font-weight:600;font-size:13px;color:var(--ink);}
+.g-amt{font-size:11.5px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums;}
+.g-amt-edit{cursor:pointer;border-bottom:1px dashed var(--border-2);}
+.g-togo{font-size:10.5px;margin-top:6px;font-weight:600;}
+.g-togo.togo{color:var(--muted);}
+.g-togo.reached{color:var(--accent);}
+.g-chip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--muted);background:var(--bg);border-radius:100px;padding:3px 9px;margin-top:8px;}
+.g-chip.custom{color:var(--accent);background:var(--accent-soft);}
+.g-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.g-ctrls{position:absolute;top:7px;right:7px;display:none;gap:3px;}
+body.goals-editing .g-ctrls{display:flex;}
+body.goals-editing .g-tile{border-style:dashed;}
+.g-ctrl{width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center;font-size:15px;line-height:1;padding:0;}
+.g-ctrl:hover{color:var(--ink);border-color:var(--border-2);background:var(--bg);}
+.g-ctrl.rm:hover{color:#dc2626;border-color:#f0b8b8;}
+.g-tile.add{border-style:dashed;border-color:var(--border-2);cursor:pointer;justify-content:center;gap:6px;color:var(--muted);background:transparent;min-height:200px;}
+.g-tile.add:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-soft);}
+.g-plus{width:38px;height:38px;border-radius:50%;border:1.5px solid currentColor;display:grid;place-items:center;font-size:21px;margin-bottom:2px;}
+.g-hidden{border-top:1px solid var(--border);margin-top:14px;padding-top:13px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.g-hidden-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);font-weight:600;}
+.g-hidden-pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:3px 5px 3px 11px;}
+.g-hidden-pill button{border:none;background:transparent;color:var(--accent);cursor:pointer;font-size:11px;font-weight:600;padding:2px 6px;border-radius:100px;}
+.g-hidden-pill button:hover{background:var(--accent-soft);}
+.goals-addform{display:none;gap:9px;flex-wrap:wrap;align-items:flex-end;padding:14px;margin-bottom:14px;background:var(--bg);border:1px solid var(--border);border-radius:12px;}
+.goals-addform .gf{display:flex;flex-direction:column;gap:4px;}
+.goals-addform label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
+.goals-addform input{font-family:'Inter',sans-serif;font-size:13px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);outline:none;}
+.goals-addform input:focus{border-color:var(--accent);}
+.goals-addform .gf.nm input{width:160px;}
+.goals-addform .gf.am input{width:96px;}
+@media (max-width:600px){
+  .g-grid{grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:9px;}
+  .g-ring-wrap,.g-ring{width:78px;height:78px;}
+  .g-ring-pct{font-size:18px;}
+  .g-tile.add{min-height:170px;}
+  .g-summary{gap:16px;}
+  .goals-head-actions{width:100%;}
+  .goals-addform{width:100%;}
+  .goals-addform .gf.nm input,.goals-addform .gf.nm{flex:1;width:auto;}
+}
+
+
 /* ── MOBILE ── */
 .hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;color:var(--ink);}
 .hamburger svg{width:22px;height:22px;display:block;}
@@ -1441,6 +1502,31 @@ textarea,select{color:var(--ink);}
       </section>
 
       <!-- MONEY FLOW SANKEY (income → destinations) -->
+      <!-- Savings goals -->
+      <section class="dash-section" id="goals-section">
+        <div class="dash-section-head">
+          <div class="dash-section-head-text">
+            <div class="dash-section-eyebrow">On track</div>
+            <div class="dash-section-title">Savings goals</div>
+            <div class="dash-section-sub">Progress toward your savings targets. Add standalone goals, or hide and reorder what shows here.</div>
+          </div>
+          <div class="goals-head-actions">
+            <button class="btn btn-ghost btn-sm" id="goals-customize-btn" onclick="toggleGoalsEdit()">Customize</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddGoal()">+ Add goal</button>
+          </div>
+        </div>
+        <div class="card"><div class="card-body">
+          <div class="goals-addform" id="goals-addform">
+            <div class="gf nm"><label>Goal name</label><input id="goal-f-name" placeholder="e.g. Wedding fund"></div>
+            <div class="gf am"><label>Target</label><input id="goal-f-target" type="number" min="0" step="100" placeholder="5000"></div>
+            <div class="gf am"><label>Saved so far</label><input id="goal-f-saved" type="number" min="0" step="100" placeholder="0"></div>
+            <button class="btn btn-primary btn-sm" onclick="saveNewGoal()">Add goal</button>
+            <button class="btn btn-ghost btn-sm" onclick="openAddGoal()">Cancel</button>
+          </div>
+          <div id="goals-card"></div>
+        </div></div>
+      </section>
+
       <section class="dash-section" id="moneyflow-section">
         <div class="dash-section-head">
           <div class="dash-section-head-text">
@@ -3951,6 +4037,99 @@ function toggleFvBonus() {
   renderChartSection();
 }
 
+// ── SAVINGS GOALS (dashboard) ──────────────────────────────
+let _stdGoals    = JSON.parse(localStorage.getItem('l3_std_goals')    || '[]');
+let _goalsHidden = new Set(JSON.parse(localStorage.getItem('l3_goals_hidden') || '[]'));
+let _goalsOrder  = JSON.parse(localStorage.getItem('l3_goals_order')  || '[]');
+let _goalsEdit   = false;
+function _saveGoalsState(){
+  localStorage.setItem('l3_std_goals',    JSON.stringify(_stdGoals));
+  localStorage.setItem('l3_goals_hidden', JSON.stringify([..._goalsHidden]));
+  localStorage.setItem('l3_goals_order',  JSON.stringify(_goalsOrder));
+}
+function _gmoney(n){
+  let s = '$';
+  try { if (typeof CURRENCIES !== 'undefined' && CURRENCIES[globalCurrency]) s = CURRENCIES[globalCurrency].short; } catch(e){}
+  return s + Math.round(n).toLocaleString();
+}
+function _collectGoals(){
+  const list = [];
+  (savAccts || []).forEach(a => {
+    if (a.goal && a.goal > 0) list.push({ key:'acct:'+a.id, name:a.name, sub:(ACCT_TYPES[a.type]||a.type)+' · account', color:(ACCT_COLORS[a.type]||'#2f5a44'), saved:a.balance||0, target:a.goal, std:false });
+  });
+  _stdGoals.forEach(g => list.push({ key:'std:'+g.id, name:g.name, sub:'Custom goal', color:'var(--accent)', saved:g.saved||0, target:g.target, std:true }));
+  const idx = k => { const i = _goalsOrder.indexOf(k); return i < 0 ? 9999 : i; };
+  list.sort((a,b) => idx(a.key) - idx(b.key));
+  return list;
+}
+const _GOAL_HIDE_SVG = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10 10 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.2 3.2m-6.7-1.1a3 3 0 1 1-4.2-4.2"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+function _goalRing(pct, color){
+  const C = 2 * Math.PI * 42, off = (C * (1 - Math.min(pct, 1))).toFixed(1);
+  return '<div class="g-ring-wrap"><svg class="g-ring" viewBox="0 0 96 96"><circle class="g-ring-track" cx="48" cy="48" r="42"></circle><circle class="g-ring-fill" cx="48" cy="48" r="42" data-off="'+off+'" style="stroke:'+color+';stroke-dasharray:'+C.toFixed(1)+';stroke-dashoffset:'+C.toFixed(1)+'"></circle></svg><div class="g-ring-center">'+(pct>=1?'<div class="g-ring-check">✓</div>':'<div class="g-ring-pct">'+Math.round(pct*100)+'<small>%</small></div>')+'</div></div>';
+}
+function renderSavingsGoals(){
+  const el = document.getElementById('goals-card'); if (!el) return;
+  const all = _collectGoals();
+  const visible = all.filter(g => !_goalsHidden.has(g.key));
+  const hidden  = all.filter(g =>  _goalsHidden.has(g.key));
+  const tiles = visible.map(g => {
+    const pct = g.target > 0 ? g.saved/g.target : 0, done = pct >= 1;
+    const amt = '<div class="g-amt'+(g.std?' g-amt-edit':'')+'"'+(g.std?' onclick="updateStdSaved(\''+g.key+'\')" title="Update saved amount"':'')+'>'+_gmoney(g.saved)+' of '+_gmoney(g.target)+'</div>';
+    return '<div class="g-tile'+(done?' done':'')+'">'
+      + '<div class="g-ctrls">'
+      +   '<button class="g-ctrl" title="Move left" onclick="moveGoal(\''+g.key+'\',-1)">‹</button>'
+      +   '<button class="g-ctrl" title="Move right" onclick="moveGoal(\''+g.key+'\',1)">›</button>'
+      +   '<button class="g-ctrl" title="Hide from dashboard" onclick="hideGoalTile(\''+g.key+'\')">'+_GOAL_HIDE_SVG+'</button>'
+      +   (g.std ? '<button class="g-ctrl rm" title="Remove goal" onclick="removeStdGoal(\''+g.key+'\')">✕</button>' : '')
+      + '</div>'
+      + _goalRing(pct, g.color)
+      + '<div class="g-name">'+esc(g.name)+'</div>'
+      + amt
+      + '<div class="g-togo '+(done?'reached':'togo')+'">'+(done?'Reached 🎉':_gmoney(g.target-g.saved)+' to go')+'</div>'
+      + '<div class="g-chip'+(g.std?' custom':'')+'">'+(g.std?'✦ Custom goal':'<span class="g-dot" style="background:'+g.color+'"></span>'+esc(g.sub))+'</div>'
+      + '</div>';
+  }).join('');
+  const addTile = '<div class="g-tile add" onclick="openAddGoal()"><div class="g-plus">+</div><div>Add a goal</div></div>';
+  const sum = arr => _gmoney(arr.reduce((s,g)=>s+g.saved,0));
+  const summary = visible.length ? '<div class="g-summary"><div class="g-stat"><b>'+sum(visible)+'</b><span>Saved</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+_gmoney(visible.reduce((s,g)=>s+g.target,0))+'</b><span>Target</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+visible.length+'</b><span>Goals</span></div></div>' : '';
+  const hiddenRow = hidden.length ? '<div class="g-hidden"><span class="g-hidden-lbl">Hidden</span>'+hidden.map(g=>'<span class="g-hidden-pill">'+esc(g.name)+'<button onclick="showGoalTile(\''+g.key+'\')">Show</button></span>').join('')+'</div>' : '';
+  el.innerHTML = summary + '<div class="g-grid">'+tiles+addTile+'</div>' + hiddenRow;
+  requestAnimationFrame(() => el.querySelectorAll('.g-ring-fill').forEach(c => c.style.strokeDashoffset = c.dataset.off));
+  document.body.classList.toggle('goals-editing', _goalsEdit);
+}
+function toggleGoalsEdit(){ _goalsEdit = !_goalsEdit; const b = document.getElementById('goals-customize-btn'); if (b) b.textContent = _goalsEdit ? 'Done' : 'Customize'; document.body.classList.toggle('goals-editing', _goalsEdit); }
+function hideGoalTile(k){ _goalsHidden.add(k); _saveGoalsState(); renderSavingsGoals(); }
+function showGoalTile(k){ _goalsHidden.delete(k); _saveGoalsState(); renderSavingsGoals(); }
+function removeStdGoal(k){ const id = k.slice(4); _stdGoals = _stdGoals.filter(g => String(g.id) !== id); _goalsHidden.delete(k); _saveGoalsState(); renderSavingsGoals(); }
+function moveGoal(k, dir){
+  const all = _collectGoals();
+  const vis = all.filter(g => !_goalsHidden.has(g.key)).map(g => g.key);
+  const hid = all.filter(g =>  _goalsHidden.has(g.key)).map(g => g.key);
+  const i = vis.indexOf(k), j = i + dir;
+  if (i < 0 || j < 0 || j >= vis.length) return;
+  const tmp = vis[i]; vis[i] = vis[j]; vis[j] = tmp;
+  _goalsOrder = vis.concat(hid);
+  _saveGoalsState(); renderSavingsGoals();
+}
+function openAddGoal(){ const f = document.getElementById('goals-addform'); if (f) f.style.display = (f.style.display === 'flex') ? 'none' : 'flex'; }
+function saveNewGoal(){
+  const name = (document.getElementById('goal-f-name').value || '').trim();
+  const target = parseFloat(document.getElementById('goal-f-target').value);
+  const saved  = parseFloat(document.getElementById('goal-f-saved').value) || 0;
+  if (!name || !(target > 0)) { alert('Enter a goal name and a target amount.'); return; }
+  _stdGoals.push({ id: uid(), name, target, saved });
+  ['goal-f-name','goal-f-target','goal-f-saved'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('goals-addform').style.display = 'none';
+  _saveGoalsState(); renderSavingsGoals();
+}
+function updateStdSaved(k){
+  const id = k.slice(4); const g = _stdGoals.find(x => String(x.id) === id); if (!g) return;
+  const v = prompt('Amount saved so far for "' + g.name + '":', g.saved);
+  if (v === null) return;
+  const n = parseFloat(v);
+  if (isFinite(n) && n >= 0) { g.saved = n; _saveGoalsState(); renderSavingsGoals(); }
+}
+
 function renderCashflowChart() {
   const now = new Date();
   const currentYear     = now.getFullYear();
@@ -5745,6 +5924,7 @@ function renderDashboard() {
   renderBreakdown();
   renderLabelsCard();
   renderRecurringCard();
+  renderSavingsGoals();
 
   // Recent 5 — positive-amount expenses only (excludes transfers and refunds)
   const recent = [...expenses].filter(t => effectiveAmt(t) > 0).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
