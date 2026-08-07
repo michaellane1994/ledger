@@ -2660,19 +2660,19 @@ function doGet(e) {
 <!-- STATEMENT TYPE GATE — mandatory initial pick before the mapper/preview -->
 <div class="modal-overlay" id="stmt-type-modal">
   <div class="modal" style="width:520px;max-width:95vw;">
-    <div class="modal-title">What kind of statement is this?</div>
-    <div class="modal-sub">This sets how deposits and withdrawals are read. You can switch it on the next screen too.</div>
+    <div class="modal-title">How are expenses shown on your statement?</div>
+    <div class="modal-sub">This sets which sign means spending. Money in defaults to a refund — flag it as income per row if you need to. You can switch this on the next screen too.</div>
     <div class="stmt-type-choice" style="margin-top:18px;">
       <button type="button" class="stmt-type-btn" onclick="pickStmtType('credit')">
         <span class="stmt-type-card">
-          <span class="stmt-type-title">Credit card</span>
-          <span class="stmt-type-desc">Purchases (spending) are <b style="color:#c15c1e;">(+)</b>; payments &amp; refunds are credits <b style="color:#16a34a;">(−)</b>.</span>
+          <span class="stmt-type-title">Expenses shown as +</span>
+          <span class="stmt-type-desc">Spending is positive <b style="color:#c15c1e;">(+)</b>; money in is negative <b style="color:#16a34a;">(−)</b>. Typical of credit-card statements.</span>
         </span>
       </button>
       <button type="button" class="stmt-type-btn" onclick="pickStmtType('bank')">
         <span class="stmt-type-card">
-          <span class="stmt-type-title">Bank account (debit / chequing)</span>
-          <span class="stmt-type-desc">Deposits are <b style="color:#16a34a;">(+)</b> income; withdrawals are <b style="color:#c15c1e;">(−)</b> spending.</span>
+          <span class="stmt-type-title">Expenses shown as −</span>
+          <span class="stmt-type-desc">Spending is negative <b style="color:#c15c1e;">(−)</b>; money in is positive <b style="color:#16a34a;">(+)</b>. Typical of bank / debit statements.</span>
         </span>
       </button>
     </div>
@@ -2692,20 +2692,20 @@ function doGet(e) {
       <button class="btn btn-primary" onclick="doImport()">Import →</button>
     </div>
     <div class="mapper">
-      <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Statement type</label>
+      <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">How are expenses shown?</label>
       <div class="stmt-type-choice">
         <label class="stmt-type-opt">
           <input type="radio" name="stmt-type" value="credit" checked onchange="onStmtTypeChange()">
           <span class="stmt-type-card">
-            <span class="stmt-type-title">Credit card</span>
-            <span class="stmt-type-desc">Purchases (spending) are <b style="color:#c15c1e;">(+)</b>; payments &amp; refunds are credits <b style="color:#16a34a;">(−)</b>.</span>
+            <span class="stmt-type-title">Expenses shown as +</span>
+            <span class="stmt-type-desc">Spending is positive <b style="color:#c15c1e;">(+)</b>; money in is negative <b style="color:#16a34a;">(−)</b>. Typical of credit-card statements.</span>
           </span>
         </label>
         <label class="stmt-type-opt">
           <input type="radio" name="stmt-type" value="bank" onchange="onStmtTypeChange()">
           <span class="stmt-type-card">
-            <span class="stmt-type-title">Bank account (debit / chequing)</span>
-            <span class="stmt-type-desc">Deposits are <b style="color:#16a34a;">(+)</b> income; withdrawals are <b style="color:#c15c1e;">(−)</b> spending.</span>
+            <span class="stmt-type-title">Expenses shown as −</span>
+            <span class="stmt-type-desc">Spending is negative <b style="color:#c15c1e;">(−)</b>; money in is positive <b style="color:#16a34a;">(+)</b>. Typical of bank / debit statements.</span>
           </span>
         </label>
       </div>
@@ -2854,20 +2854,20 @@ function doGet(e) {
         <div style="font-size:12.5px;color:var(--muted);" id="pdf-parse-summary"></div>
         <button class="btn btn-ghost btn-sm" onclick="resetPdfEdits()" id="pdf-reset-edits-btn" style="display:none;font-size:11px;padding:3px 9px;">Reset edits</button>
       </div>
-      <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Statement type</label>
+      <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">How are expenses shown?</label>
       <div class="stmt-type-choice" style="margin-bottom:14px;">
         <label class="stmt-type-opt">
           <input type="radio" name="pdf-stmt-type" value="credit" checked onchange="parsePdfTransactions()">
           <span class="stmt-type-card">
-            <span class="stmt-type-title">Credit card</span>
-            <span class="stmt-type-desc">Purchases (spending) are <b style="color:#c15c1e;">(+)</b>; payments &amp; refunds are credits <b style="color:#16a34a;">(−)</b>.</span>
+            <span class="stmt-type-title">Expenses shown as +</span>
+            <span class="stmt-type-desc">Spending is positive <b style="color:#c15c1e;">(+)</b>; money in is negative <b style="color:#16a34a;">(−)</b>. Typical of credit-card statements.</span>
           </span>
         </label>
         <label class="stmt-type-opt">
           <input type="radio" name="pdf-stmt-type" value="bank" onchange="parsePdfTransactions()">
           <span class="stmt-type-card">
-            <span class="stmt-type-title">Bank account (debit / chequing)</span>
-            <span class="stmt-type-desc">Deposits are <b style="color:#16a34a;">(+)</b> income; withdrawals are <b style="color:#c15c1e;">(−)</b> spending.</span>
+            <span class="stmt-type-title">Expenses shown as −</span>
+            <span class="stmt-type-desc">Spending is negative <b style="color:#c15c1e;">(−)</b>; money in is positive <b style="color:#16a34a;">(+)</b>. Typical of bank / debit statements.</span>
           </span>
         </label>
       </div>
@@ -7622,7 +7622,7 @@ function parseImportRows() {
     // is mostly about capturing income); on a credit-card statement a credit is a
     // refund unless it looks like payroll. Both are editable per row in the preview.
     const isCredit = refund;
-    const autoIncome = isCredit && isBank; // credit-card credits are refunds, not income
+    const autoIncome = false; // inflows default to refund; user flags income per row in the preview
     valid.push({ date, merchant, amount: amt, refund: isCredit && !autoIncome, category: autoIncome ? null : autoCat(merchant), isIncome: autoIncome });
   });
   return { valid, invalid, mappingIncomplete: false };
@@ -7649,7 +7649,7 @@ function toggleCsvStmtType() {
 function renderCsvStmtSummary() {
   const el = document.getElementById('csv-stmt-summary'); if (!el) return;
   const v = (document.querySelector('input[name="stmt-type"]:checked') || {}).value;
-  el.textContent = v === 'bank' ? 'Bank account (debit / chequing)' : v === 'credit' ? 'Credit card' : '—';
+  el.textContent = v === 'bank' ? 'Expenses shown as − (minus)' : v === 'credit' ? 'Expenses shown as + (plus)' : '—';
 }
 function updateImportPreview() {
   renderCsvStmtSummary();
@@ -7748,7 +7748,7 @@ function renderImportPreview() {
       <td data-label="Date" style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editImportRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Merchant" style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}${curSym}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td data-label="Category" style="padding:3px 6px;"><button type="button" class="imp-sel imp-catbtn" onclick="openPreviewDD(event,${i},false)">${esc(catBtnLabel)}</button>${(t.refund && !isIncome && !isSavings) ? '<span class="refund-badge" style="margin-left:6px;font-size:10px;padding:1px 7px;vertical-align:middle;">↩ Refund</span>' : ''}</td>
+      <td data-label="Category" style="padding:3px 6px;"><button type="button" class="imp-sel imp-catbtn" onclick="openPreviewDD(event,${i},false)">${esc(catBtnLabel)}</button>${(t.refund && !isIncome && !isSavings) ? '<span class="refund-badge" style="margin-left:6px;font-size:10px;padding:1px 7px;vertical-align:middle;cursor:pointer;" onclick="openPreviewDD(event,' + i + ',false)" title="Flag as income or change category">↩ Refund ▾</span>' : ''}</td>
       <td data-label="Person" class="import-preview-person-cell" style="padding:3px 6px;">${personCell}</td>
       <td data-label="" style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
@@ -7931,7 +7931,7 @@ async function doImport() {
       const date = normDate(dateStr);
       if (!date) return;
       const isCredit = refund;
-      const autoIncome = isCredit && isBank; // credit-card credits are refunds, not income
+      const autoIncome = false; // inflows default to refund; user flags income per row in the preview
       parsed.push({ id: uid(), date, merchant, amount: amt, category: null, person, card: cardName, note: '', refund: isCredit && !autoIncome, isIncome: autoIncome });
     });
   }
@@ -10112,7 +10112,7 @@ function parsePdfTransactions() {
     t.id     = uid();
     t.note   = '';
     t.refund = t.amount < 0;
-    t.isIncome = t.refund && isBank; // bank/chequing deposits are income; credit-card credits are refunds
+    t.isIncome = false; // inflows default to refund; user flags income per row in the preview
     if (t.isIncome) { t.refund = false; t.category = null; }
   });
 
@@ -10194,7 +10194,7 @@ function renderPdfPreview() {
       <td data-label="Date" style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editPdfRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Merchant" style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editPdfRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td data-label="Amount" style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}${curSym}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editPdfRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td data-label="Category" style="padding:3px 6px;"><button type="button" class="imp-sel imp-catbtn" onclick="openPreviewDD(event,${i},true)">${esc(catBtnLabel)}</button>${(t.refund && !isIncome && !isSavings) ? '<span class="refund-badge" style="margin-left:6px;font-size:10px;padding:1px 7px;vertical-align:middle;">↩ Refund</span>' : ''}</td>
+      <td data-label="Category" style="padding:3px 6px;"><button type="button" class="imp-sel imp-catbtn" onclick="openPreviewDD(event,${i},true)">${esc(catBtnLabel)}</button>${(t.refund && !isIncome && !isSavings) ? '<span class="refund-badge" style="margin-left:6px;font-size:10px;padding:1px 7px;vertical-align:middle;cursor:pointer;" onclick="openPreviewDD(event,' + i + ',true)" title="Flag as income or change category">↩ Refund ▾</span>' : ''}</td>
       <td data-label="Person" style="padding:3px 6px;"><select class="imp-sel" onchange="editPdfRow(${i},'person',this.value)" title="Whose transaction" aria-label="Person">${_pdfPeople.map(p => `<option value="${esc(p)}"${(t.person || pdfGlobalPerson) === p ? ' selected' : ''}>${esc(p)}</option>`).join('')}</select></td>
       <td data-label="" style="padding:3px 4px;text-align:center;"><button onclick="deletePdfRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#b91c1c';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
