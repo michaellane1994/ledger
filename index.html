@@ -583,6 +583,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .ms-quick{display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px;border-bottom:1px solid var(--border);}
 .ms-quick-btn{font-size:11px;font-weight:600;padding:3px 10px;border:1px solid var(--border);border-radius:100px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;}
 .ms-quick-btn:hover{border-color:var(--accent);color:var(--accent);}
+.ms-quick-reset{margin-left:auto;color:var(--faint);}
 .ms-drop-done button{background:var(--accent);color:#fff;border:none;border-radius:100px;padding:6px 18px;font-size:13px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;}
 .ms-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:499;display:none;}
 @media (max-width:600px){
@@ -6294,6 +6295,7 @@ let _msLastItems = {};
 function _msSetFor(id){ return id === 'ms-cat' ? txnCatFilter : id === 'ms-card' ? txnCardFilter : id === 'ms-inc-type' ? incTypeFilter : id === 'ms-inc-month' ? incMonthFilter : txnMonthFilter; }
 function _msRerender(id){ if (id.startsWith('ms-inc')) renderIncome(); else renderTxns(); }
 function msMonthAll(id){ const fs = _msSetFor(id); (_msLastItems[id] || []).forEach(it => fs.add(it.value)); _msRerender(id); }
+function msMonthReset(id){ const fs = _msSetFor(id); fs.clear(); _msRerender(id); }
 function msMonthYear(id, yr){
   const fs = _msSetFor(id); const items = _msLastItems[id] || [];
   const yrMonths = items.filter(it => String(it.value).slice(0,4) === yr).map(it => it.value);
@@ -6314,6 +6316,7 @@ function buildMsDrop(id, items, filterSet) {
     const years = [...new Set(items.map(i => String(i.value).slice(0,4)))].sort().reverse();
     quick = '<div class="ms-quick"><button type="button" class="ms-quick-btn" onclick="event.stopPropagation();msMonthAll(\'' + id + '\')">All months</button>'
       + years.map(y => '<button type="button" class="ms-quick-btn" onclick="event.stopPropagation();msMonthYear(\'' + id + '\',\'' + y + '\')">' + y + '</button>').join('')
+      + '<button type="button" class="ms-quick-btn ms-quick-reset" onclick="event.stopPropagation();msMonthReset(\'' + id + '\')" title="Clear month filter">↺ Reset</button>'
       + '</div>';
   }
   drop.innerHTML = doneHeader + quick + items.map(({value, label}) => {
