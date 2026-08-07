@@ -992,6 +992,12 @@ body.goals-editing .g-tile{border-style:dashed;}
 .goals-addform label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
 .goals-addform input{font-family:'Inter',sans-serif;font-size:13px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);outline:none;}
 .goals-addform input:focus{border-color:var(--accent);}
+.goals-addform select{font-family:'Inter',sans-serif;font-size:13px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);outline:none;}
+.goals-addform select:focus{border-color:var(--accent);}
+.g-person{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);margin-top:5px;}
+.g-person.joint{color:var(--accent);}
+.g-name-edit{cursor:pointer;}
+.g-name-edit:hover{text-decoration:underline dotted;text-underline-offset:2px;}
 .goals-addform .gf.nm input{width:160px;}
 .goals-addform .gf.am input{width:96px;}
 @media (max-width:600px){
@@ -1520,6 +1526,7 @@ body.goals-editing .g-tile{border-style:dashed;}
             <div class="gf nm"><label>Goal name</label><input id="goal-f-name" placeholder="e.g. Wedding fund"></div>
             <div class="gf am"><label>Target</label><input id="goal-f-target" type="number" min="0" step="100" placeholder="5000"></div>
             <div class="gf am"><label>Saved so far</label><input id="goal-f-saved" type="number" min="0" step="100" placeholder="0"></div>
+            <div class="gf"><label>Person</label><select id="goal-f-person"></select></div>
             <button class="btn btn-primary btn-sm" onclick="saveNewGoal()">Add goal</button>
             <button class="btn btn-ghost btn-sm" onclick="openAddGoal()">Cancel</button>
           </div>
@@ -4055,14 +4062,22 @@ function _gmoney(n){
 function _collectGoals(){
   const list = [];
   (savAccts || []).forEach(a => {
-    if (a.goal && a.goal > 0) list.push({ key:'acct:'+a.id, name:a.name, sub:(ACCT_TYPES[a.type]||a.type)+' · account', color:(ACCT_COLORS[a.type]||'#2f5a44'), saved:a.balance||0, target:a.goal, std:false });
+    if (a.goal && a.goal > 0) list.push({ key:'acct:'+a.id, name:a.name, sub:(ACCT_TYPES[a.type]||a.type)+' · account', color:(ACCT_COLORS[a.type]||'#2f5a44'), saved:a.balance||0, target:a.goal, std:false, person:a.person||'' });
   });
-  _stdGoals.forEach(g => list.push({ key:'std:'+g.id, name:g.name, sub:'Custom goal', color:'var(--accent)', saved:g.saved||0, target:g.target, std:true }));
+  _stdGoals.forEach(g => list.push({ key:'std:'+g.id, name:g.name, sub:'Custom goal', color:'var(--accent)', saved:g.saved||0, target:g.target, std:true, person:g.person||'' }));
   const idx = k => { const i = _goalsOrder.indexOf(k); return i < 0 ? 9999 : i; };
   list.sort((a,b) => idx(a.key) - idx(b.key));
   return list;
 }
 const _GOAL_HIDE_SVG = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10 10 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.2 3.2m-6.7-1.1a3 3 0 1 1-4.2-4.2"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+const _GOAL_USER_SVG='<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+const _GOAL_JOINT_SVG='<svg viewBox="0 0 24 24" width="13" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-3-3.87"/><path d="M8 21v-2a4 4 0 0 1 3-3.87"/><circle cx="9" cy="7" r="3"/><circle cx="17" cy="8" r="2.5"/></svg>';
+function _goalPeople(){
+  let ppl = [...new Set(Array.from(document.querySelectorAll('input[name="person"]')).map(r => r.value).filter(Boolean))];
+  if (!ppl.length) ppl = ['Michael','Lili'];
+  if (typeof showJoint !== 'undefined' && showJoint && !ppl.includes('Joint')) ppl.push('Joint');
+  return ppl;
+}
 function _goalRing(pct, color){
   const C = 2 * Math.PI * 42, off = (C * (1 - Math.min(pct, 1))).toFixed(1);
   return '<div class="g-ring-wrap"><svg class="g-ring" viewBox="0 0 96 96"><circle class="g-ring-track" cx="48" cy="48" r="42"></circle><circle class="g-ring-fill" cx="48" cy="48" r="42" data-off="'+off+'" style="stroke:'+color+';stroke-dasharray:'+C.toFixed(1)+';stroke-dashoffset:'+C.toFixed(1)+'"></circle></svg><div class="g-ring-center">'+(pct>=1?'<div class="g-ring-check">✓</div>':'<div class="g-ring-pct">'+Math.round(pct*100)+'<small>%</small></div>')+'</div></div>';
@@ -4083,10 +4098,11 @@ function renderSavingsGoals(){
       +   (g.std ? '<button class="g-ctrl rm" title="Remove goal" onclick="removeStdGoal(\''+g.key+'\')">✕</button>' : '')
       + '</div>'
       + _goalRing(pct, g.color)
-      + '<div class="g-name">'+esc(g.name)+'</div>'
+      + '<div class="g-name g-name-edit" title="Rename goal" onclick="renameGoal(\''+g.key+'\')">'+esc(g.name)+'</div>'
       + amt
       + '<div class="g-togo '+(done?'reached':'togo')+'">'+(done?'Reached 🎉':_gmoney(g.target-g.saved)+' to go')+'</div>'
       + '<div class="g-chip'+(g.std?' custom':'')+'">'+(g.std?'✦ Custom goal':'<span class="g-dot" style="background:'+g.color+'"></span>'+esc(g.sub))+'</div>'
+      + (g.person ? '<div class="g-person'+(g.person==='Joint'?' joint':'')+'">'+(g.person==='Joint'?_GOAL_JOINT_SVG:_GOAL_USER_SVG)+'<span>'+esc(g.person)+'</span></div>' : '')
       + '</div>';
   }).join('');
   const addTile = '<div class="g-tile add" onclick="openAddGoal()"><div class="g-plus">+</div><div>Add a goal</div></div>';
@@ -4111,16 +4127,40 @@ function moveGoal(k, dir){
   _goalsOrder = vis.concat(hid);
   _saveGoalsState(); renderSavingsGoals();
 }
-function openAddGoal(){ const f = document.getElementById('goals-addform'); if (f) f.style.display = (f.style.display === 'flex') ? 'none' : 'flex'; }
+function openAddGoal(){
+  const f = document.getElementById('goals-addform'); if (!f) return;
+  const showing = f.style.display !== 'flex';
+  if (showing) {
+    const sel = document.getElementById('goal-f-person');
+    if (sel) { const ppl = _goalPeople(); sel.innerHTML = ppl.map(p => '<option value="'+esc(p)+'">'+esc(p)+'</option>').join(''); if (ppl.includes('Joint')) sel.value = 'Joint'; }
+  }
+  f.style.display = showing ? 'flex' : 'none';
+}
 function saveNewGoal(){
   const name = (document.getElementById('goal-f-name').value || '').trim();
   const target = parseFloat(document.getElementById('goal-f-target').value);
   const saved  = parseFloat(document.getElementById('goal-f-saved').value) || 0;
   if (!name || !(target > 0)) { alert('Enter a goal name and a target amount.'); return; }
-  _stdGoals.push({ id: uid(), name, target, saved });
+  const person = (document.getElementById('goal-f-person') || {}).value || '';
+  _stdGoals.push({ id: uid(), name, target, saved, person });
   ['goal-f-name','goal-f-target','goal-f-saved'].forEach(i => document.getElementById(i).value = '');
   document.getElementById('goals-addform').style.display = 'none';
   _saveGoalsState(); renderSavingsGoals();
+}
+function renameGoal(k){
+  if (k.indexOf('std:') === 0) {
+    const id = k.slice(4); const g = _stdGoals.find(x => String(x.id) === id); if (!g) return;
+    const v = prompt('Rename goal:', g.name); if (v === null) return;
+    const nm = v.trim(); if (!nm) return;
+    g.name = nm; _saveGoalsState(); renderSavingsGoals();
+  } else {
+    const id = k.slice(5); const a = (savAccts || []).find(x => String(x.id) === id); if (!a) return;
+    const v = prompt('Rename savings account:', a.name); if (v === null) return;
+    const nm = v.trim(); if (!nm) return;
+    a.name = nm; persist(); renderSavingsGoals();
+    if (typeof renderSavings === 'function') renderSavings();
+    if (typeof autoPush === 'function') autoPush();
+  }
 }
 function updateStdSaved(k){
   const id = k.slice(4); const g = _stdGoals.find(x => String(x.id) === id); if (!g) return;
@@ -9499,7 +9539,7 @@ async function syncToSheets(btn) {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed] } }),
+      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed], stdGoals: _stdGoals, goalsHidden: [..._goalsHidden], goalsOrder: _goalsOrder } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -9597,6 +9637,9 @@ async function syncFromSheets(btn) {
       localStorage.setItem('l3_labels', JSON.stringify(labels));
       recurringDismissed = new Set(Array.isArray(data.settings?.recurringDismissed) ? data.settings.recurringDismissed : []);
       localStorage.setItem('l3_recurring_dismissed', JSON.stringify([...recurringDismissed]));
+      if (Array.isArray(data.settings?.stdGoals))    { _stdGoals    = data.settings.stdGoals;               localStorage.setItem('l3_std_goals',    JSON.stringify(_stdGoals)); }
+      if (Array.isArray(data.settings?.goalsHidden)) { _goalsHidden = new Set(data.settings.goalsHidden);   localStorage.setItem('l3_goals_hidden', JSON.stringify([..._goalsHidden])); }
+      if (Array.isArray(data.settings?.goalsOrder))  { _goalsOrder  = data.settings.goalsOrder;             localStorage.setItem('l3_goals_order',  JSON.stringify(_goalsOrder)); }
       // Config editable in Settings — joint toggle, income types, savings types. (People
       // are fixed on this site, so nothing to sync there.) Backward-compat: only overwrite
       // when the Sheet carries the field, so an older Sheet doesn't wipe local config.
@@ -9787,7 +9830,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed] } }),
+        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed], stdGoals: _stdGoals, goalsHidden: [..._goalsHidden], goalsOrder: _goalsOrder } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
