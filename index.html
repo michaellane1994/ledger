@@ -956,8 +956,12 @@ textarea,select{color:var(--ink);}
 .g-overall-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:7px;}
 .g-overall-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600;}
 .g-overall-pct{font-family:var(--num);font-size:14px;font-weight:400;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
-.g-overall-bar{height:9px;background:var(--bg);border:1px solid var(--border);border-radius:99px;overflow:hidden;}
-.g-overall-fill{height:100%;background:var(--accent);border-radius:99px;width:0;transition:width .7s cubic-bezier(.4,0,.2,1);}
+.g-overall-bar{position:relative;height:9px;background:var(--bg);border:1px solid var(--border);border-radius:99px;overflow:hidden;}
+.g-overall-fill{position:absolute;left:0;top:0;height:100%;background:var(--accent);width:0;transition:width .7s cubic-bezier(.4,0,.2,1);}
+.g-overall-gap{position:absolute;right:0;top:0;height:100%;background-color:var(--bg);background-image:repeating-linear-gradient(45deg,var(--border-2) 0,var(--border-2) 1.5px,transparent 1.5px,transparent 5px);}
+.g-overall-tgt{cursor:pointer;border-bottom:1px dashed var(--border-2);}
+.g-overall-cap{display:flex;align-items:center;gap:6px;margin-top:7px;font-size:11px;color:var(--muted);}
+.g-overall-cap i{flex:none;width:20px;height:9px;border-radius:3px;border:1px solid var(--border);background-color:var(--bg);background-image:repeating-linear-gradient(45deg,var(--border-2) 0,var(--border-2) 1.5px,transparent 1.5px,transparent 5px);}
 .g-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:11px;}
 .g-tile{position:relative;border:1px solid var(--border);border-radius:14px;padding:16px 12px 13px;background:var(--surface);display:flex;flex-direction:column;align-items:center;text-align:center;transition:transform .16s ease,box-shadow .2s ease,border-color .16s;}
 .g-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--border-2);}
@@ -4056,11 +4060,13 @@ function toggleFvBonus() {
 let _stdGoals    = JSON.parse(localStorage.getItem('l3_std_goals')    || '[]');
 let _goalsHidden = new Set(JSON.parse(localStorage.getItem('l3_goals_hidden') || '[]'));
 let _goalsOrder  = JSON.parse(localStorage.getItem('l3_goals_order')  || '[]');
+let _goalsTotalTarget = parseFloat(localStorage.getItem('l3_goals_total_target')) || 0;
 let _goalsEdit   = false;
 function _saveGoalsState(){
   localStorage.setItem('l3_std_goals',    JSON.stringify(_stdGoals));
   localStorage.setItem('l3_goals_hidden', JSON.stringify([..._goalsHidden]));
   localStorage.setItem('l3_goals_order',  JSON.stringify(_goalsOrder));
+  localStorage.setItem('l3_goals_total_target', String(_goalsTotalTarget));
 }
 function _gmoney(n){
   let s = '$';
@@ -4117,10 +4123,19 @@ function renderSavingsGoals(){
   }).join('');
   const addTile = '<div class="g-tile add" onclick="openAddGoal()"><div class="g-plus">+</div><div>Add a goal</div></div>';
   const tSaved  = all.reduce((s,g)=>s+g.saved,0);
-  const tTarget = all.reduce((s,g)=>s+g.target,0);
-  const oPct    = tTarget > 0 ? Math.min(tSaved/tTarget, 1) : 0;
-  const summary = all.length ? '<div class="g-summary"><div class="g-stat"><b>'+_gmoney(tSaved)+'</b><span>Saved</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+_gmoney(tTarget)+'</b><span>Target</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+all.length+'</b><span>Goals</span></div></div>'
-    + '<div class="g-overall"><div class="g-overall-head"><span class="g-overall-lbl">Overall progress</span><span class="g-overall-pct">'+_gmoney(tSaved)+' of '+_gmoney(tTarget)+' · '+Math.round(oPct*100)+'%</span></div><div class="g-overall-bar"><div class="g-overall-fill" data-w="'+(oPct*100).toFixed(1)+'%"></div></div></div>' : '';
+  const tGoals  = all.reduce((s,g)=>s+g.target,0);
+  const oTarget = _goalsTotalTarget > 0 ? _goalsTotalTarget : tGoals;
+  const gap     = Math.max(0, oTarget - tGoals);
+  const span    = Math.max(oTarget, tGoals, 1);
+  const savedW  = (Math.min(tSaved, span) / span * 100).toFixed(2);
+  const gapW    = (gap / span * 100).toFixed(2);
+  const oPct    = oTarget > 0 ? Math.round(Math.min(tSaved/oTarget, 1) * 100) : 0;
+  const tgtSpan = '<span class="g-overall-tgt" onclick="setOverallTarget()" title="Set your combined savings target">'+_gmoney(oTarget)+'</span>';
+  const gapCap  = gap > 0 ? '<div class="g-overall-cap"><i></i><span>'+_gmoney(gap)+' unspecified · not yet assigned to a goal</span></div>' : '';
+  const summary = all.length ? '<div class="g-summary"><div class="g-stat"><b>'+_gmoney(tSaved)+'</b><span>Saved</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+_gmoney(tGoals)+'</b><span>Goal total</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+all.length+'</b><span>Goals</span></div></div>'
+    + '<div class="g-overall"><div class="g-overall-head"><span class="g-overall-lbl">Overall progress</span><span class="g-overall-pct">'+_gmoney(tSaved)+' of '+tgtSpan+' · '+oPct+'%</span></div>'
+    + '<div class="g-overall-bar"><div class="g-overall-fill" data-w="'+savedW+'%"></div>'+(gap > 0 ? '<div class="g-overall-gap" style="width:'+gapW+'%"></div>' : '')+'</div>'
+    + gapCap + '</div>' : '';
   const hiddenRow = hidden.length ? '<div class="g-hidden"><span class="g-hidden-lbl">Hidden</span>'+hidden.map(g=>'<span class="g-hidden-pill">'+esc(g.name)+'<button onclick="showGoalTile(\''+g.key+'\')">Show</button></span>').join('')+'</div>' : '';
   el.innerHTML = summary + '<div class="g-grid">'+tiles+addTile+'</div>' + hiddenRow;
   requestAnimationFrame(() => { el.querySelectorAll('.g-ring-fill').forEach(c => c.style.strokeDashoffset = c.dataset.off); const ob = el.querySelector('.g-overall-fill'); if (ob) ob.style.width = ob.dataset.w; });
@@ -4181,6 +4196,16 @@ function renameGoal(k){
     if (typeof renderSavings === 'function') renderSavings();
     if (typeof autoPush === 'function') autoPush();
   }
+}
+function setOverallTarget(){
+  const cur = _goalsTotalTarget > 0 ? _goalsTotalTarget : '';
+  const v = prompt('Set your combined savings target (leave blank to just track the sum of your goals):', cur);
+  if (v === null) return;
+  const t = v.trim();
+  if (t === '') { _goalsTotalTarget = 0; }
+  else { const n = parseFloat(t); if (!isFinite(n) || n < 0) { alert('Enter a valid amount.'); return; } _goalsTotalTarget = n; }
+  _saveGoalsState(); renderSavingsGoals();
+  if (typeof autoPush === 'function') autoPush();
 }
 function updateGoalTarget(k){
   if (k.indexOf('std:') === 0) {
@@ -9572,7 +9597,7 @@ async function syncToSheets(btn) {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed], stdGoals: _stdGoals, goalsHidden: [..._goalsHidden], goalsOrder: _goalsOrder } }),
+      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed], stdGoals: _stdGoals, goalsHidden: [..._goalsHidden], goalsOrder: _goalsOrder, goalsTotalTarget: _goalsTotalTarget } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -9673,6 +9698,7 @@ async function syncFromSheets(btn) {
       if (Array.isArray(data.settings?.stdGoals))    { _stdGoals    = data.settings.stdGoals;               localStorage.setItem('l3_std_goals',    JSON.stringify(_stdGoals)); }
       if (Array.isArray(data.settings?.goalsHidden)) { _goalsHidden = new Set(data.settings.goalsHidden);   localStorage.setItem('l3_goals_hidden', JSON.stringify([..._goalsHidden])); }
       if (Array.isArray(data.settings?.goalsOrder))  { _goalsOrder  = data.settings.goalsOrder;             localStorage.setItem('l3_goals_order',  JSON.stringify(_goalsOrder)); }
+      if (typeof data.settings?.goalsTotalTarget === 'number') { _goalsTotalTarget = data.settings.goalsTotalTarget; localStorage.setItem('l3_goals_total_target', String(_goalsTotalTarget)); }
       // Config editable in Settings — joint toggle, income types, savings types. (People
       // are fixed on this site, so nothing to sync there.) Backward-compat: only overwrite
       // when the Sheet carries the field, so an older Sheet doesn't wipe local config.
@@ -9863,7 +9889,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed], stdGoals: _stdGoals, goalsHidden: [..._goalsHidden], goalsOrder: _goalsOrder } }),
+        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed], stdGoals: _stdGoals, goalsHidden: [..._goalsHidden], goalsOrder: _goalsOrder, goalsTotalTarget: _goalsTotalTarget } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
