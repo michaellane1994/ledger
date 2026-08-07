@@ -1016,6 +1016,12 @@ body.goals-editing .g-tile{border-style:dashed;}
 .g-person.joint{color:var(--accent);}
 .g-name-edit{cursor:pointer;}
 .g-name-edit:hover{text-decoration:underline dotted;text-underline-offset:2px;}
+.g-name-inp{font-family:'Inter',sans-serif;font-weight:600;font-size:13px;color:var(--ink);text-align:center;width:100%;max-width:150px;border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:var(--surface);outline:none;}
+.g-name-inp:focus{border-color:var(--accent);}
+.g-num-inp{font-family:var(--num);font-size:12px;color:var(--ink);width:76px;text-align:center;border:1px solid var(--border);border-radius:6px;padding:2px 4px;background:var(--surface);outline:none;font-variant-numeric:tabular-nums;}
+.g-num-inp:focus{border-color:var(--accent);}
+.g-editrow{display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap;}
+.g-editrow > span{color:var(--faint);}
 .goals-addform .gf.nm input{width:160px;}
 .goals-addform .gf.am input{width:96px;}
 @media (max-width:600px){
@@ -4111,9 +4117,9 @@ function renderSavingsGoals(){
   const tiles = visible.map(g => {
     const pct = g.target > 0 ? g.saved/g.target : 0, done = pct >= 1;
     const ed = _goalsEdit;
-    const savedTxt  = ed ? '<span class="g-ed" onclick="'+(g.std?'updateStdSaved':'updateAcctBalance')+'(\''+g.key+'\')" title="Edit current balance">'+_gmoney(g.saved)+'</span>' : _gmoney(g.saved);
-    const targetTxt = ed ? '<span class="g-ed" onclick="updateGoalTarget(\''+g.key+'\')" title="Edit goal target">'+_gmoney(g.target)+'</span>' : _gmoney(g.target);
-    const amt = '<div class="g-amt">'+savedTxt+' of '+targetTxt+'</div>';
+    const savedTxt  = ed ? '<input class="g-num-inp" type="number" step="1" min="0" value="'+(g.saved||0)+'" onchange="setGoalSaved(\''+g.key+'\',this.value)" title="Saved / current balance">' : _gmoney(g.saved);
+    const targetTxt = ed ? '<input class="g-num-inp" type="number" step="1" min="0" value="'+(g.target||0)+'" onchange="setGoalTarget(\''+g.key+'\',this.value)" title="Target amount">' : _gmoney(g.target);
+    const amt = ed ? '<div class="g-amt g-editrow">'+savedTxt+'<span>of</span>'+targetTxt+'</div>' : '<div class="g-amt">'+savedTxt+' of '+targetTxt+'</div>';
     return '<div class="g-tile'+(done?' done':'')+(ed?'':' g-tile-link')+'"'+(ed?'':' onclick="goNav(\'savings\')" title="Open in Savings"')+'>'
       + '<div class="g-ctrls">'
       +   '<button class="g-ctrl" title="Move left" onclick="moveGoal(\''+g.key+'\',-1)">‹</button>'
@@ -4122,7 +4128,7 @@ function renderSavingsGoals(){
       +   (g.std ? '<button class="g-ctrl rm" title="Remove goal" onclick="removeStdGoal(\''+g.key+'\')">✕</button>' : '')
       + '</div>'
       + _goalRing(pct, g.color)
-      + (ed ? '<div class="g-name g-name-edit" title="Rename goal" onclick="renameGoal(\''+g.key+'\')">'+esc(g.name)+'</div>' : '<div class="g-name">'+esc(g.name)+'</div>')
+      + (ed ? '<input class="g-name-inp" value="'+esc(g.name)+'" onchange="renameGoalInline(\''+g.key+'\',this.value)" title="Rename goal">' : '<div class="g-name">'+esc(g.name)+'</div>')
       + amt
       + '<div class="g-togo '+(done?'reached':'togo')+'">'+(done?'Reached 🎉':_gmoney(g.target-g.saved)+' to go')+'</div>'
       + '<div class="g-chip'+(g.std?' custom':'')+'">'+(g.std?'✦ Custom goal':'<span class="g-dot" style="background:'+g.color+'"></span>'+esc(g.sub))+'</div>'
@@ -4192,20 +4198,39 @@ function saveNewGoal(){
   if (typeof renderSavings === 'function') renderSavings();
   if (typeof autoPush === 'function') autoPush();
 }
-function renameGoal(k){
+function renameGoalInline(k, val){
+  const nm = (val || '').trim(); if (!nm) { renderSavingsGoals(); return; }
   if (k.indexOf('std:') === 0) {
     const id = k.slice(4); const g = _stdGoals.find(x => String(x.id) === id); if (!g) return;
-    const v = prompt('Rename goal:', g.name); if (v === null) return;
-    const nm = v.trim(); if (!nm) return;
-    g.name = nm; _saveGoalsState(); renderSavingsGoals();
+    g.name = nm; _saveGoalsState();
   } else {
     const id = k.slice(5); const a = (savAccts || []).find(x => String(x.id) === id); if (!a) return;
-    const v = prompt('Rename savings account:', a.name); if (v === null) return;
-    const nm = v.trim(); if (!nm) return;
-    a.name = nm; persist(); renderSavingsGoals();
-    if (typeof renderSavings === 'function') renderSavings();
-    if (typeof autoPush === 'function') autoPush();
+    a.name = nm; persist(); if (typeof renderSavings === 'function') renderSavings();
   }
+  renderSavingsGoals(); if (typeof autoPush === 'function') autoPush();
+}
+function setGoalTarget(k, val){
+  const n = parseFloat(val); if (!isFinite(n) || n <= 0) { renderSavingsGoals(); return; }
+  if (k.indexOf('std:') === 0) {
+    const id = k.slice(4); const g = _stdGoals.find(x => String(x.id) === id); if (!g) return;
+    g.target = n; _saveGoalsState();
+  } else {
+    const id = k.slice(5); const a = (savAccts || []).find(x => String(x.id) === id); if (!a) return;
+    a.goal = n; persist(); if (typeof renderSavings === 'function') renderSavings();
+  }
+  renderSavingsGoals(); if (typeof autoPush === 'function') autoPush();
+}
+function setGoalSaved(k, val){
+  const n = parseFloat(val); if (!isFinite(n) || n < 0) { renderSavingsGoals(); return; }
+  if (k.indexOf('std:') === 0) {
+    const id = k.slice(4); const g = _stdGoals.find(x => String(x.id) === id); if (!g) return;
+    g.saved = n; _saveGoalsState();
+  } else {
+    const id = k.slice(5); const a = (savAccts || []).find(x => String(x.id) === id); if (!a) return;
+    const fromContribs = (contribs || []).filter(c => c.accountId === id).reduce((s, c) => s + (c.type === 'contribution' ? c.amount : -c.amount), 0);
+    a.balance = n; a.baseBalance = n - fromContribs; persist(); if (typeof renderSavings === 'function') renderSavings();
+  }
+  renderSavingsGoals(); if (typeof autoPush === 'function') autoPush();
 }
 function setSavingsGoal(val){
   const t = (val || '').trim();
@@ -4213,46 +4238,6 @@ function setSavingsGoal(val){
   else { const n = parseFloat(t); if (!isFinite(n) || n < 0) { renderSavingsGoals(); return; } _goalsTotalTarget = n; }
   _saveGoalsState(); renderSavingsGoals();
   if (typeof autoPush === 'function') autoPush();
-}
-function setOverallTarget(){
-  const cur = _goalsTotalTarget > 0 ? _goalsTotalTarget : '';
-  const v = prompt('Set your combined savings target (leave blank to just track the sum of your goals):', cur);
-  if (v === null) return;
-  const t = v.trim();
-  if (t === '') { _goalsTotalTarget = 0; }
-  else { const n = parseFloat(t); if (!isFinite(n) || n < 0) { alert('Enter a valid amount.'); return; } _goalsTotalTarget = n; }
-  _saveGoalsState(); renderSavingsGoals();
-  if (typeof autoPush === 'function') autoPush();
-}
-function updateGoalTarget(k){
-  if (k.indexOf('std:') === 0) {
-    const id = k.slice(4); const g = _stdGoals.find(x => String(x.id) === id); if (!g) return;
-    const v = prompt('Target amount for "' + g.name + '":', g.target); if (v === null) return;
-    const n = parseFloat(v); if (isFinite(n) && n > 0) { g.target = n; _saveGoalsState(); renderSavingsGoals(); }
-  } else {
-    const id = k.slice(5); const a = (savAccts || []).find(x => String(x.id) === id); if (!a) return;
-    const v = prompt('Target amount for "' + a.name + '":', a.goal); if (v === null) return;
-    const n = parseFloat(v); if (isFinite(n) && n > 0) { a.goal = n; persist(); renderSavingsGoals();
-      if (typeof renderSavings === 'function') renderSavings();
-      if (typeof autoPush === 'function') autoPush(); }
-  }
-}
-function updateAcctBalance(k){
-  const id = k.slice(5); const a = (savAccts || []).find(x => String(x.id) === id); if (!a) return;
-  const v = prompt('Current balance for "' + a.name + '":', a.balance); if (v === null) return;
-  const n = parseFloat(v); if (!isFinite(n) || n < 0) return;
-  const fromContribs = (contribs || []).filter(c => c.accountId === id).reduce((s, c) => s + (c.type === 'contribution' ? c.amount : -c.amount), 0);
-  a.balance = n; a.baseBalance = n - fromContribs;
-  persist(); renderSavingsGoals();
-  if (typeof renderSavings === 'function') renderSavings();
-  if (typeof autoPush === 'function') autoPush();
-}
-function updateStdSaved(k){
-  const id = k.slice(4); const g = _stdGoals.find(x => String(x.id) === id); if (!g) return;
-  const v = prompt('Amount saved so far for "' + g.name + '":', g.saved);
-  if (v === null) return;
-  const n = parseFloat(v);
-  if (isFinite(n) && n >= 0) { g.saved = n; _saveGoalsState(); renderSavingsGoals(); }
 }
 
 function renderCashflowChart() {
