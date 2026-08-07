@@ -580,6 +580,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 /* "Done" header only shown in the mobile bottom-sheet form of a filter. */
 .ms-drop-done{display:none;position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:11px 16px;justify-content:space-between;align-items:center;z-index:1;}
 .ms-drop-done-title{font-weight:600;font-size:13px;color:var(--ink);}
+.ms-quick{display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px;border-bottom:1px solid var(--border);}
+.ms-quick-btn{font-size:11px;font-weight:600;padding:3px 10px;border:1px solid var(--border);border-radius:100px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;}
+.ms-quick-btn:hover{border-color:var(--accent);color:var(--accent);}
 .ms-drop-done button{background:var(--accent);color:#fff;border:none;border-radius:100px;padding:6px 18px;font-size:13px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;}
 .ms-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:499;display:none;}
 @media (max-width:600px){
@@ -6257,13 +6260,33 @@ function toggleIncMs(id, value) {
   if (fs.has(value)) fs.delete(value); else fs.add(value);
   renderIncome();
 }
+let _msLastItems = {};
+function _msSetFor(id){ return id === 'ms-cat' ? txnCatFilter : id === 'ms-card' ? txnCardFilter : id === 'ms-inc-type' ? incTypeFilter : id === 'ms-inc-month' ? incMonthFilter : txnMonthFilter; }
+function _msRerender(id){ if (id.startsWith('ms-inc')) renderIncome(); else renderTxns(); }
+function msMonthAll(id){ const fs = _msSetFor(id); (_msLastItems[id] || []).forEach(it => fs.add(it.value)); _msRerender(id); }
+function msMonthYear(id, yr){
+  const fs = _msSetFor(id); const items = _msLastItems[id] || [];
+  const yrMonths = items.filter(it => String(it.value).slice(0,4) === yr).map(it => it.value);
+  const exactly = fs.size === yrMonths.length && yrMonths.every(v => fs.has(v));
+  fs.clear();
+  if (exactly) items.forEach(it => fs.add(it.value)); else yrMonths.forEach(v => fs.add(v));
+  _msRerender(id);
+}
 function buildMsDrop(id, items, filterSet) {
   const drop = document.getElementById(id + '-drop');
   if (!drop) return;
+  _msLastItems[id] = items;
   const handler = id.startsWith('ms-inc') ? 'toggleIncMs' : 'toggleMsOpt';
   const titles = {'ms-cat':'Categories','ms-card':'Cards','ms-month':'Months','ms-inc-type':'Income types','ms-inc-month':'Months'};
   const doneHeader = `<div class="ms-drop-done"><span class="ms-drop-done-title">${titles[id] || 'Filter'}</span><button type="button" onclick="event.stopPropagation();closeAllMs();">Done</button></div>`;
-  drop.innerHTML = doneHeader + items.map(({value, label}) => {
+  let quick = '';
+  if (id === 'ms-month' || id === 'ms-inc-month') {
+    const years = [...new Set(items.map(i => String(i.value).slice(0,4)))].sort().reverse();
+    quick = '<div class="ms-quick"><button type="button" class="ms-quick-btn" onclick="event.stopPropagation();msMonthAll(\'' + id + '\')">All months</button>'
+      + years.map(y => '<button type="button" class="ms-quick-btn" onclick="event.stopPropagation();msMonthYear(\'' + id + '\',\'' + y + '\')">' + y + '</button>').join('')
+      + '</div>';
+  }
+  drop.innerHTML = doneHeader + quick + items.map(({value, label}) => {
     const v = value.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     return `<label class="ms-opt" onclick="event.stopPropagation()"><input type="checkbox" ${filterSet.has(value)?'checked':''} onchange="${handler}('${id}','${v}')"><span class="ms-check"></span><span>${esc(label)}</span></label>`;
   }).join('');
@@ -6271,7 +6294,7 @@ function buildMsDrop(id, items, filterSet) {
   if (!btn) return;
   const empty  = {'ms-cat':'All categories','ms-card':'All cards','ms-month':'All months','ms-inc-type':'All types','ms-inc-month':'All months'};
   const nouns  = {'ms-cat':'categories','ms-card':'cards','ms-month':'months','ms-inc-type':'types','ms-inc-month':'months'};
-  if (filterSet.size === 0) {
+  if (filterSet.size === 0 || filterSet.size === items.length) {
     btn.textContent = empty[id];
     btn.classList.remove('has-filter');
   } else if (filterSet.size === 1) {
