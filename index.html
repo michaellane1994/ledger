@@ -973,6 +973,7 @@ textarea,select{color:var(--ink);}
 .g-name{font-weight:600;font-size:13px;color:var(--ink);}
 .g-amt{font-size:11.5px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums;}
 .g-amt-edit{cursor:pointer;border-bottom:1px dashed var(--border-2);}
+.g-ed{cursor:pointer;border-bottom:1px dashed var(--border-2);}
 .g-togo{font-size:10.5px;margin-top:6px;font-weight:600;}
 .g-togo.togo{color:var(--muted);}
 .g-togo.reached{color:var(--accent);}
@@ -1530,6 +1531,7 @@ body.goals-editing .g-tile{border-style:dashed;}
         <div class="card"><div class="card-body">
           <div class="goals-addform" id="goals-addform">
             <div class="gf nm"><label>Goal name</label><input id="goal-f-name" placeholder="e.g. Wedding fund"></div>
+            <div class="gf"><label>Type</label><select id="goal-f-type"></select></div>
             <div class="gf am"><label>Target</label><input id="goal-f-target" type="number" min="0" step="100" placeholder="5000"></div>
             <div class="gf am"><label>Saved so far</label><input id="goal-f-saved" type="number" min="0" step="100" placeholder="0"></div>
             <div class="gf"><label>Person</label><select id="goal-f-person"></select></div>
@@ -4095,7 +4097,9 @@ function renderSavingsGoals(){
   const hidden  = all.filter(g =>  _goalsHidden.has(g.key));
   const tiles = visible.map(g => {
     const pct = g.target > 0 ? g.saved/g.target : 0, done = pct >= 1;
-    const amt = '<div class="g-amt'+(g.std?' g-amt-edit':'')+'"'+(g.std?' onclick="updateStdSaved(\''+g.key+'\')" title="Update saved amount"':'')+'>'+_gmoney(g.saved)+' of '+_gmoney(g.target)+'</div>';
+    const savedTxt  = g.std ? '<span class="g-ed" onclick="updateStdSaved(\''+g.key+'\')" title="Edit saved amount">'+_gmoney(g.saved)+'</span>' : _gmoney(g.saved);
+    const targetTxt = '<span class="g-ed" onclick="updateGoalTarget(\''+g.key+'\')" title="Edit goal target">'+_gmoney(g.target)+'</span>';
+    const amt = '<div class="g-amt">'+savedTxt+' of '+targetTxt+'</div>';
     return '<div class="g-tile'+(done?' done':'')+'">'
       + '<div class="g-ctrls">'
       +   '<button class="g-ctrl" title="Move left" onclick="moveGoal(\''+g.key+'\',-1)">‹</button>'
@@ -4112,10 +4116,10 @@ function renderSavingsGoals(){
       + '</div>';
   }).join('');
   const addTile = '<div class="g-tile add" onclick="openAddGoal()"><div class="g-plus">+</div><div>Add a goal</div></div>';
-  const tSaved  = visible.reduce((s,g)=>s+g.saved,0);
-  const tTarget = visible.reduce((s,g)=>s+g.target,0);
+  const tSaved  = all.reduce((s,g)=>s+g.saved,0);
+  const tTarget = all.reduce((s,g)=>s+g.target,0);
   const oPct    = tTarget > 0 ? Math.min(tSaved/tTarget, 1) : 0;
-  const summary = visible.length ? '<div class="g-summary"><div class="g-stat"><b>'+_gmoney(tSaved)+'</b><span>Saved</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+_gmoney(tTarget)+'</b><span>Target</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+visible.length+'</b><span>Goals</span></div></div>'
+  const summary = all.length ? '<div class="g-summary"><div class="g-stat"><b>'+_gmoney(tSaved)+'</b><span>Saved</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+_gmoney(tTarget)+'</b><span>Target</span></div><div class="g-sdiv"></div><div class="g-stat"><b>'+all.length+'</b><span>Goals</span></div></div>'
     + '<div class="g-overall"><div class="g-overall-head"><span class="g-overall-lbl">Overall progress</span><span class="g-overall-pct">'+_gmoney(tSaved)+' of '+_gmoney(tTarget)+' · '+Math.round(oPct*100)+'%</span></div><div class="g-overall-bar"><div class="g-overall-fill" data-w="'+(oPct*100).toFixed(1)+'%"></div></div></div>' : '';
   const hiddenRow = hidden.length ? '<div class="g-hidden"><span class="g-hidden-lbl">Hidden</span>'+hidden.map(g=>'<span class="g-hidden-pill">'+esc(g.name)+'<button onclick="showGoalTile(\''+g.key+'\')">Show</button></span>').join('')+'</div>' : '';
   el.innerHTML = summary + '<div class="g-grid">'+tiles+addTile+'</div>' + hiddenRow;
@@ -4142,6 +4146,8 @@ function openAddGoal(){
   if (showing) {
     const sel = document.getElementById('goal-f-person');
     if (sel) { const ppl = _goalPeople(); sel.innerHTML = ppl.map(p => '<option value="'+esc(p)+'">'+esc(p)+'</option>').join(''); if (ppl.includes('Joint')) sel.value = 'Joint'; }
+    const tsel = document.getElementById('goal-f-type');
+    if (tsel && typeof ACCT_TYPES_ARR !== 'undefined') tsel.innerHTML = ACCT_TYPES_ARR.map(t => '<option value="'+esc(t.key)+'">'+esc(t.label)+'</option>').join('');
   }
   f.style.display = showing ? 'flex' : 'none';
 }
@@ -4151,10 +4157,15 @@ function saveNewGoal(){
   const saved  = parseFloat(document.getElementById('goal-f-saved').value) || 0;
   if (!name || !(target > 0)) { alert('Enter a goal name and a target amount.'); return; }
   const person = (document.getElementById('goal-f-person') || {}).value || '';
-  _stdGoals.push({ id: uid(), name, target, saved, person });
+  const typeEl = document.getElementById('goal-f-type');
+  const type   = (typeEl && typeEl.value && typeEl.value !== '__custom__') ? typeEl.value : ((ACCT_TYPES_ARR[0] && ACCT_TYPES_ARR[0].key) || 'savings');
+  const color  = ACCT_COLORS[type] || '#2f5a44';
+  savAccts.push({ id: uid(), name, type, person, balance: saved, baseBalance: saved, goal: target, currency: globalCurrency, balanceEquiv: null, color });
   ['goal-f-name','goal-f-target','goal-f-saved'].forEach(i => document.getElementById(i).value = '');
   document.getElementById('goals-addform').style.display = 'none';
-  _saveGoalsState(); renderSavingsGoals();
+  persist(); renderSavingsGoals();
+  if (typeof renderSavings === 'function') renderSavings();
+  if (typeof autoPush === 'function') autoPush();
 }
 function renameGoal(k){
   if (k.indexOf('std:') === 0) {
@@ -4169,6 +4180,19 @@ function renameGoal(k){
     a.name = nm; persist(); renderSavingsGoals();
     if (typeof renderSavings === 'function') renderSavings();
     if (typeof autoPush === 'function') autoPush();
+  }
+}
+function updateGoalTarget(k){
+  if (k.indexOf('std:') === 0) {
+    const id = k.slice(4); const g = _stdGoals.find(x => String(x.id) === id); if (!g) return;
+    const v = prompt('Target amount for "' + g.name + '":', g.target); if (v === null) return;
+    const n = parseFloat(v); if (isFinite(n) && n > 0) { g.target = n; _saveGoalsState(); renderSavingsGoals(); }
+  } else {
+    const id = k.slice(5); const a = (savAccts || []).find(x => String(x.id) === id); if (!a) return;
+    const v = prompt('Target amount for "' + a.name + '":', a.goal); if (v === null) return;
+    const n = parseFloat(v); if (isFinite(n) && n > 0) { a.goal = n; persist(); renderSavingsGoals();
+      if (typeof renderSavings === 'function') renderSavings();
+      if (typeof autoPush === 'function') autoPush(); }
   }
 }
 function updateStdSaved(k){
