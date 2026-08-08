@@ -4245,7 +4245,11 @@ function openEditGoal(k){
   const ppl = _goalPeople();
   psel.innerHTML = '<option value="">—</option>' + ppl.map(p => '<option value="'+esc(p)+'"'+(p===person?' selected':'')+'>'+esc(p)+'</option>').join('');
   document.getElementById('goal-edit-modal').classList.add('open');
-  setTimeout(() => { const n = document.getElementById('ge-name'); if (n) n.focus(); }, 30);
+  // Auto-focus for quick typing on desktop only. On mobile a programmatic focus pops
+  // the on-screen keyboard the instant the modal opens, sliding up over it — which reads
+  // as "the window didn't come up". Let the user tap a field when they're ready instead.
+  const _isTouch = window.matchMedia && window.matchMedia('(max-width:768px)').matches;
+  if (!_isTouch) setTimeout(() => { const n = document.getElementById('ge-name'); if (n) n.focus(); }, 30);
 }
 function closeGoalEdit(){ document.getElementById('goal-edit-modal').classList.remove('open'); _editGoalKey = null; }
 function saveGoalEdit(){
