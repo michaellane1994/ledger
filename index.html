@@ -75,6 +75,11 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 html{-webkit-text-size-adjust:100%;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55;min-height:100vh;overflow-x:hidden;font-feature-settings:'cv11','ss01','ss03';-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;letter-spacing:-0.005em;}
+/* Form-control baseline: inherit Inter (never a system-font fallback) + a consistent
+   text-input size, so any input without a scoped rule aligns with the rest. The more
+   specific rules further down (and the mobile iOS-zoom carve-outs) still win. */
+input, select, textarea, button { font-family: inherit; }
+input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]):not([type=file]) { font-size: 13px; }
 button,input,select,textarea{font-family:inherit;}
 button{-webkit-tap-highlight-color:transparent;}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
