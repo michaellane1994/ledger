@@ -10032,7 +10032,10 @@ async function openPdfParser(file) {
     await ensurePdfJs();
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    // isEvalSupported:false closes CVE-2024-4367 — a crafted PDF's font data could
+    // otherwise execute arbitrary JS in the page (pdf.js < 4.2.67). We only extract
+    // text from untrusted user uploads, so the eval path is never needed.
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, isEvalSupported: false }).promise;
     let fullText = '';
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
