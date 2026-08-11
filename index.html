@@ -2067,7 +2067,7 @@ body.goals-editing .g-tile{border-style:dashed;}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
         <div>
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:4px;" id="rental-page-period">All time</div>
-          <div style="font-family:'Fraunces',serif;font-size:28px;" id="rental-page-total">$0.00</div>
+          <div style="font-family:var(--num);font-size:28px;font-weight:400;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;" id="rental-page-total">$0.00</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <select id="rental-f-year" onchange="renderRental()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Inter',sans-serif;outline:none;">
@@ -3242,6 +3242,7 @@ let contribs  = JSON.parse(localStorage.getItem('l3_contribs') || '[]'); // cont
 let sheetsUrl    = localStorage.getItem('l3_sheets_url') || '';
 let showJoint    = localStorage.getItem('l3_show_joint') !== 'false';
 let rentalExpenses = JSON.parse(localStorage.getItem('l3_rental') || '[]');
+let rentalTagCats = JSON.parse(localStorage.getItem('l3_rental_tag_cats') || '{}');  // txnId -> rental category for tagged expenses
 let mortBalances      = JSON.parse(localStorage.getItem('l3_mort_balances') || '{}');
 let mortVoluntaryPmts = JSON.parse(localStorage.getItem('l3_mort_voluntary') || '{}');
 // User-managed list of card / account labels (e.g. "Amex Gold", "TD Chequing").
@@ -3274,6 +3275,7 @@ function persist() {
   localStorage.setItem('l3_contribs',   JSON.stringify(contribs));
   if (sheetsUrl) localStorage.setItem('l3_sheets_url', sheetsUrl);
   localStorage.setItem('l3_rental', JSON.stringify(rentalExpenses));
+  localStorage.setItem('l3_rental_tag_cats', JSON.stringify(rentalTagCats));
   localStorage.setItem('l3_card_types', JSON.stringify(cardTypes));
   localStorage.setItem('l3_labels',     JSON.stringify(labels));
   localStorage.setItem('l3_recurring_dismissed', JSON.stringify([...recurringDismissed]));
@@ -9352,7 +9354,7 @@ function renderRental() {
       id: t.id,
       date: t.date,
       amount: Math.abs(t.amount || 0),
-      cat: null,
+      cat: rentalTagCats[t.id] || null,
       txnCat: t.category,
       person: t.person || '',
       card: t.card || '',
@@ -9374,7 +9376,7 @@ function renderRental() {
     // Category filter only applies to manual entries — tagged txns don't have
     // a rental category and would always be filtered out. Show them anyway
     // when a cat filter is active; the accountant still wants that context.
-    if (cf && r._src === 'manual' && r.cat !== cf) return false;
+    if (cf && r.cat !== cf) return false;
     return true;
   }).sort((a,b) => b.date.localeCompare(a.date));
 
@@ -9387,8 +9389,8 @@ function renderRental() {
   // visible but distinct.
   const grid = document.getElementById('rental-cat-grid');
   const byCat = {};
-  const taggedTotal = list.filter(r => r._src === 'tagged').reduce((s,r) => s + r.amount, 0);
-  list.filter(r => r._src === 'manual').forEach(r => byCat[r.cat] = (byCat[r.cat] || 0) + r.amount);
+  const taggedTotal = list.filter(r => r._src === 'tagged' && !r.cat).reduce((s,r) => s + r.amount, 0);
+  list.filter(r => r.cat).forEach(r => byCat[r.cat] = (byCat[r.cat] || 0) + r.amount);
   const catTiles = RENTAL_CATS.map(c => {
     const amt = byCat[c.key] || 0;
     const pct = total ? (amt / total * 100) : 0;
@@ -9419,7 +9421,7 @@ function renderRental() {
       const tc = CAT[r.txnCat] || CAT.misc;
       return `<tr class="rental-tagged">
         <td style="color:var(--faint);font-size:12px;width:92px;">${r.date}</td>
-        <td><span class="cat-badge" style="background:${tc.bg};color:${tc.color};"><span class="cat-badge-dot" style="background:${tc.color};"></span>${tc.label}</span> <span style="font-size:10px;color:#2d6a4f;background:#e9f5ec;padding:1px 6px;border-radius:4px;margin-left:4px;font-weight:600;">TAGGED</span></td>
+        <td><select class="rental-cat-sel" onchange="setRentalCat('${r.id}',this.value)" title="Assign a rental category" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);cursor:pointer;outline:none;"><option value="">Uncategorized</option>${RENTAL_CATS.map(rc => `<option value="${rc.key}" ${r.cat===rc.key?'selected':''}>${rc.label}</option>`).join('')}</select> <span style="font-size:10px;color:#2d6a4f;background:#e9f5ec;padding:1px 6px;border-radius:4px;margin-left:4px;font-weight:600;" title="Tagged from Transactions (originally: ${esc(tc.label)})">TAGGED</span></td>
         <td style="font-weight:500;">${esc(r.desc)}</td>
         <td><span class="person-tag">${esc(r.person)}</span></td>
         <td><span class="person-tag">${esc(r.card||'')}</span></td>
@@ -9691,7 +9693,7 @@ async function syncToSheets(btn) {
   try {
     const res = await fetchWithTimeout(sheetsUrl, {
       method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed], stdGoals: _stdGoals, goalsHidden: [..._goalsHidden], goalsOrder: _goalsOrder, goalsTotalTarget: _goalsTotalTarget } }),
+      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed], stdGoals: _stdGoals, goalsHidden: [..._goalsHidden], goalsOrder: _goalsOrder, goalsTotalTarget: _goalsTotalTarget, rentalTagCats } }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -9793,6 +9795,7 @@ async function syncFromSheets(btn) {
       if (Array.isArray(data.settings?.goalsHidden)) { _goalsHidden = new Set(data.settings.goalsHidden);   localStorage.setItem('l3_goals_hidden', JSON.stringify([..._goalsHidden])); }
       if (Array.isArray(data.settings?.goalsOrder))  { _goalsOrder  = data.settings.goalsOrder;             localStorage.setItem('l3_goals_order',  JSON.stringify(_goalsOrder)); }
       if (typeof data.settings?.goalsTotalTarget === 'number') { _goalsTotalTarget = data.settings.goalsTotalTarget; localStorage.setItem('l3_goals_total_target', String(_goalsTotalTarget)); }
+      if (data.settings?.rentalTagCats && typeof data.settings.rentalTagCats === 'object') { rentalTagCats = data.settings.rentalTagCats; localStorage.setItem('l3_rental_tag_cats', JSON.stringify(rentalTagCats)); }
       // Config editable in Settings — joint toggle, income types, savings types. (People
       // are fixed on this site, so nothing to sync there.) Backward-compat: only overwrite
       // when the Sheet carries the field, so an older Sheet doesn't wipe local config.
@@ -9983,7 +9986,7 @@ async function autoPush() {
     try {
       const res = await fetchWithTimeout(sheetsUrl, {
         method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed], stdGoals: _stdGoals, goalsHidden: [..._goalsHidden], goalsOrder: _goalsOrder, goalsTotalTarget: _goalsTotalTarget } }),
+        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, rentalExpenses, settings: { showJoint, incomeTypes: INCOME_TYPES_ARR, acctTypes: ACCT_TYPES_ARR, currency: globalCurrency, commitExcludedCats: [...commitExcludedCats], commitDismissedMerchants: [...commitDismissedMerchants], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData, cardTypes, labels, recurringDismissed: [...recurringDismissed], stdGoals: _stdGoals, goalsHidden: [..._goalsHidden], goalsOrder: _goalsOrder, goalsTotalTarget: _goalsTotalTarget, rentalTagCats } }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'Push failed');
@@ -11146,10 +11149,17 @@ function toggleRental(id) {
   const t = txns.find(x => x.id === id);
   if (!t) return;
   t.rental = !t.rental;
+  if (!t.rental) delete rentalTagCats[id];  // dropping the tag drops its assigned rental category
   persist();
   renderTxns();
   if (typeof renderRental === 'function' && document.getElementById('rental-body')) renderRental();
   autoPush();
+}
+function setRentalCat(id, key) {
+  if (key) rentalTagCats[id] = key; else delete rentalTagCats[id];
+  localStorage.setItem('l3_rental_tag_cats', JSON.stringify(rentalTagCats));
+  renderRental();
+  if (typeof autoPush === 'function') autoPush();
 }
 function fmtMonth(m) { const [y, mo] = m.split('-'); return new Date(y, mo - 1).toLocaleString('default', { month: 'long', year: 'numeric' }); }
 function fmtDate(d) { if (!d) return '—'; const [y, mo, day] = d.split('-'); return new Date(+y, mo - 1, +day).toLocaleString('default', { month: 'short', day: 'numeric', year: 'numeric' }); }
