@@ -10003,6 +10003,8 @@ function ensurePdfJs() {
   _pdfJsPromise = new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.integrity = 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e';
+    s.crossOrigin = 'anonymous';
     s.onload = () => resolve();
     s.onerror = () => { _pdfJsPromise = null; reject(new Error('Could not load the PDF reader. Check your connection and try again.')); };
     document.head.appendChild(s);
@@ -10030,7 +10032,7 @@ async function openPdfParser(file) {
 
   try {
     await ensurePdfJs();
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
     const arrayBuffer = await file.arrayBuffer();
     // isEvalSupported:false closes CVE-2024-4367 — a crafted PDF's font data could
     // otherwise execute arbitrary JS in the page (pdf.js < 4.2.67). We only extract
