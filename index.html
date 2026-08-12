@@ -2848,7 +2848,7 @@ function doGet(e) {
       <textarea id="pdf-raw-text" style="display:none;" readonly></textarea>
       <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <button type="button" class="btn btn-ghost btn-sm" onclick="copyPdfRawText(this)" style="font-size:11px;padding:3px 9px;color:var(--muted);">Copy extracted text</button>
-        <span style="font-size:10.5px;color:var(--faint);">Copies the raw text the app read from your PDF — useful for support.</span>
+        <span style="font-size:10.5px;color:var(--faint);">Copies the text the app read from your PDF with personal details (name, address, card number) removed — safe to send to support.</span>
       </div>
       <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div class="add-field">
@@ -10164,9 +10164,36 @@ function detectPdfBank(text) {
 }
 
 // Copy the raw text the app extracted from the PDF (support/debug aid).
+// Best-effort scrub of personal data before the extracted text is copied (so it's safe
+// to send to support). Keeps transactions + statement figures; removes card/account
+// numbers, the name/address block, phone, email, and postal codes.
+function _scrubPdfText(raw) {
+  const CA_POSTAL = /\b[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d\b/;
+  const US_CITYZIP = /,\s*[A-Z]{2}\s+\d{5}(-\d{4})?\b/;
+  const lines = String(raw || '').split('\n');
+  const drop = new Set();
+  for (let i = 0; i < lines.length; i++) {
+    if (CA_POSTAL.test(lines[i]) || US_CITYZIP.test(lines[i])) {
+      drop.add(i);
+      for (let k = 1; k <= 2; k++) {
+        const p = i - k; if (p < 0) break;
+        const L = lines[p].trim();
+        if (!L || L.includes('$') || /^[A-Za-z]{3}\s+\d/.test(L)) break;
+        drop.add(p);
+      }
+    }
+  }
+  let s = lines.map((l, i) => drop.has(i) ? '[personal details removed]' : l).join('\n');
+  s = s.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, '[email removed]');
+  s = s.replace(/\b\d{2,}[\d *]*\*{2,}[\d* ]*\d\b/g, '[card removed]');
+  s = s.replace(/\b\d{12,19}\b/g, '[card removed]');
+  s = s.replace(/\b(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g, '[phone removed]');
+  s = s.replace(new RegExp(CA_POSTAL.source, 'g'), '[postal removed]');
+  return s;
+}
 function copyPdfRawText(btn) {
   const ta = document.getElementById('pdf-raw-text');
-  const txt = (ta && ta.value) || '';
+  const txt = _scrubPdfText((ta && ta.value) || '');
   if (!txt) return;
   const done = () => { if (btn) { const o = btn.textContent; btn.textContent = 'Copied ✓'; setTimeout(() => { btn.textContent = o; }, 1500); } };
   if (navigator.clipboard && navigator.clipboard.writeText) {
