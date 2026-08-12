@@ -10112,8 +10112,48 @@ function closePdfModal() {
   document.body.style.overflow = '';
 }
 
+function parseWealthsimple(text) {
+  const mos = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  // Wealthsimple credit-card rows carry no year; anchor it to the statement period
+  // ("Mon DD — Mon DD, YYYY"), falling back to the statement date. Handles a Dec→Jan
+  // wrap where the opening month belongs to the previous year.
+  let endMonth = null, endYear = null;
+  let m = text.match(/([A-Za-z]{3})\s+\d{1,2}\s*[—–\-]\s*([A-Za-z]{3})\s+\d{1,2},\s+(\d{4})/);
+  if (m) { endMonth = mos[m[2].toLowerCase()]; endYear = parseInt(m[3], 10); }
+  if (endYear === null) { const sd = text.match(/Statement date\s+([A-Za-z]{3,})\s+\d{1,2},\s+(\d{4})/i); if (sd) { endMonth = mos[sd[1].slice(0,3).toLowerCase()]; endYear = parseInt(sd[2], 10); } }
+  if (endYear === null) endYear = new Date().getFullYear();
+  const yearFor = mo => (endMonth !== null && mo > endMonth) ? endYear - 1 : endYear;
+  // Row: "Jun 28   Jun 29   Purchase   MERCHANT   $27.88". FX purchases put the CAD amount
+  // a line or two below (after an "X USD • rate" line), so we look ahead when a row has no
+  // trailing amount. Credits (payments/refunds) are marked with a leading en-dash.
+  const dateHead = /^([A-Za-z]{3})\s+(\d{1,2})\s+([A-Za-z]{3})\s+(\d{1,2})\s+(Payment|Purchase|Refund|Return|Credit|Reversal|Fee|Interest|Cash advance)\s+(.*)$/i;
+  const amtRe = /([–\-]?)\s*\$\s*([\d][\d,. ]*\d)\s*$/;
+  const lines = text.split('\n').map(l => l.replace(/\s+$/, '')).filter(l => l.trim());
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const dh = lines[i].match(dateHead); if (!dh) continue;
+    const tMon = dh[1], tDay = dh[2], type = dh[5]; let details = (dh[6] || '').trim();
+    const mo = mos[tMon.toLowerCase()]; if (mo === undefined) continue;
+    let amtStr = null, neg = false;
+    const am = details.match(amtRe);
+    if (am) { neg = (am[1] === '–' || am[1] === '-'); amtStr = am[2]; details = details.slice(0, am.index).trim(); }
+    else {
+      let j = i + 1;
+      while (j < lines.length && !amtRe.test(lines[j]) && !dateHead.test(lines[j])) j++;
+      if (j < lines.length && amtRe.test(lines[j])) { const a2 = lines[j].match(amtRe); neg = (a2[1] === '–' || a2[1] === '-'); amtStr = a2[2]; i = j; }
+    }
+    if (!amtStr) continue;
+    if (/^payment$/i.test(type)) continue;  // card payment = transfer to the card, not spending
+    const amount = parseFloat(amtStr.replace(/[\s,]/g, '')); if (!isFinite(amount) || amount === 0) continue;
+    if (!details) details = type;
+    const date = `${yearFor(mo)}-${String(mo+1).padStart(2,'0')}-${String(parseInt(tDay,10)).padStart(2,'0')}`;
+    out.push({ date, merchant: details, amount: neg ? -amount : amount });
+  }
+  return out;
+}
 function detectPdfBank(text) {
   const t = text.toLowerCase();
+  if (t.includes('wealthsimple')) return 'Wealthsimple';
   if (t.includes('royal bank') || t.includes('rbc')) return 'RBC';
   if (t.includes('american express') || t.includes('amex')) return 'Amex';
   if (t.includes('scotiabank') || t.includes('bank of nova scotia')) return 'Scotiabank';
@@ -10159,6 +10199,7 @@ function parsePdfTransactions() {
   else if (bank === 'CIBC')  txns = parseCIBC(rawText);
   else if (bank === 'TD')    txns = parseTD(rawText);
   else if (bank === 'Chase') txns = parseChase(rawText);
+  else if (bank === 'Wealthsimple') txns = parseWealthsimple(rawText);
   else                       txns = parseGeneric(rawText);
   // If a bank-specific parser (e.g. the simple TD one) came up empty, fall back to the
   // more robust generic parser before giving up — its format may not match the preset.
