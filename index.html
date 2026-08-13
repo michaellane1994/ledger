@@ -702,10 +702,15 @@ tbody tr:hover .del-btn{opacity:1;}
 .txn-td-amount .txn-amt-val{font-weight:600;line-height:1.2;}
 .txn-amt-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px;margin-top:4px;min-height:22px;}
 .del-btn.edit-btn:hover{color:var(--accent-hover);}
-/* Touch devices have no hover, so always show the row action buttons (edit, delete). */
+/* Touch devices have no hover, so always show the row action buttons (edit, delete).
+   The rental tag is the exception: it's a status marker, not a primary action, so an
+   untagged house on every row reads as "everything is tagged". Keep it hidden (and
+   untappable, so it can't be hit by accident) unless the txn is actually tagged —
+   tagging on touch happens in the Edit Transaction modal instead. */
 @media (hover: none), (max-width: 768px){
   .del-btn{opacity:1;}
   .del-btn.edit-btn{padding:5px 8px;}
+  .del-btn.rental-btn:not(.on){opacity:0;pointer-events:none;}
 }
 .del-btn.always-on{opacity:1 !important;}
 .del-btn:hover{color:#dc2626;background:#fef2f2;}
@@ -2989,6 +2994,10 @@ function doGet(e) {
       <div class="add-field" id="add-nw-field" style="display:none;">
         <label>Needs / Wants override</label>
         <button type="button" id="add-nw-toggle" data-needs="false" onclick="toggleAddNw()" style="padding:6px 12px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#eaf0f9;color:#2563eb;cursor:pointer;font-family:'Inter',sans-serif;">Want</button>
+      </div>
+      <div class="add-field" id="add-rental-field" style="display:none;">
+        <label>Rental expense (for tax reporting)</label>
+        <button type="button" id="add-rental-toggle" data-rental="false" onclick="toggleAddRental()" style="padding:6px 12px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;">Not rental</button>
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -8211,6 +8220,23 @@ function toggleAddNw() {
   _setAddNwLabel(btn.dataset.needs !== 'true');
 }
 
+// Rental tag in the Edit Transaction modal. Mirrors the 🏠 row button, and is the
+// primary way to tag on touch devices where that button only shows once tagged.
+function _setAddRentalLabel(on) {
+  const btn = document.getElementById('add-rental-toggle');
+  if (!btn) return;
+  btn.textContent = on ? '🏠 Rental' : 'Not rental';
+  btn.style.background   = on ? '#e9f5ec' : 'var(--bg)';
+  btn.style.color        = on ? '#2d6a4f' : 'var(--muted)';
+  btn.style.borderColor  = on ? '#b7dbc3' : 'var(--border)';
+  btn.dataset.rental     = on ? 'true' : 'false';
+}
+function toggleAddRental() {
+  const btn = document.getElementById('add-rental-toggle');
+  if (!btn) return;
+  _setAddRentalLabel(btn.dataset.rental !== 'true');
+}
+
 // Populate the Add/Edit Transaction card dropdown with existing card names so
 // the field acts as a pick-list (still type-to-add-new via the datalist).
 // Add/Edit Transaction card dropdown: a real <select> of known cards (union of
@@ -8281,6 +8307,9 @@ function openAddModal() {
   document.getElementById('add-type-row').style.display = '';
   document.getElementById('add-nw-field').style.display = 'none';
   _setAddNwLabel(false);
+  // Rental tagging is an edit-only affordance, same as the 🏠 row button
+  document.getElementById('add-rental-field').style.display = 'none';
+  _setAddRentalLabel(false);
   document.getElementById('add-modal').classList.add('open');
   setTimeout(() => document.getElementById('add-merchant').focus(), 100);
 }
@@ -8324,6 +8353,9 @@ function openEditModal(id) {
   const showNw = !isRefund && !isTransfer && !isProtected;
   document.getElementById('add-nw-field').style.display = showNw ? '' : 'none';
   _setAddNwLabel(isNeeds(t));
+  // Rental tag: same eligibility as the 🏠 row button (anything that isn't income or savings)
+  document.getElementById('add-rental-field').style.display = isProtected ? 'none' : '';
+  _setAddRentalLabel(!!t.rental);
   document.getElementById('add-modal').classList.add('open');
 }
 
@@ -8442,6 +8474,13 @@ function saveEditTxn() {
       const nwBtn = document.getElementById('add-nw-toggle');
       if (nwBtn) t.needs = nwBtn.dataset.needs === 'true';
     }
+    // Rental tag (same rule as toggleRental: dropping the tag drops its rental category)
+    const rentBtn = document.getElementById('add-rental-toggle');
+    if (rentBtn) {
+      const wantRental = rentBtn.dataset.rental === 'true';
+      if (wantRental) t.rental = true;
+      else { delete t.rental; delete rentalTagCats[t.id]; }
+    }
   }
 
   _editTxnId = null;
@@ -8449,6 +8488,7 @@ function saveEditTxn() {
   closeAddModal();
   renderTxns();
   renderDashboard();
+  if (typeof renderRental === 'function' && document.getElementById('rental-body')) renderRental();
   autoPush();
 }
 
