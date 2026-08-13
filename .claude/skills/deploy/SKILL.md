@@ -1,49 +1,73 @@
 ---
 name: deploy
-description: Deploy both Ledger versions to GitHub Pages. Personal site → michaellane1994/ledger. General Template → michaellane1994/expensetracker.
+description: Deploy the Ledger sites. Personal → michaellane1994/ledger (GitHub Pages). Trove SaaS → michaellane1994/ledger-saas (Cloudflare, householdtrove.com).
 disable-model-invocation: true
 argument-hint: "<commit message>"
 ---
 
-Deploy both Ledger versions to GitHub Pages.
+Deploy a Ledger site. Commit message: $ARGUMENTS
 
-Commit message: $ARGUMENTS
+**Name which site you are deploying before you touch git**, and deploy one site per run
+unless the user explicitly asks for both. Both repos are **public**.
 
-## Personal Site → michaellane1994/ledger
+## Before anything
 
-1. Run `git fetch origin` to check for remote changes.
-2. Run `git diff origin/main -- index.html` to see if the remote index.html differs from the local one.
-   - If there ARE differences, read both the remote version (`git show origin/main:index.html`) and the local `expense-tracker-clean.html`, identify what changed on the remote (e.g. custom categories, savings account types, income types, any hardcoded config), and merge those changes into `expense-tracker-clean.html` before proceeding. Tell the user what you found and merged.
-   - If there are NO differences, proceed.
-3. Copy `Personal Site/expense-tracker-clean.html` → `index.html`.
-4. Syntax check: run `node --check index.html`. If `node` is not in PATH, skip and proceed.
-5. Stage `index.html` explicitly: `git add index.html`. Do NOT stage `General Template/index.html` via git — it is a symlink target and git will error.
-6. Commit with the provided message (append "Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>").
-7. Push to `main` with `git push`.
-8. Report: "Personal site pushed — https://michaellane1994.github.io/ledger/" or "Personal site push failed — [error]".
+1. **Both sites are repo-as-master.** Edit the file in the repo, commit, push. There is no
+   `cp` from iCloud — the iCloud "Saas Model" copy is stale since 2026-05-04 and copying
+   from it would destroy months of work. See `SITE_LAYOUT.md`.
+2. **Never deploy the General Template** (`expensetracker`). Deprecated 2026-07-08.
+3. **Syntax check first** — required by CLAUDE.md, and `node` is not on PATH:
+   - Extract the largest inline `<script>` block from the HTML to a temp `.js`
+   - `ELECTRON_RUN_AS_NODE=1 "/Applications/Antigravity IDE.app/Contents/MacOS/Electron" --check <file>`
+   - Do not push if it fails.
+4. **Scan the diff before committing** for anything that must not be public: CRA BN,
+   BC registration number, legal-name-on-record, the ops gmail, API keys, real transaction
+   data. If any appear, stop and tell the user.
+5. **Stage explicit paths.** Never `git add .` — it can pick up untracked scratch files.
 
-## General Template → michaellane1994/expensetracker
+## Personal site → michaellane1994/ledger
 
-This is a separate standalone repo at `/Users/michaellane/CLAUDE CODE/expensetracker/` (if it exists locally) — but since there is no local clone, push the template file directly using the GitHub API or by cloning the repo temporarily.
+1. `git fetch origin` and check `git diff origin/main -- index.html` for remote-only changes
+   (a remote agent or another machine may have pushed). If they differ, reconcile before
+   committing rather than blowing them away.
+2. Syntax check `index.html` as above.
+3. `git add index.html` (plus any other explicitly changed files).
+4. Commit with the provided message, appending:
+   `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`
+5. `git push origin main`.
+6. Report: "Personal site pushed — https://michaellane1994.github.io/ledger/"
 
-**Practical steps:**
-1. Check if a local clone exists: `ls "/Users/michaellane/CLAUDE CODE/expensetracker" 2>/dev/null && echo exists || echo missing`
-2. If missing, clone it: `git clone git@github.com:michaellane1994/expensetracker.git "/Users/michaellane/CLAUDE CODE/expensetracker"`
-3. Copy `General Template/index.html` → `/Users/michaellane/CLAUDE CODE/expensetracker/index.html`
-4. Stage, commit, and push:
+Note: Google Sheets sync only works once deployed (CORS blocks local testing).
+
+## Trove SaaS → michaellane1994/ledger-saas
+
+Working dir: `/Users/michaellane/CLAUDE CODE/ledger-saas/`
+
+1. `git fetch origin`, check for remote-only changes as above.
+2. Identify what changed:
+   - `public/app/index.html` — the app
+   - `public/index.html` — the marketing landing page
+   - `src/worker.js` — the backend Worker
+   - `public/{privacy,terms,accessibility}.html`, `sitemap.xml`, `robots.txt` — legal/SEO
+3. Syntax check any changed HTML's inline JS.
+4. **If you touched `sitemap.xml`, `robots.txt`, or a canonical tag:** use the
+   **extensionless** URLs (`/privacy`, not `/privacy.html`). Cloudflare Pages 307-redirects
+   the `.html` form, so pointing SEO signals at it creates redirect hops.
+5. `git add <explicit paths>`, commit with attribution, `git push origin main`.
+6. Cloudflare auto-deploys from `main`. **Verify it actually went live** before reporting —
+   poll the real URL rather than assuming:
+   ```bash
+   until curl -s https://householdtrove.com/<changed-path> | grep -q "<something new>"; do sleep 5; done
    ```
-   git -C "/Users/michaellane/CLAUDE CODE/expensetracker" add index.html
-   git -C "/Users/michaellane/CLAUDE CODE/expensetracker" commit -m "<same commit message> Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-   git -C "/Users/michaellane/CLAUDE CODE/expensetracker" push
-   ```
-5. Report: "Template pushed — https://michaellane1994.github.io/expensetracker/" or "Template push failed — [error]".
+7. Report: "Trove SaaS pushed and verified live — https://householdtrove.com"
 
-## Final summary to user
+## Reminders that bite
 
-Always end with both results explicitly:
-- "Personal site pushed — https://michaellane1994.github.io/ledger/"
-- "Template pushed — https://michaellane1994.github.io/expensetracker/"
-
-Or the relevant failure message for either.
-
-Note: Google Sheets sync only works after deployment (CORS blocks local testing).
+- **Apps Script**: if the change touched the `<pre id="apps-script-code">` block on the
+  personal site, tell the user explicitly: *"The Apps Script has changed — copy the updated
+  code from the Setup Guide into your Google Sheets Apps Script editor and redeploy."*
+- **Branding**: if the change touched the wordmark, product name, or palette, refresh
+  `og-image.png`, `email-logo.png`, and the `emailShell()` templates in `src/worker.js`
+  (see CLAUDE.md).
+- **`TEST_MODE`**: still `true` in `public/app/index.html` and must stay that way until the
+  Stripe live-mode flip. Never flip it as a side effect of another change.

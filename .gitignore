@@ -1,8 +1,6 @@
 .DS_Store
-settings.local.json
+/settings.local.json
 ledger.code-workspace
-agents/
-skills/
 General Template
 Personal Site
 LEDGER_SAAS_ROADMAP.md

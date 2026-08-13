@@ -1,118 +1,125 @@
 # Ledger — Site Layout & Sync Workflow
 
-**Last updated:** 2026-05-05 (personal site migrated out of iCloud)
+**Last updated:** 2026-08-13 (repo-as-master for both active sites; stale iCloud copies flagged)
 
-This doc captures where each of the three Ledger sites lives, how edits flow to GitHub, and how the local automation works. Refer to this any time you (or a future agent) needs to touch one of the sites.
+Where each site lives, how edits reach GitHub, and what the local automation does.
+Read this before touching any site or running any `cp`.
 
-## Three Sites at a Glance
+## Active sites
 
-| # | Site | Source file (master) | Git working dir | Remote | Live URL | localStorage prefix |
+Two sites are actively maintained. A third exists but is deprecated.
+
+| # | Site | Master (edit this) | Git working dir | Remote | Live URL | localStorage |
 |---|---|---|---|---|---|---|
-| 1 | **Personal** (Michael & Lili's real data) | `/Users/michaellane/CLAUDE CODE/ledger/index.html` _(repo IS master)_ | `/Users/michaellane/CLAUDE CODE/ledger/` | `github.com:michaellane1994/ledger.git` | `michaellane1994.github.io/ledger/` | `l3_` |
-| 2 | **Self-host / family template** (free, Drive sync) | `~/Library/Mobile Documents/com~apple~CloudDocs/General Template/index-selfhost.html` _(iCloud master)_ | `/Users/michaellane/CLAUDE CODE/expensetracker/` | `github.com:michaellane1994/expensetracker.git` | Check Pages config | `lt_` |
-| 3 | **SaaS** (paid, Drive sync, Stripe gates) | `~/Library/Mobile Documents/com~apple~CloudDocs/Saas Model/index.html` _(iCloud master)_ | `/Users/michaellane/CLAUDE CODE/ledger-saas/public/index.html` | `github.com:michaellane1994/ledger-saas.git` | `michaellane1994.github.io/ledger-saas/` | `lt_` |
+| 1 | **Personal** (Michael & Lili's real data) | `ledger/index.html` — **repo is master** | `/Users/michaellane/CLAUDE CODE/ledger/` | `michaellane1994/ledger` | `michaellane1994.github.io/ledger/` | `l3_` |
+| 2 | **Trove SaaS** (paid, Drive sync, Stripe) | `ledger-saas/public/app/index.html` (app)<br>`ledger-saas/public/index.html` (landing) — **repo is master** | `/Users/michaellane/CLAUDE CODE/ledger-saas/` | `michaellane1994/ledger-saas` | `householdtrove.com` (Cloudflare) | `lt_` |
+| — | ~~Self-host / family template~~ | *(deprecated 2026-07-08 — do not edit)* | `/Users/michaellane/CLAUDE CODE/expensetracker/` | `michaellane1994/expensetracker` | GitHub Pages | `lt_` |
 
-> **Personal site migration note (2026-05-05):** the iCloud folder at `~/Library/Mobile Documents/com~apple~CloudDocs/Personal Site/` was archived to `~/ledger-archive/personal-site-2026-05-05/` and the repo became the single source of truth. The `Personal Site` symlink in this repo was removed at the same time. Sites 2 and 3 still use iCloud as the editing source.
+### ⚠️ The iCloud copies are stale — do not `cp` from them
 
-## Edit Workflow
+Older versions of this doc described sites 2 and 3 as having **iCloud masters** that you
+copy into the repo. That is no longer true, and following it would destroy work:
+
+| iCloud folder | Last modified | Repo equivalent | Verdict |
+|---|---|---|---|
+| `CloudDocs/Saas Model/index.html` | **2026-05-04** | `ledger-saas/public/app/index.html` (2026-08-12) | **3+ months stale. Ignore it.** |
+| `CloudDocs/General Template/index-selfhost.html` | — | `expensetracker/index.html` | Deprecated site; not maintained |
+| `CloudDocs/Personal Site/` | retired 2026-05-05 | — | Archived to `~/ledger-archive/personal-site-2026-05-05/` |
+
+**Both active sites are now repo-as-master.** Edit the file in the repo, commit, push. No
+`cp` step, no iCloud round-trip, for either one.
+
+## Edit workflow
 
 ### Personal site (#1)
 
-1. Edit `/Users/michaellane/CLAUDE CODE/ledger/index.html` directly.
-2. `git add index.html && git commit -m "..." && git push`.
-3. GitHub Pages picks it up at `michaellane1994.github.io/ledger/`.
+1. Edit `ledger/index.html` directly.
+2. Extract the inline JS and syntax-check it (see below) — required by CLAUDE.md.
+3. `git add index.html && git commit && git push`.
+4. GitHub Pages serves it at `michaellane1994.github.io/ledger/`.
 
-No `cp` step. No iCloud sync. Repo is the only place the file lives.
+### Trove SaaS (#2)
 
-### Self-host (#2)
+1. Edit `ledger-saas/public/app/index.html` (the app) or `public/index.html` (the landing).
+2. Syntax-check as above.
+3. `git add <file> && git commit && git push`.
+4. Cloudflare auto-deploys from `main`; live within ~a minute at `householdtrove.com`.
 
-1. Edit `~/Library/Mobile Documents/com~apple~CloudDocs/General Template/index-selfhost.html` (iCloud master).
-2. `cp` to `/Users/michaellane/CLAUDE CODE/expensetracker/index.html`.
-3. `cd` into the repo, commit, push.
+Worker changes (`src/worker.js`) need a deploy to take effect.
 
-### SaaS (#3)
+### Syntax check (no `node` on PATH)
 
-1. Edit `~/Library/Mobile Documents/com~apple~CloudDocs/Saas Model/index.html` (iCloud master).
-2. `cp` to `/Users/michaellane/CLAUDE CODE/ledger-saas/public/index.html`.
-3. `cd` into the repo, commit, push.
+`node` is not installed on this machine. Use the Node runtime bundled with the IDE:
 
-## Auto-Pull (All Three Repos)
+```bash
+ELECTRON_RUN_AS_NODE=1 "/Applications/Antigravity IDE.app/Contents/MacOS/Electron" --check extracted.js
+```
 
-A LaunchAgent per repo pulls every 5 minutes so remote agents and other-machine pushes flow back automatically.
+Extract the JS first — it's the single largest inline `<script>` block at the bottom of
+the HTML. `jq` is also unavailable; use `python3` for JSON work.
 
-**Per-repo files:**
+## Repo hygiene
 
-| Repo | Script | LaunchAgent label | Log |
-|---|---|---|---|
-| `ledger` (personal) | `~/ledger-archive/auto-pull.sh` | `com.michaellane.ledger-pull` | `~/ledger-archive/auto-pull.log` |
-| `expensetracker` (self-host) | `~/ledger-archive/auto-pull-expensetracker.sh` | `com.michaellane.expensetracker-pull` | `~/ledger-archive/auto-pull-expensetracker.log` |
-| `ledger-saas` (SaaS) | `~/ledger-archive/auto-pull-ledger-saas.sh` | `com.michaellane.ledger-saas-pull` | `~/ledger-archive/auto-pull-ledger-saas.log` |
+**Both repos are public.** Never commit business identifiers (CRA BN, BC registration
+number, legal name on record), secrets, or the ops gmail. Deliberately kept out of git:
 
-Plists live at `~/Library/LaunchAgents/<label>.plist`.
+| File | Where it lives | Why |
+|---|---|---|
+| `LEDGER_SAAS_ROADMAP.md` | `ledger/`, gitignored | Internal strategy + business state |
+| `SECURITY.md` | `ledger-saas/`, gitignored | Security posture detail |
+| Memory files | `~/.claude/projects/-Users-michaellane-CLAUDE-CODE-ledger/memory/` | Outside any repo |
 
-**Behavior (identical for all three):**
+Superseded pre-rebrand backups were archived out of both repos on 2026-08-13 to
+`~/ledger-archive/workspace-cleanup-2026-08-13/`. Git history still holds every version,
+so don't re-add backup copies — use `git show <ref>:<path>` instead.
 
-- Runs every 300s (5 min).
-- Checks `git status --porcelain` first; if the working tree has uncommitted changes, it skips with a log entry. In-progress edits are never clobbered.
-- Uses `git pull --ff-only` so it never auto-merges. If history diverged, it skips and logs.
-- Silent on "Already up to date"; only logs skips / actual pulls / errors.
+## Auto-pull (all three repos)
 
-**Inspect all three:**
+A LaunchAgent per repo pulls every 5 minutes so remote agents and other-machine pushes
+flow back automatically. Verified loaded 2026-08-13.
+
+| Repo | Script | LaunchAgent label |
+|---|---|---|
+| `ledger` | `~/ledger-archive/auto-pull.sh` | `com.michaellane.ledger-pull` |
+| `expensetracker` | `~/ledger-archive/auto-pull-expensetracker.sh` | `com.michaellane.expensetracker-pull` |
+| `ledger-saas` | `~/ledger-archive/auto-pull-ledger-saas.sh` | `com.michaellane.ledger-saas-pull` |
+
+Plists live at `~/Library/LaunchAgents/<label>.plist`. Logs at `~/ledger-archive/auto-pull*.log`.
+
+**Behavior (identical for all three):** runs every 300s; skips if the working tree is dirty
+(in-progress edits are never clobbered); uses `git pull --ff-only` so it never auto-merges;
+silent unless it skips, pulls, or errors.
 
 ```bash
 launchctl list | grep -E "ledger-pull|expensetracker-pull|ledger-saas-pull"
-tail -f ~/ledger-archive/auto-pull*.log    # tail every repo's log together
+tail -f ~/ledger-archive/auto-pull*.log
+launchctl unload ~/Library/LaunchAgents/com.michaellane.ledger-pull.plist   # disable one
+bash ~/ledger-archive/auto-pull.sh                                          # force-run now
 ```
 
-**Disable / re-enable a single repo:**
+## What's not automated
 
-```bash
-launchctl unload ~/Library/LaunchAgents/com.michaellane.<label>-pull.plist
-launchctl load   ~/Library/LaunchAgents/com.michaellane.<label>-pull.plist
-```
+- Auto-pull never pushes. If a remote agent commits while you have local commits, the pull
+  skips (non-fast-forward). Resolve manually.
+- Session context. A new chat gets `CLAUDE.md`, `MEMORY.md`, and skill names automatically,
+  plus recent git state via the `SessionStart` hook (`~/.claude/hooks/ledger-git-context.py`).
+  Run `/checkpoint` to reconcile the notes against git when they drift.
 
-Replace `<label>` with `ledger`, `expensetracker`, or `ledger-saas`.
+## Remote agents
 
-**Force-run now:**
+Agents scheduled via `/schedule` run in Anthropic's cloud and only see the GitHub repo they
+clone — no iCloud, no local filesystem, and **no memory files**. Both active sites are
+repo-as-master, so remote agents work cleanly for either; auto-pull catches your local copy
+up within 5 minutes.
 
-```bash
-bash ~/ledger-archive/auto-pull.sh
-bash ~/ledger-archive/auto-pull-expensetracker.sh
-bash ~/ledger-archive/auto-pull-ledger-saas.sh
-```
-
-## What's NOT Automated
-
-- The auto-pull does not push. If a remote agent commits and you also have local commits, the pull will be skipped (non-fast-forward). Resolve manually.
-- iCloud sync between devices is irrelevant for site #1 now. Sites 2 and 3 still rely on iCloud for that — but the repo working copies stay in sync via auto-pull regardless.
-
-## Remote Agents
-
-Agents scheduled via `/schedule` run in Anthropic's cloud and only have access to the GitHub repo they clone. They cannot reach iCloud or your local filesystem.
-
-For site #1 this is seamless: agent clones, edits, pushes; auto-pull catches up your local copy within 5 minutes.
-
-For sites #2 and #3, a remote agent could in theory be queued, but its push would only update the GitHub repo — your local iCloud master would still be stale. You'd need to manually pull and reverse-sync to iCloud, which defeats the iCloud-master pattern. So in practice, only schedule remote agents for the personal repo.
-
-## Migrating Sites 2 / 3 Out of iCloud Later (Optional)
-
-If you ever want sites 2 and 3 to behave like site 1 (repo-as-master, no iCloud, optional auto-pull), the steps for each are:
-
-1. `mv ~/Library/Mobile\ Documents/com~apple~CloudDocs/<Site>/ ~/ledger-archive/<site>-YYYY-MM-DD/`
-2. Remove any symlinks in dependent repos that point at the archived path.
-3. Update CLAUDE.md and the memory routing table to reflect the new master.
-4. Optional: copy the `auto-pull.sh` and plist patterns and create `<site>-pull.plist` for that repo.
-
-About 10 minutes per site.
-
-## Quick Path Reference
+## Quick path reference
 
 | Purpose | Path |
 |---|---|
-| Personal site source (master) | `/Users/michaellane/CLAUDE CODE/ledger/index.html` |
-| Self-host source (iCloud master) | `~/Library/Mobile Documents/com~apple~CloudDocs/General Template/index-selfhost.html` |
-| SaaS source (iCloud master) | `~/Library/Mobile Documents/com~apple~CloudDocs/Saas Model/index.html` |
-| Personal site iCloud archive | `~/ledger-archive/personal-site-2026-05-05/` |
-| Auto-pull script | `~/ledger-archive/auto-pull.sh` |
-| Auto-pull plist | `~/Library/LaunchAgents/com.michaellane.ledger-pull.plist` |
-| Auto-pull log | `~/ledger-archive/auto-pull.log` |
+| Personal site source | `/Users/michaellane/CLAUDE CODE/ledger/index.html` |
+| SaaS app source | `/Users/michaellane/CLAUDE CODE/ledger-saas/public/app/index.html` |
+| SaaS landing source | `/Users/michaellane/CLAUDE CODE/ledger-saas/public/index.html` |
+| SaaS Worker (backend) | `/Users/michaellane/CLAUDE CODE/ledger-saas/src/worker.js` |
+| Roadmap (gitignored) | `/Users/michaellane/CLAUDE CODE/ledger/LEDGER_SAAS_ROADMAP.md` |
+| Memory files | `~/.claude/projects/-Users-michaellane-CLAUDE-CODE-ledger/memory/` |
+| Archives | `~/ledger-archive/` |
