@@ -4832,21 +4832,23 @@ function computeMoneyflowData() {
   const totalIncome = sources.reduce((s, x) => s + x.amount, 0);
   if (totalIncome === 0) return { sources: [], destinations: [], flows: [], totalIncome: 0 };
 
-  // Needs vs Wants totals across expense transactions in period. A category is
-  // Needs if its `fixed` flag is true; else Wants. Refunds (amount < 0) are
-  // ignored — they reduce actual spend but Sankey shows gross flows.
+  // Needs vs Wants totals across expense transactions in period. Mirror the
+  // dashboard hero EXACTLY so the two views never disagree: honour per-txn
+  // Needs/Wants overrides (isNeeds, not the raw category flag) and net refunds
+  // and transfers (effectiveAmt) rather than showing gross flows. A refund
+  // therefore reduces the destination it offsets, matching the hero's total.
   let needs = 0;
   let wants = 0;
   const catTotals = {};
+  const _mfEff = t => t.incomeType === 'transfer' ? -Math.abs(t.amount || 0) : (t.amount || 0);
   txns.forEach(t => {
     if (!dashPeriodTest(t.date)) return;
-    if ((t.amount || 0) <= 0) return;
     if (t.savingsAccountId) return;
     if (t.incomeType && t.incomeType !== 'transfer') return;
-    const cat = CATS.find(c => c.key === t.category);
-    catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
-    if (cat && cat.fixed) needs += t.amount;
-    else wants += t.amount;
+    const amt = _mfEff(t);
+    catTotals[t.category] = (catTotals[t.category] || 0) + amt;
+    if (isNeeds(t)) needs += amt;
+    else wants += amt;
   });
 
   // Savings destination: contributions logged in the period.
@@ -4871,6 +4873,7 @@ function computeMoneyflowData() {
         const cat = CATS.find(c => c.key === key);
         return { key, name: cat ? cat.label : key, amount, color: (cat && cat.color) || MONEYFLOW_COLORS.other };
       })
+      .filter(r => r.amount > 0)
       .sort((a, b) => b.amount - a.amount);
     let top;
     if (moneyflowTopN === 'custom') {
