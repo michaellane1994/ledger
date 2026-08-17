@@ -3288,7 +3288,7 @@ if (!cardTypes.length && txns.length) {
 }
 let selMonth  = '';
 let selYear   = String(new Date().getFullYear());
-let dashPeriod    = '';        // '', 'latest', '3m', 'ytd', 'year'
+let dashPeriod    = '';        // '', 'latest', '3m', 'ytd', 'year', 'all'
 let dashCatFilter = new Set(); // empty = show all categories
 let dashCatMode   = 'top5';   // 'all', 'top5', 'custom'
 
@@ -3429,6 +3429,7 @@ function renderPills() {
       + '<option value="3m">Last 3 months</option>'
       + '<option value="ytd">Year to date</option>'
       + '<option value="year">Full year</option>'
+      + '<option value="all">All time</option>'
       + '</optgroup>';
     if (yearMonths.length) {
       html += '<optgroup label="Month">'
@@ -3445,6 +3446,7 @@ function renderPills() {
     else if (dashPeriod === 'ytd') cur = 'ytd';
     else if (dashPeriod === 'year') cur = 'year';
     else if (dashPeriod === 'latest') cur = 'latest';
+    else if (dashPeriod === 'all') cur = 'all';
     else if (selMonth) cur = `month:${selMonth}`;
     sel.value = cur;
     sel.onchange = (e) => setMoneyflowPeriod(e.target.value === 'year' ? ('year:' + selYear) : e.target.value);
@@ -4758,6 +4760,7 @@ function renderMoneyflowPeriodPicker(selId) {
     if (dashPeriod === '3m')     return '3m';
     if (dashPeriod === 'ytd')    return 'ytd';
     if (dashPeriod === 'year')   return `year:${selYear}`;
+    if (dashPeriod === 'all')    return 'all';
     if (selMonth)                return `month:${selMonth}`;
     return 'all';
   })();
@@ -4767,6 +4770,7 @@ function renderMoneyflowPeriodPicker(selId) {
     html += `<option value="latest">Latest month</option>`;
     html += `<option value="3m">Last 3 months</option>`;
     html += `<option value="ytd">Year to date</option>`;
+    html += `<option value="all">All time</option>`;
     html += `</optgroup>`;
   }
   if (years.length) {
@@ -4787,7 +4791,7 @@ function renderMoneyflowPeriodPicker(selId) {
 function setMoneyflowPeriod(v) {
   if (!v) return;
   if (v === 'all') {
-    dashPeriod = '';
+    dashPeriod = 'all';
     selMonth = '';
   } else if (v === 'latest' || v === '3m' || v === 'ytd') {
     dashPeriod = v;
@@ -4971,6 +4975,7 @@ function renderMoneyflow() {
     else if (dashPeriod === 'year') periodLabel = `year ${selYear}`;
     else if (dashPeriod === '3m') periodLabel = 'last 3 months';
     else if (dashPeriod === 'latest') periodLabel = 'latest month';
+    else if (dashPeriod === 'all') periodLabel = 'all time';
     else if (selMonth) {
       // Month Year with capitalized month, e.g. "July 2026"
       const [y, mo] = selMonth.split('-');
