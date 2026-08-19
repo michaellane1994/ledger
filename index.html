@@ -10812,7 +10812,73 @@ function parseRBC(text) {
   return txns;
 }
 
+// Amex Canada (Gold Rewards etc.): the PDF extracts each transaction's details
+// (txn date, posting date, merchant) and its amount into SEPARATE column-blocks
+// on every page — all the details top-to-bottom, then all the amounts
+// top-to-bottom — so a single-line regex finds nothing. Zip the two columns back
+// together per page (their order is preserved), skipping card payments and the
+// page/section total lines.
+function parseAmexColumnar(text) {
+  const mos = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  // Anchor the year to the statement's CLOSING date — the second date in the
+  // header line "... Jun 17, 2026   Jul 16, 2026" — and roll back a month that
+  // sits after it (a Dec charge on a Jan statement belongs to the prior year).
+  let closeMonth = null, closeYear = null;
+  const per = text.match(/([A-Za-z]{3})\s+\d{1,2},\s+\d{4}\s+([A-Za-z]{3})\s+\d{1,2},\s+(\d{4})/);
+  if (per) { closeMonth = mos[per[2].toLowerCase()]; closeYear = parseInt(per[3], 10); }
+  if (closeYear === null) {
+    const sd = text.match(/([A-Za-z]{3})\s+\d{1,2},\s+(\d{4})/);
+    if (sd) { closeMonth = mos[sd[1].toLowerCase()]; closeYear = parseInt(sd[2], 10); }
+  }
+  if (closeYear === null) { closeYear = new Date().getFullYear(); closeMonth = new Date().getMonth(); }
+  const yearFor = mo => (closeMonth !== null && mo > closeMonth) ? closeYear - 1 : closeYear;
+
+  const dateRow = /^([A-Za-z]{3})\s+(\d{1,2})\s+([A-Za-z]{3})\s+(\d{1,2})\s+(.+)$/;
+  const bareAmt = /^(-?[\d,]+\.\d{2})$/;
+  const out = [];
+  const pages = text.split(/--- PAGE BREAK ---/);
+  for (const page of pages) {
+    const lines = page.split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const details = [];
+    const amounts = [];
+    let stopAmounts = false;
+    for (const line of lines) {
+      // The grand-total ("Total of New Transactions for ... 3,063.16") prints the
+      // total as a bare amount a couple of lines down — stop taking amounts here
+      // so it isn't zipped in as a phantom transaction.
+      if (/^Total of New Transactions for/i.test(line)) stopAmounts = true;
+      const dm = line.match(dateRow);
+      if (dm && mos[dm[1].toLowerCase()] !== undefined && mos[dm[3].toLowerCase()] !== undefined) {
+        details.push({ mon: dm[1], day: dm[2], text: dm[5].trim() });
+        continue;
+      }
+      if (!stopAmounts) {
+        const am = line.match(bareAmt);
+        if (am) amounts.push(am[1]);
+      }
+    }
+    const n = Math.min(details.length, amounts.length);
+    for (let i = 0; i < n; i++) {
+      const d = details[i];
+      // Skip card payments (money paid TO the card, not spending). Filtered after
+      // the positional zip so the remaining rows stay aligned with their amounts.
+      if (/PAYMENT RECEIVED|THANK YOU/i.test(d.text)) continue;
+      const amt = parseFloat(amounts[i].replace(/,/g, ''));
+      if (!isFinite(amt) || amt === 0) continue;
+      const mo = mos[d.mon.toLowerCase()];
+      const date = `${yearFor(mo)}-${String(mo+1).padStart(2,'0')}-${String(parseInt(d.day,10)).padStart(2,'0')}`;
+      out.push({ date, merchant: d.text, amount: amt });
+    }
+  }
+  return out;
+}
 function parseAmex(text) {
+  // Newer Amex Canada PDFs split details/amounts into separate columns; detect
+  // that layout and zip it. Fall back to the legacy single-line format below.
+  if (/New Transactions for|Total of (Payment Activity|New Transactions)/i.test(text)) {
+    const columnar = parseAmexColumnar(text);
+    if (columnar.length) return columnar;
+  }
   const txns = [];
   const lines = text.split('\n');
   // Amex: "15 Jan 2026    Merchant Name    $123.45"
