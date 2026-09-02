@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#f4f1ec">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..600&family=Inter:wght@300;400;500;600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <!-- pdf.js is lazy-loaded by ensurePdfJs() on first PDF upload. -->
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
@@ -19,7 +19,7 @@
    Bento Grid + Swiss Modernism, semantic tokens, 8pt rhythm
    ============================================================ */
 :root {
-  --num: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --num: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --ink:        #0a0a0d;
   --ink-2:      #2c2c34;
   --bg:         #faf8f3;
@@ -78,7 +78,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html{-webkit-text-size-adjust:100%;}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55;min-height:100vh;overflow-x:hidden;font-feature-settings:'cv11','ss01','ss03';-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;letter-spacing:-0.005em;}
+body{font-family:'Work Sans',sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55;min-height:100vh;overflow-x:hidden;font-feature-settings:'cv11','ss01','ss03';-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;letter-spacing:-0.005em;}
 /* Form-control baseline: inherit Inter (never a system-font fallback) + a consistent
    text-input size, so any input without a scoped rule aligns with the rest. The more
    specific rules further down (and the mobile iOS-zoom carve-outs) still win. */
@@ -100,11 +100,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .logo{height:64px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0 20px;border-bottom:1px solid rgba(255,255,255,.07);}
 .logo-top{display:flex;flex-direction:row;align-items:center;gap:10px;}
 .logo-emblem{width:34px;height:34px;flex-shrink:0;display:block;}
-.logo h1{font-family:'Fraunces',serif;font-size:36px;color:#fff;letter-spacing:-0.02em;line-height:1;}
+.logo h1{font-family:'Lora',serif;font-size:36px;font-weight:500;color:#fff;letter-spacing:-0.02em;line-height:1;}
 .logo span{font-size:11px;color:rgba(255,255,255,.4);letter-spacing:.8px;text-transform:uppercase;margin-top:6px;display:block;font-weight:500;line-height:1;}
 .nav{padding:14px 10px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;}
 .nav-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.25);padding:8px 12px 5px;font-weight:600;}
-.nav-item{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;color:rgba(255,255,255,.55);transition:all .15s ease;font-family:'Fraunces',Georgia,serif;font-optical-sizing:auto;font-size:15px;margin-bottom:2px;user-select:none;font-weight:450;}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;color:rgba(255,255,255,.55);transition:all .15s ease;font-family:'Lora',Georgia,serif;font-optical-sizing:auto;font-size:15px;margin-bottom:2px;user-select:none;font-weight:450;}
 .nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.92);}
 .nav-item.active{background:var(--nav-active-bg);color:var(--nav-active-color);font-weight:550;}
 .nav-item svg{width:16px;height:16px;flex-shrink:0;}
@@ -190,24 +190,24 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .main.dash-bar-visible{padding-top:94px;}
 .topbar-pills-row::-webkit-scrollbar{display:none;}
 .topbar-left{display:flex;align-items:center;gap:14px;min-width:0;}
-.topbar-title{font-family:'Fraunces',Georgia,serif;font-optical-sizing:auto;font-size:33px;font-weight:400;color:var(--ink);letter-spacing:-0.015em;white-space:nowrap;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none;outline:none;}
+.topbar-title{font-family:'Lora',Georgia,serif;font-optical-sizing:auto;font-size:33px;font-weight:400;color:var(--ink);letter-spacing:-0.015em;white-space:nowrap;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none;outline:none;}
 .topbar-title:focus{outline:none;}
 .topbar-title:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
 .month-pills{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;align-items:center;}
-.mpill{padding:4px 11px;border-radius:100px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap;flex-shrink:0;}
+.mpill{padding:4px 11px;border-radius:100px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;font-family:'Work Sans',sans-serif;white-space:nowrap;flex-shrink:0;}
 .mpill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .mpill.year-pill{font-weight:600;font-size:12px;}
 .pill-sep{width:1px;background:var(--border);margin:2px 4px;align-self:stretch;flex-shrink:0;}
 /* Year dropdown replaces year pills — keeps the period bar width fixed as multi-year data accumulates. */
-.year-select{padding:4px 24px 4px 10px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid var(--border);background-color:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;font-weight:600;flex-shrink:0;outline:none;line-height:1.2;-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 12px) center,calc(100% - 8px) center;background-size:4px 4px,4px 4px;background-repeat:no-repeat;}
+.year-select{padding:4px 24px 4px 10px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid var(--border);background-color:var(--surface);color:var(--ink);font-family:'Work Sans',sans-serif;font-weight:600;flex-shrink:0;outline:none;line-height:1.2;-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 12px) center,calc(100% - 8px) center;background-size:4px 4px,4px 4px;background-repeat:no-repeat;}
 .period-select{min-width:118px;}
 .year-select:hover{border-color:var(--accent);}
 .year-select:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(107,163,232,.18);}
-.dash-pill{padding:3px 10px;border-radius:8px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap;}
+.dash-pill{padding:3px 10px;border-radius:8px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s;font-family:'Work Sans',sans-serif;white-space:nowrap;}
 .dash-pill.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .dash-pill:hover:not(.active){background:var(--accent-soft);color:var(--accent);border-color:var(--accent);}
 .topbar-right{display:flex;gap:8px;align-items:center;flex-shrink:0;}
-.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:transform .15s ease, box-shadow .2s ease, background .15s ease, color .15s ease, border-color .15s ease;font-family:'Inter',sans-serif;letter-spacing:-0.005em;line-height:1.2;}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:transform .15s ease, box-shadow .2s ease, background .15s ease, color .15s ease, border-color .15s ease;font-family:'Work Sans',sans-serif;letter-spacing:-0.005em;line-height:1.2;}
 .btn:active{transform:translateY(1px);}
 .btn-primary{background:transparent;color:var(--accent);}
 @media (hover:hover){ .btn-primary:hover{background:var(--accent);color:#fff;transform:translateY(-1px);} }
@@ -232,7 +232,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .dash-overview{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:var(--s-3);margin-bottom:0;}
 .dash-overview-hero{grid-column:1;grid-row:1 / span 2;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--s-6) var(--s-7);box-shadow:var(--shadow-xs);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;min-height:200px;}
 .dash-overview-hero .hero-label{font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:600;margin-bottom:6px;}
-.dash-overview-hero .hero-total{font-family:'Fraunces',serif;font-size:clamp(40px, 4.4vw, 54px);color:var(--ink);line-height:1;letter-spacing:-0.025em;font-weight:400;}
+.dash-overview-hero .hero-total{font-family:'Lora',serif;font-size:clamp(40px, 4.4vw, 54px);color:var(--ink);line-height:1;letter-spacing:-0.025em;font-weight:400;}
 .dash-overview-hero .hero-sub{font-size:13px;color:var(--muted);margin-top:6px;}
 .hero-aux{margin-top:var(--s-4);font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:var(--s-2);align-items:center;}
 .hero-aux strong{color:var(--ink);font-weight:600;}
@@ -242,7 +242,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .o-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:var(--s-4);box-shadow:var(--shadow-xs);transition:transform .12s ease, box-shadow .15s ease, border-color .15s ease;display:flex;flex-direction:column;justify-content:center;cursor:pointer;}
 .o-stat:hover{box-shadow:var(--shadow);border-color:var(--border-2);transform:translateY(-1px);}
 .o-label{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600;}
-.o-val{font-family:'Fraunces',serif;font-size:24px;letter-spacing:-0.018em;font-weight:400;line-height:1.05;margin-top:4px;color:var(--ink);font-variant-numeric:tabular-nums;}
+.o-val{font-family:'Lora',serif;font-size:24px;letter-spacing:-0.018em;font-weight:400;line-height:1.05;margin-top:4px;color:var(--ink);font-variant-numeric:tabular-nums;}
 .o-sub{font-size:11.5px;color:var(--faint);margin-top:3px;line-height:1.3;}
 @media (max-width: 980px){
   .dash-overview{grid-template-columns:1fr;}
@@ -260,7 +260,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .dash-section-head{margin-bottom:var(--s-3);display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-4);flex-wrap:wrap;}
 .dash-section-head-text{display:flex;flex-direction:column;gap:2px;}
 .dash-section-eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:600;}
-.dash-section-title{font-family:'Fraunces',serif;font-size:28px;letter-spacing:-0.018em;font-weight:400;color:var(--ink);line-height:1.1;}
+.dash-section-title{font-family:'Lora',serif;font-size:28px;letter-spacing:-0.018em;font-weight:400;color:var(--ink);line-height:1.1;}
 .dash-section-sub{font-size:12.5px;color:var(--muted);margin-top:2px;max-width:540px;line-height:1.5;}
 .dash-section-actions{display:flex;align-items:center;gap:var(--s-3);flex-wrap:wrap;}
 .dash-section .card{margin-bottom:0;}
@@ -292,11 +292,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 
 .month-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:26px 30px;margin-bottom:18px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between;gap:24px;}
 .hero-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;margin-bottom:6px;}
-.hero-total{font-family:'Fraunces',serif;font-size:50px;color:var(--ink);line-height:1;}
+.hero-total{font-family:'Lora',serif;font-size:50px;color:var(--ink);line-height:1;}
 .hero-sub{font-size:12.5px;color:var(--faint);margin-top:7px;}
 .hero-stats{display:flex;gap:36px;flex-shrink:0;}
 .hsi .hs-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);font-weight:600;margin-bottom:4px;}
-.hsi .hs-val{font-family:'Fraunces',serif;font-size:21px;}
+.hsi .hs-val{font-family:'Lora',serif;font-size:21px;}
 .hsi .hs-sub{font-size:11px;color:var(--faint);margin-top:2px;}
 
 /* Category grid – 7 cols, 2 rows */
@@ -331,7 +331,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 /* Money-flow hover tooltip. Follows the cursor (Chart.js-style) with a small
    dark bubble, positioned above-right of the pointer and flipped when it
    would run off the viewport edge. */
-.moneyflow-tt{position:fixed;z-index:9999;background:rgba(31,28,21,.96);color:#fff;padding:7px 11px;border-radius:6px;font-size:11.5px;line-height:1.4;pointer-events:none;opacity:0;transition:opacity .08s ease;font-family:'Inter',sans-serif;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.24);letter-spacing:-0.005em;}
+.moneyflow-tt{position:fixed;z-index:9999;background:rgba(31,28,21,.96);color:#fff;padding:7px 11px;border-radius:6px;font-size:11.5px;line-height:1.4;pointer-events:none;opacity:0;transition:opacity .08s ease;font-family:'Work Sans',sans-serif;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.24);letter-spacing:-0.005em;}
 .moneyflow-tt.show{opacity:1;}
 .moneyflow-tt .tt-title{font-weight:600;font-size:12px;margin-bottom:1px;}
 .moneyflow-tt .tt-val{color:rgba(255,255,255,.82);}
@@ -339,11 +339,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 /* Icon-style button used for the fullscreen-expand trigger next to the mode
    toggles. Deliberately shape-matches the toggle pill row so the row reads
    as one control group. */
-.moneyflow-icon-btn{width:30px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;font-size:15px;line-height:1;transition:background .12s,color .12s,border-color .12s;}
+.moneyflow-icon-btn{width:30px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-family:'Work Sans',sans-serif;font-size:15px;line-height:1;transition:background .12s,color .12s,border-color .12s;}
 .moneyflow-icon-btn:hover{color:var(--ink);border-color:var(--border-2);}
 /* Inline period picker in the Money flow section header. Matches the mode-
    toggle pill visual weight; changing it re-renders the whole dashboard. */
-.moneyflow-period-picker{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--ink);cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;letter-spacing:-0.005em;padding:5px 26px 5px 12px;height:28px;line-height:1;outline:none;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg, transparent 50%, currentColor 50%),linear-gradient(135deg, currentColor 50%, transparent 50%);background-position:calc(100% - 12px) 12px, calc(100% - 7px) 12px;background-size:5px 5px, 5px 5px;background-repeat:no-repeat;transition:border-color .12s;}
+.moneyflow-period-picker{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--ink);cursor:pointer;font-family:'Work Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:-0.005em;padding:5px 26px 5px 12px;height:28px;line-height:1;outline:none;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg, transparent 50%, currentColor 50%),linear-gradient(135deg, currentColor 50%, transparent 50%);background-position:calc(100% - 12px) 12px, calc(100% - 7px) 12px;background-size:5px 5px, 5px 5px;background-repeat:no-repeat;transition:border-color .12s;}
 .moneyflow-period-picker:hover{border-color:var(--border-2);}
 .moneyflow-period-picker:focus-visible{border-color:var(--accent);}
 /* Money flow fullscreen viewer. Overlays the whole viewport, contains a
@@ -353,7 +353,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .mf-modal.open{display:flex;align-items:stretch;justify-content:center;}
 .mf-modal-inner{background:var(--surface);border-radius:12px;width:100%;max-width:1400px;max-height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.32);}
 .mf-modal-head{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);gap:12px;}
-.mf-modal-title{font-family:'Fraunces',serif;font-size:23px;color:var(--ink);}
+.mf-modal-title{font-family:'Lora',serif;font-size:23px;color:var(--ink);}
 .mf-modal-tools{display:flex;align-items:center;gap:6px;}
 .mf-zoom-btn{background:var(--bg);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:4px 10px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;min-width:30px;}
 .mf-zoom-btn:hover{border-color:var(--border-2);}
@@ -375,7 +375,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .mf-mob{padding:4px 2px 6px;}
 .mf-mob-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
 .mf-mob-total-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
-.mf-mob-total{font-family:'Fraunces',serif;font-size:22px;color:var(--ink);letter-spacing:-0.01em;}
+.mf-mob-total{font-family:'Lora',serif;font-size:22px;color:var(--ink);letter-spacing:-0.01em;}
 .mf-mob-sources-head{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px;padding:0 4px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;}
 .mf-mob-sources{display:flex;flex-direction:column;gap:0;margin-bottom:14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
 .mf-mob-src{display:flex;align-items:center;gap:10px;font-size:13px;padding:10px 12px;background:transparent;border:0;color:var(--ink);text-align:left;font-family:inherit;cursor:pointer;min-height:44px;transition:background .12s;-webkit-tap-highlight-color:rgba(0,0,0,.06);}
@@ -410,7 +410,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .mf-sheet-grip{width:40px;height:4px;background:var(--border);border-radius:4px;margin:8px auto 4px;flex-shrink:0;}
 .mf-sheet-head{padding:6px 16px 12px;display:flex;align-items:flex-start;gap:12px;border-bottom:1px solid var(--border);}
 .mf-sheet-title-block{flex:1;min-width:0;}
-.mf-sheet-title{font-family:'Fraunces',serif;font-size:23px;color:var(--ink);line-height:1.2;letter-spacing:-0.005em;overflow:hidden;text-overflow:ellipsis;}
+.mf-sheet-title{font-family:'Lora',serif;font-size:23px;color:var(--ink);line-height:1.2;letter-spacing:-0.005em;overflow:hidden;text-overflow:ellipsis;}
 .mf-sheet-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
 .mf-sheet-total-block{text-align:right;flex-shrink:0;}
 .mf-sheet-total-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
@@ -421,7 +421,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 /* Sort row above the drill-down list. Small label + select on the right. */
 .mf-sheet-sort{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 18px 8px;border-bottom:1px solid var(--border);}
 .mf-sheet-sort-label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
-.mf-sheet-sort-select{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--ink);font-family:'Inter',sans-serif;font-size:12px;padding:5px 26px 5px 10px;height:28px;line-height:1;outline:none;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 12px) 12px,calc(100% - 7px) 12px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;cursor:pointer;transition:border-color .12s;}
+.mf-sheet-sort-select{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--ink);font-family:'Work Sans',sans-serif;font-size:12px;padding:5px 26px 5px 10px;height:28px;line-height:1;outline:none;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 12px) 12px,calc(100% - 7px) 12px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;cursor:pointer;transition:border-color .12s;}
 .mf-sheet-sort-select:hover{border-color:var(--border-2);}
 .mf-sheet-txn{display:flex;align-items:center;gap:12px;padding:11px 6px;border-bottom:1px solid var(--border);}
 .mf-sheet-txn-left{flex:1;min-width:0;}
@@ -435,7 +435,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 @media (min-width: 641px){
   #moneyflow-expand-btn{display:none;}
 }
-.moneyflow-cat-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;font-size:11.5px;border:1px solid var(--border);border-radius:100px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;transition:background .12s,color .12s,border-color .12s;}
+.moneyflow-cat-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;font-size:11.5px;border:1px solid var(--border);border-radius:100px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:'Work Sans',sans-serif;transition:background .12s,color .12s,border-color .12s;}
 .moneyflow-cat-chip:hover{border-color:var(--border-2);color:var(--ink);}
 .moneyflow-cat-chip.on{background:var(--ink);color:var(--surface);border-color:var(--ink);}
 .moneyflow-cat-chip .chip-dot{width:8px;height:8px;border-radius:50%;background:var(--cat-c, var(--muted));}
@@ -443,15 +443,15 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .moneyflow-mode-btn{background:transparent;border:none;padding:5px 12px;font-size:12px;font-weight:500;color:var(--muted);border-radius:5px;cursor:pointer;font-family:inherit;letter-spacing:-0.005em;transition:background .12s, color .12s;}
 .moneyflow-mode-btn:hover{color:var(--ink);}
 .moneyflow-mode-btn.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06);}
-.moneyflow-node-label{font-size:12.5px;font-weight:500;fill:var(--ink);font-family:'Inter',sans-serif;}
-.moneyflow-node-amount{font-size:11px;fill:var(--muted);font-family:'Inter',sans-serif;}
+.moneyflow-node-label{font-size:12.5px;font-weight:500;fill:var(--ink);font-family:'Work Sans',sans-serif;}
+.moneyflow-node-amount{font-size:11px;fill:var(--muted);font-family:'Work Sans',sans-serif;}
 .moneyflow-ribbon{transition:fill-opacity .15s;}
 .moneyflow-ribbon:hover{fill-opacity:0.55!important;}
 .cat-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--s-5) var(--s-5);box-shadow:var(--shadow-xs);border-top:4px solid transparent;transition:transform .15s ease, box-shadow .2s ease, border-color .15s ease;cursor:pointer;position:relative;}
 .cat-tile:hover{box-shadow:var(--shadow);transform:translateY(-2px);border-color:var(--border-2);}
 .cat-tile::after{content:"";position:absolute;top:18px;right:18px;width:10px;height:10px;border-radius:50%;background:currentColor;color:var(--cat-c, transparent);opacity:.85;}
 .ct-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ct-amount{font-family:'Fraunces',serif;font-size:17px;margin-bottom:5px;}
+.ct-amount{font-family:'Lora',serif;font-size:17px;margin-bottom:5px;}
 .ct-bar-wrap{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
 .ct-bar{height:100%;border-radius:2px;transition:width .5s ease;}
 .ct-pct{font-size:10px;color:var(--faint);margin-top:4px;}
@@ -554,13 +554,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .chart-controls{padding:12px 18px 8px;display:flex;flex-direction:column;gap:9px;border-bottom:1px solid var(--border);}
 .chart-range{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .chart-range label{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
-.chart-range select{padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;cursor:pointer;}
+.chart-range select{padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--ink);font-family:'Work Sans',sans-serif;outline:none;cursor:pointer;}
 .chart-range select:focus{border-color:var(--accent);}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-xs);transition:box-shadow .2s ease, border-color .15s ease;overflow:hidden;}
 .card:hover{box-shadow:var(--shadow);border-color:var(--border-2);}
 .card-head{padding:var(--s-5) var(--s-6) var(--s-3);display:flex;align-items:center;justify-content:space-between;}
 .card-head+.card-body{padding-top:0;}
-.card-title{font-family:'Fraunces',serif;font-size:23px;letter-spacing:-0.015em;font-weight:400;}
+.card-title{font-family:'Lora',serif;font-size:23px;letter-spacing:-0.015em;font-weight:400;}
 #view-settings .card-title{font-size:18px;}
 .card-body{padding:12px 20px 18px;}
 .subcat-rows{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
@@ -578,7 +578,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 /* ── TRANSACTIONS ── */
 .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
 .txn-sort-mobile{display:none;}
-.filter-bar input,.filter-bar select,.filter-bar .ms-btn{padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;transition:border-color .15s ease, box-shadow .15s ease;}
+.filter-bar input,.filter-bar select,.filter-bar .ms-btn{padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--ink);font-family:'Work Sans',sans-serif;outline:none;transition:border-color .15s ease, box-shadow .15s ease;}
 .filter-bar input:hover,.filter-bar select:hover,.filter-bar .ms-btn:hover{border-color:var(--border-2);}
 .filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,90,68,.14);}
 .filter-bar input{min-width:180px;}
@@ -592,10 +592,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .ms-drop-done{display:none;position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:11px 16px;justify-content:space-between;align-items:center;z-index:1;}
 .ms-drop-done-title{font-weight:600;font-size:13px;color:var(--ink);}
 .ms-quick{display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px;border-bottom:1px solid var(--border);}
-.ms-quick-btn{font-size:11px;font-weight:600;padding:3px 10px;border:1px solid var(--border);border-radius:100px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;}
+.ms-quick-btn{font-size:11px;font-weight:600;padding:3px 10px;border:1px solid var(--border);border-radius:100px;background:var(--surface);color:var(--muted);cursor:pointer;font-family:'Work Sans',sans-serif;}
 .ms-quick-btn:hover{border-color:var(--accent);color:var(--accent);}
 .ms-quick-reset{margin-left:auto;color:var(--faint);}
-.ms-drop-done button{background:var(--accent);color:#fff;border:none;border-radius:100px;padding:6px 18px;font-size:13px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;}
+.ms-drop-done button{background:var(--accent);color:#fff;border:none;border-radius:100px;padding:6px 18px;font-size:13px;font-weight:500;font-family:'Work Sans',sans-serif;cursor:pointer;}
 .ms-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:499;display:none;}
 @media (max-width:600px){
   .ms-backdrop.open{display:block;}
@@ -605,7 +605,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
   .ms-opt{padding:13px 18px;font-size:15px;min-height:48px;}
   .ms-check{width:18px;height:18px;}
 }
-.ms-opt{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;user-select:none;}
+.ms-opt{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:13px;font-family:'Work Sans',sans-serif;color:var(--ink);cursor:pointer;user-select:none;}
 .ms-opt:hover{background:var(--bg);}
 .ms-opt input[type=checkbox]{display:none;}
 .ms-check{width:14px;height:14px;border:1.5px solid var(--border);border-radius:3px;flex-shrink:0;position:relative;background:var(--surface);transition:background .1s,border-color .1s;}
@@ -630,7 +630,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .recur-m{color:var(--ink-2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .recur-meta{color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .recur-a{color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
-.recur-viewall{margin-top:8px;background:none;border:none;color:var(--accent);font-weight:600;font-size:12.5px;cursor:pointer;font-family:'Inter',sans-serif;text-align:left;padding:6px 2px;}
+.recur-viewall{margin-top:8px;background:none;border:none;color:var(--accent);font-weight:600;font-size:12.5px;cursor:pointer;font-family:'Work Sans',sans-serif;text-align:left;padding:6px 2px;}
 .recur-x{font-size:10px;color:var(--faint);font-weight:600;margin-left:2px;}
 .recur-empty-note{font-size:13px;color:var(--muted);line-height:1.55;padding:12px 4px;}
 .recur-hidden-summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:6px 2px;margin-top:6px;border-top:1px solid var(--border);font-size:12px;color:var(--faint);font-weight:500;-webkit-tap-highlight-color:transparent;}
@@ -640,21 +640,21 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .recur-restore:hover{opacity:1;}
 .bulk-bar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2100;display:none;align-items:center;gap:8px;background:#1f1c15;color:#fff;padding:8px 10px 8px 16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.32);flex-wrap:wrap;max-width:94vw;}
 .bulk-bar .bulk-count{font-size:13px;font-weight:600;margin-right:2px;white-space:nowrap;}
-.bulk-bar select{font-size:12.5px;font-family:'Inter',sans-serif;padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;outline:none;}
+.bulk-bar select{font-size:12.5px;font-family:'Work Sans',sans-serif;padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;outline:none;}
 .bulk-bar select option{color:#000;}
 .bulk-bar .bulk-done{font-size:12.5px;font-weight:600;background:#fff;color:#1f1c15;border:none;border-radius:8px;padding:7px 13px;cursor:pointer;}
 .bulk-bar .bulk-del{font-size:12.5px;font-weight:600;background:rgba(220,38,38,.92);color:#fff;border:none;border-radius:8px;padding:7px 13px;cursor:pointer;transition:background .15s;}
 .bulk-bar .bulk-del:hover{background:#dc2626;}
 .bulk-bar .bulk-selall{font-size:12.5px;font-weight:600;background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.28);border-radius:8px;padding:6px 11px;cursor:pointer;}
 .lbl-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;}
-.lbl-card{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;font-family:'Inter',sans-serif;transition:border-color .12s,box-shadow .12s;}
+.lbl-card{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;font-family:'Work Sans',sans-serif;transition:border-color .12s,box-shadow .12s;}
 .lbl-card:hover{border-color:var(--accent);box-shadow:var(--shadow-xs);}
 .lbl-card-top{display:flex;align-items:center;gap:8px;}
 .lbl-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
 .lbl-card-name{font-size:13px;font-weight:600;color:var(--ink);}
 .lbl-card-amt{font-size:22px;font-weight:600;color:var(--ink);letter-spacing:-0.01em;font-variant-numeric:tabular-nums;}
 .lbl-card-sub{font-size:11px;color:var(--muted);}
-.lbl-more-btn{margin-top:12px;background:none;border:none;color:var(--accent);font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;padding:4px 2px;}
+.lbl-more-btn{margin-top:12px;background:none;border:none;color:var(--accent);font-family:'Work Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;padding:4px 2px;}
 .lbl-more-btn:hover{text-decoration:underline;}
 .lbl-filter-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 4px 3px 10px;border-radius:100px;background:color-mix(in srgb, var(--lc) 16%, transparent);color:var(--lc);margin-left:6px;vertical-align:middle;}
 .lbl-filter-chip button{background:none;border:none;color:inherit;cursor:pointer;font-size:12px;padding:2px 4px;line-height:1;border-radius:50%;}
@@ -669,11 +669,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .tcp-transfer.active{background:#1d4e89;color:#fff;}
 .tcp-needs{border-color:#b85416;color:#b85416;}
 .tcp-needs.active{background:#b85416;color:#fff;}
-.txn-date-input{border:none;background:transparent;font-size:12px;color:var(--faint);font-family:'Inter',sans-serif;cursor:pointer;width:96px;padding:0;outline:none;}
+.txn-date-input{border:none;background:transparent;font-size:12px;color:var(--faint);font-family:'Work Sans',sans-serif;cursor:pointer;width:96px;padding:0;outline:none;}
 .txn-date-mob{display:none;}  /* mobile-only date (shown in the category cell where the date column is hidden); never on desktop */
 .txn-date-input:focus{color:var(--ink);}
 .txn-date-input::-webkit-calendar-picker-indicator{opacity:0.35;cursor:pointer;}
-.income-inline{border:none;border-bottom:1px solid transparent;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:inherit;padding:1px 2px;outline:none;}
+.income-inline{border:none;border-bottom:1px solid transparent;background:transparent;font-size:13px;font-family:'Work Sans',sans-serif;color:inherit;padding:1px 2px;outline:none;}
 .income-inline:hover,.income-inline:focus{border-bottom-color:var(--border);}
 .th-sort{cursor:pointer;user-select:none;}
 .th-sort:hover{color:var(--ink);}
@@ -685,12 +685,12 @@ tbody tr{border-bottom:1px solid var(--border-2);transition:background .12s ease
 tbody tr:last-child{border-bottom:none;}
 tbody tr:hover{background:var(--row-hover);}
 tbody td{padding:10px 15px;font-size:13.5px;vertical-align:middle;}
-.cat-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:opacity .15s;}
+.cat-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;cursor:pointer;border:none;font-family:'Work Sans',sans-serif;transition:opacity .15s;}
 .cat-badge:hover{opacity:.75;}
-.refund-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;background:#eaf5ee;color:#2a7a50;border:none;font-family:'Inter',sans-serif;white-space:nowrap;}
-.income-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;background:#dde4f9;color:#1d4ed8;border:none;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity .15s;}
+.refund-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;background:#eaf5ee;color:#2a7a50;border:none;font-family:'Work Sans',sans-serif;white-space:nowrap;}
+.income-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;background:#dde4f9;color:#1d4ed8;border:none;cursor:pointer;font-family:'Work Sans',sans-serif;transition:opacity .15s;}
 .income-badge:hover{opacity:.75;}
-.savings-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;background:#fdf3e2;color:#b87820;border:none;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity .15s;}
+.savings-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:100px;font-size:11.5px;font-weight:500;background:#fdf3e2;color:#b87820;border:none;cursor:pointer;font-family:'Work Sans',sans-serif;transition:opacity .15s;}
 .savings-badge:hover{opacity:.75;}
 .cat-badge-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 .person-tag{display:inline-flex;align-items:center;font-size:11px;color:var(--muted);padding:2px 7px;background:var(--bg);border-radius:100px;}
@@ -748,7 +748,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .row-menu-btn:hover{color:var(--ink);background:var(--bg);}
 .row-menu-drop{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:600;min-width:130px;display:none;animation:fadeIn .1s ease;}
 .row-menu-drop.open{display:block;}
-.row-menu-drop button{display:block;width:100%;text-align:left;background:none;border:none;padding:8px 14px;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;}
+.row-menu-drop button{display:block;width:100%;text-align:left;background:none;border:none;padding:8px 14px;font-size:13px;font-family:'Work Sans',sans-serif;color:var(--ink);cursor:pointer;}
 .row-menu-drop button:hover{background:var(--bg);}
 .row-menu-drop button.danger{color:#dc2626;}
 .row-menu-drop button.danger:hover{background:#fef2f2;}
@@ -770,7 +770,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .drop-zone{border:2px dashed var(--border);border-radius:var(--radius);background:var(--surface);padding:50px 32px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:22px;}
 .drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:#fef8f5;}
 .dz-icon{width:46px;height:46px;background:var(--bg);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--accent);}
-.dz-title{font-family:'Fraunces',serif;font-size:23px;margin-bottom:7px;}
+.dz-title{font-family:'Lora',serif;font-size:23px;margin-bottom:7px;}
 .dz-sub{color:var(--muted);font-size:13px;line-height:1.6;}
 .csv-note{display:inline-block;margin-top:12px;font-size:11.5px;color:var(--faint);background:var(--bg);border-radius:6px;padding:4px 10px;}
 .upload-list{display:flex;flex-direction:column;gap:10px;}
@@ -819,7 +819,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 /* ── HELP MODAL ── */
 .help-modal{width:720px;max-width:94vw;padding:0;display:flex;flex-direction:column;max-height:86vh;overflow:hidden;}
 .help-head{padding:22px 28px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
-.help-title{font-family:'Fraunces',serif;font-size:28px;color:var(--ink);line-height:1.2;}
+.help-title{font-family:'Lora',serif;font-size:28px;color:var(--ink);line-height:1.2;}
 .help-sub{font-size:13px;color:var(--muted);margin-top:3px;}
 .help-close{background:transparent;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;padding:4px 8px;border-radius:6px;transition:background .15s, color .15s;}
 .help-close:hover{background:var(--bg);color:var(--ink);}
@@ -828,12 +828,12 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .help-nav a{font-size:12px;color:var(--muted);padding:5px 11px;border-radius:100px;background:var(--bg);text-decoration:none;transition:background .15s, color .15s;cursor:pointer;}
 .help-nav a:hover{background:var(--border);color:var(--ink);}
 .help-body section{margin-bottom:26px;scroll-margin-top:12px;}
-.help-body h3{font-family:'Fraunces',serif;font-size:22px;color:var(--ink);margin-bottom:10px;}
+.help-body h3{font-family:'Lora',serif;font-size:22px;color:var(--ink);margin-bottom:10px;}
 .help-body p{font-size:13.5px;color:var(--ink);line-height:1.65;margin-bottom:10px;}
 .help-body .help-note{font-size:12.5px;color:var(--muted);}
 .help-steps{list-style:none;padding:0;counter-reset:step;display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
 .help-steps li{position:relative;padding-left:30px;font-size:13.5px;color:var(--ink);line-height:1.6;counter-increment:step;}
-.help-steps li::before{content:counter(step);position:absolute;left:0;top:0;width:22px;height:22px;background:var(--bg);border:1px solid var(--border);border-radius:50%;font-size:11px;font-weight:600;color:var(--muted);display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;}
+.help-steps li::before{content:counter(step);position:absolute;left:0;top:0;width:22px;height:22px;background:var(--bg);border:1px solid var(--border);border-radius:50%;font-size:11px;font-weight:600;color:var(--muted);display:flex;align-items:center;justify-content:center;font-family:'Work Sans',sans-serif;}
 .help-feat{list-style:none;padding:0;display:flex;flex-direction:column;gap:8px;}
 .help-feat li{font-size:13px;color:var(--ink);line-height:1.55;padding-left:16px;position:relative;}
 .help-feat li::before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;background:var(--accent);}
@@ -850,7 +850,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
   .help-body{padding:16px 18px 22px;}
 }
 @keyframes slideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-.modal-title{font-family:'Fraunces',serif;font-size:28px;margin-bottom:6px;letter-spacing:-0.015em;}
+.modal-title{font-family:'Lora',serif;font-size:28px;margin-bottom:6px;letter-spacing:-0.015em;}
 .modal-sub{color:var(--muted);font-size:13px;margin-bottom:22px;line-height:1.5;}
 .mapper{background:var(--bg);border-radius:var(--radius);padding:16px;margin-bottom:16px;}
 /* Import preview: hide the Person column (header + cells) until at least
@@ -860,7 +860,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 #import-preview-table:not(.has-income-col) .import-preview-person-cell{display:none;}
 /* Import-preview dropdowns (Category, Person): persistent border + a caret
    so they read as tappable selects, not plain text. */
-.imp-sel{appearance:none;-webkit-appearance:none;background-color:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 22px 5px 8px;font-size:12px;color:var(--ink);font-family:'Inter',sans-serif;cursor:pointer;outline:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 12px) 52%,calc(100% - 7px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;max-width:170px;text-overflow:ellipsis;}
+.imp-sel{appearance:none;-webkit-appearance:none;background-color:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 22px 5px 8px;font-size:12px;color:var(--ink);font-family:'Work Sans',sans-serif;cursor:pointer;outline:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 12px) 52%,calc(100% - 7px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;max-width:170px;text-overflow:ellipsis;}
 .imp-sel:focus{border-color:var(--accent);}
 /* Mobile: transform each preview row into a stacked labelled card (standard
    responsive-table pattern) so nothing squishes and no horizontal scroll.
@@ -917,7 +917,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .map-actions{display:flex;gap:8px;justify-content:flex-end;}
 .map-actions-top{margin:12px 0 4px;}
 .mapper-field label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;}
-.mapper-field select{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;}
+.mapper-field select{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Work Sans',sans-serif;background:var(--surface);color:var(--ink);outline:none;}
 .mapper-field select:focus{border-color:var(--accent);}
 /* Force ink color + a global color-scheme hint so dark-mode form controls
    don't fall back to browser-default black-on-dark. color-scheme also
@@ -943,7 +943,7 @@ textarea,select{color:var(--ink);}
 .prog-label{font-size:11.5px;color:var(--faint);}
 .add-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
 .add-field label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;font-weight:500;}
-.add-field input,.add-field select,.add-field textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;transition:border-color .15s ease, box-shadow .15s ease;}
+.add-field input,.add-field select,.add-field textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);color:var(--ink);outline:none;transition:border-color .15s ease, box-shadow .15s ease;}
 .add-field input:hover,.add-field select:hover,.add-field textarea:hover{border-color:var(--border-2);}
 .add-field input:focus,.add-field select:focus,.add-field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,90,68,.14);}
 .add-field textarea{resize:none;height:60px;}
@@ -954,7 +954,7 @@ textarea,select{color:var(--ink);}
 .summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:box-shadow .15s;}
 .summary-card:hover{box-shadow:var(--shadow-lg);}
 .sc-left .sc-label{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:6px;}
-.sc-left .sc-val{font-family:'Fraunces',serif;font-size:28px;}
+.sc-left .sc-val{font-family:'Lora',serif;font-size:28px;}
 .sc-left .sc-sub{font-size:11.5px;color:var(--faint);margin-top:4px;}
 .sc-yoy{font-size:11px;color:var(--muted);margin-top:4px;}
 .sc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -962,7 +962,7 @@ textarea,select{color:var(--ink);}
 
 .income-table,.savings-table{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px;}
 .section-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
-.section-head-title{font-family:'Fraunces',serif;font-size:19px;}
+.section-head-title{font-family:'Lora',serif;font-size:19px;}
 
 .goal-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:6px;}
 .goal-bar{height:100%;border-radius:3px;background:#2d6a4f;transition:width .5s ease;}
@@ -1031,9 +1031,9 @@ body.goals-editing .g-tile{border-style:dashed;}
 .goals-addform{display:none;gap:9px;flex-wrap:wrap;align-items:flex-end;padding:14px;margin-bottom:14px;background:var(--bg);border:1px solid var(--border);border-radius:12px;}
 .goals-addform .gf{display:flex;flex-direction:column;gap:4px;}
 .goals-addform label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
-.goals-addform input{font-family:'Inter',sans-serif;font-size:13px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);outline:none;}
+.goals-addform input{font-family:'Work Sans',sans-serif;font-size:13px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);outline:none;}
 .goals-addform input:focus{border-color:var(--accent);}
-.goals-addform select{font-family:'Inter',sans-serif;font-size:13px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);outline:none;}
+.goals-addform select{font-family:'Work Sans',sans-serif;font-size:13px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);outline:none;}
 .goals-addform select:focus{border-color:var(--accent);}
 .g-person{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);margin-top:5px;}
 .g-person.joint{color:var(--accent);}
@@ -1193,7 +1193,7 @@ body.goals-editing .g-tile{border-style:dashed;}
 /* ── MORTGAGES PAGE ── */
 .mort-hero{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:16px;}
 .mort-hero-label{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:4px;}
-.mort-hero-value{font-family:'Fraunces',serif;font-size:32px;}
+.mort-hero-value{font-family:'Lora',serif;font-size:32px;}
 .mort-hero-stats{display:flex;gap:32px;flex-wrap:wrap;align-items:flex-end;}
 .mort-hero-subvalue{font-size:18px;font-weight:600;margin-top:2px;}
 .mort-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px;}
@@ -1203,7 +1203,7 @@ body.goals-editing .g-tile{border-style:dashed;}
 .mort-card.selected{border-color:var(--accent);}
 .mort-card-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:2px;}
 .mort-card-property{font-size:12px;color:var(--muted);margin-bottom:12px;}
-.mort-card-balance{font-family:'Fraunces',serif;font-size:24px;margin-bottom:4px;}
+.mort-card-balance{font-family:'Lora',serif;font-size:24px;margin-bottom:4px;}
 .mort-card-rate{font-size:12px;color:var(--muted);margin-bottom:12px;}
 .mort-card-footer{display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid var(--border);padding-top:12px;}
 .mort-card-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);}
@@ -1216,7 +1216,7 @@ body.goals-editing .g-tile{border-style:dashed;}
 [data-theme="dark"] .mort-rate-type-badge.fixed{background:#0d1a3a;border-color:#2a4da8;color:#7090e0;}
 [data-theme="dark"] .mort-rate-type-badge.variable{background:#2a1f08;border-color:#7c5010;color:#d4a850;}
 .mort-detail{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:18px;}
-.mort-detail-title{font-family:'Fraunces',serif;font-size:26px;margin-bottom:18px;}
+.mort-detail-title{font-family:'Lora',serif;font-size:26px;margin-bottom:18px;}
 .mort-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
 @media(max-width:1100px){.mort-stat-grid{grid-template-columns:repeat(2,1fr);}}
 .mort-stat-box{background:var(--bg);border-radius:var(--radius-sm);padding:12px 14px;}
@@ -1232,7 +1232,7 @@ body.goals-editing .g-tile{border-style:dashed;}
 .mort-sim-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;}
 .mort-sim-field{display:flex;flex-direction:column;gap:4px;}
 .mort-sim-field label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
-.mort-sim-input{padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;width:200px;}
+.mort-sim-input{padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--surface);color:var(--ink);font-family:'Work Sans',sans-serif;outline:none;width:200px;}
 .mort-sim-input:focus{border-color:var(--accent);}
 .mort-sim-results{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
 @media(max-width:700px){.mort-sim-results{grid-template-columns:1fr;}}
@@ -1256,7 +1256,7 @@ body.goals-editing .g-tile{border-style:dashed;}
 .mort-past-yr td{opacity:.5;}
 .mort-curr-yr td:first-child{color:var(--accent);}
 .mort-past-pmt td{opacity:.45;}
-.mort-extra-input{width:88px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;text-align:right;}
+.mort-extra-input{width:88px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--surface);color:var(--ink);font-family:'Work Sans',sans-serif;outline:none;text-align:right;}
 .mort-extra-input:focus{border-color:var(--accent);}
 .mort-vol-impact{display:flex;gap:14px;flex-wrap:wrap;background:#edf5f1;border:1px solid #a8d5be;border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:14px;}
 [data-theme="dark"] .mort-vol-impact{background:#071a10;border-color:#1a4030;}
@@ -1267,14 +1267,14 @@ body.goals-editing .g-tile{border-style:dashed;}
 /* Payoff trajectory: per-debt slider + extra input + impact stats + balance-over-time SVG chart. */
 .mort-trajectory{border-top:1px solid var(--border);padding-top:20px;margin-top:20px;}
 .mort-traj-head{margin-bottom:14px;}
-.mort-traj-title{font-family:'Fraunces',serif;font-size:22px;letter-spacing:-0.015em;margin-bottom:3px;}
+.mort-traj-title{font-family:'Lora',serif;font-size:22px;letter-spacing:-0.015em;margin-bottom:3px;}
 .mort-traj-sub{font-size:12.5px;color:var(--muted);}
 .mort-traj-controls{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);}
 .mort-traj-control{display:flex;flex-direction:column;gap:6px;min-width:140px;}
 .mort-traj-control.slider{flex:1 1 240px;}
 .mort-traj-control label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
 .mort-traj-control input[type=range]{width:100%;cursor:pointer;accent-color:var(--accent);}
-.mort-traj-control input[type=number]{padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;width:110px;}
+.mort-traj-control input[type=number]{padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);color:var(--ink);outline:none;width:110px;}
 .mort-traj-range-labels{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);}
 .mort-traj-range-labels .current{color:var(--ink);font-weight:600;}
 .mort-traj-impact{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
@@ -1324,13 +1324,13 @@ body.goals-editing .g-tile{border-style:dashed;}
 .mort-card-add:hover{border-color:var(--accent);color:var(--accent);}
 /* Always visible so the edit affordance is discoverable (esp. on mobile, where
    there's no hover). Small bordered pill with an "Edit" label. */
-.mort-edit-btn{position:absolute;top:9px;left:9px;background:var(--surface);border:1px solid var(--border);cursor:pointer;color:var(--muted);padding:3px 8px;border-radius:100px;transition:color .15s,border-color .15s,background .15s;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'Inter',sans-serif;line-height:1;z-index:2;}
+.mort-edit-btn{position:absolute;top:9px;left:9px;background:var(--surface);border:1px solid var(--border);cursor:pointer;color:var(--muted);padding:3px 8px;border-radius:100px;transition:color .15s,border-color .15s,background .15s;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;font-family:'Work Sans',sans-serif;line-height:1;z-index:2;}
 .mort-edit-btn:hover{color:var(--accent);border-color:var(--accent);}
 .mort-card:hover .mort-edit-btn{opacity:1;}
 .mort-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px;}
 .mort-modal{background:var(--surface);border-radius:var(--radius);padding:28px 28px 20px;width:min(560px,100%);max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
 .mort-modal-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
-.mort-modal-title-text{font-family:'Fraunces',serif;font-size:23px;}
+.mort-modal-title-text{font-family:'Lora',serif;font-size:23px;}
 .mort-modal-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;line-height:1;padding:2px;}
 .mort-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 @media(max-width:500px){.mort-form-grid{grid-template-columns:1fr;}}
@@ -1338,7 +1338,7 @@ body.goals-editing .g-tile{border-style:dashed;}
 .mort-form-group.full{grid-column:span 2;}
 @media(max-width:500px){.mort-form-group.full{grid-column:1;}}
 .mort-form-label{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
-.mort-form-input{padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;width:100%;}
+.mort-form-input{padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--ink);font-family:'Work Sans',sans-serif;outline:none;width:100%;}
 .mort-form-input:focus{border-color:var(--accent);}
 .mort-form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:14px;border-top:1px solid var(--border);}
 .mort-form-hint{font-size:11px;color:var(--faint);margin-top:3px;}
@@ -1380,15 +1380,8 @@ body.goals-editing .g-tile{border-style:dashed;}
   <div class="logo">
     <div class="logo-top">
       <h1>Ledger</h1>
-      <svg class="logo-emblem" viewBox="0 0 48 48" aria-hidden="true">
-        <g fill="none" stroke="#6ba3e8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11 40 V22 L24 11 L37 22 V40 Z"/>
-          <path d="M31 16 V12 H34 V18.5"/>
-          <rect x="16" y="27" width="16" height="11" rx="2.4"/>
-          <path d="M16 30.5 H32"/>
-          <path d="M24 33.5 V35.6"/>
-        </g>
-        <circle cx="24" cy="33.5" r="1.3" fill="#6ba3e8"/>
+      <svg class="logo-emblem" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#6ba3e8" fill-rule="evenodd" d="M12 1.6 23.4 10.6H20v8.8A2.6 2.6 0 0 1 17.4 22H6.6A2.6 2.6 0 0 1 4 19.4v-8.8H0.6Z M12 12.2m-2.4 0a2.4 2.4 0 1 0 4.8 0a2.4 2.4 0 1 0-4.8 0Z M10.9 14.2h2.2l.35 5.2h-2.9Z"/>
       </svg>
     </div>
     <span>Household Expenses</span>
@@ -1553,12 +1546,12 @@ body.goals-editing .g-tile{border-style:dashed;}
             <button class="dash-pill" onclick="toggleCatDropdown(event)"><span id="dash-cat-label">All Categories</span> ▾</button>
             <div id="dash-cat-menu" style="display:none;position:absolute;top:calc(100% + 4px);right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.15);">
               <div style="padding:6px 10px 7px;border-bottom:1px solid var(--border);display:flex;gap:4px;" onclick="event.stopPropagation()">
-                <button id="dcm-all"    onclick="setDashCatMode('all')"    style="flex:1;font-size:11.5px;font-family:'Inter',sans-serif;padding:3px 0;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--ink);">All</button>
-                <button id="dcm-top5"   onclick="setDashCatMode('top5')"   style="flex:1;font-size:11.5px;font-family:'Inter',sans-serif;padding:3px 0;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--ink);">Top 5</button>
-                <button id="dcm-custom" onclick="setDashCatMode('custom')"  style="flex:1;font-size:11.5px;font-family:'Inter',sans-serif;padding:3px 0;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--ink);">Custom</button>
+                <button id="dcm-all"    onclick="setDashCatMode('all')"    style="flex:1;font-size:11.5px;font-family:'Work Sans',sans-serif;padding:3px 0;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--ink);">All</button>
+                <button id="dcm-top5"   onclick="setDashCatMode('top5')"   style="flex:1;font-size:11.5px;font-family:'Work Sans',sans-serif;padding:3px 0;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--ink);">Top 5</button>
+                <button id="dcm-custom" onclick="setDashCatMode('custom')"  style="flex:1;font-size:11.5px;font-family:'Work Sans',sans-serif;padding:3px 0;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--ink);">Custom</button>
               </div>
               <div id="dash-cat-items" style="max-height:260px;overflow-y:auto;padding:2px 0;"></div>
-              <div style="padding:8px 10px;border-top:1px solid var(--border);"><button onclick="document.getElementById('dash-cat-menu').style.display='none'" style="width:100%;font-size:12.5px;font-weight:600;font-family:'Inter',sans-serif;padding:8px 0;border-radius:7px;border:none;cursor:pointer;background:var(--accent);color:#fff;">Done</button></div>
+              <div style="padding:8px 10px;border-top:1px solid var(--border);"><button onclick="document.getElementById('dash-cat-menu').style.display='none'" style="width:100%;font-size:12.5px;font-weight:600;font-family:'Work Sans',sans-serif;padding:8px 0;border-radius:7px;border:none;cursor:pointer;background:var(--accent);color:#fff;">Done</button></div>
             </div>
           </div>
         </div>
@@ -1779,10 +1772,10 @@ body.goals-editing .g-tile{border-style:dashed;}
               <div style="display:flex;align-items:center;gap:5px;">
                 <label style="font-size:11px;color:var(--muted);white-space:nowrap;">From</label>
                 <select id="cf-from-month" onchange="setCfFrom(this.value)"
-                  style="font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;"></select>
+                  style="font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Work Sans',sans-serif;outline:none;"></select>
                 <label style="font-size:11px;color:var(--muted);white-space:nowrap;">To</label>
                 <select id="cf-to-month" onchange="setCfTo(this.value)"
-                  style="font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;"></select>
+                  style="font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Work Sans',sans-serif;outline:none;"></select>
               </div>
               <div style="display:flex;align-items:center;gap:5px;">
                 <label style="font-size:11px;color:var(--muted);white-space:nowrap;">Start balance</label>
@@ -1793,7 +1786,7 @@ body.goals-editing .g-tile{border-style:dashed;}
               <button id="cf-bonus-btn" class="btn btn-ghost btn-sm" onclick="toggleCfBonus()" style="font-size:11px;padding:2px 8px;">Bonus: on</button>
               <div class="ms-wrap" id="ms-cf-excl" style="position:relative;">
                 <button class="ms-btn" id="ms-cf-excl-btn" onclick="openMs(event,'ms-cf-excl')"
-                  style="font-size:11px;padding:2px 22px 2px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;cursor:pointer;outline:none;height:22px;">Exclude categories</button>
+                  style="font-size:11px;padding:2px 22px 2px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Work Sans',sans-serif;cursor:pointer;outline:none;height:22px;">Exclude categories</button>
                 <div class="ms-drop" id="ms-cf-excl-drop"></div>
               </div>
             </div>
@@ -1826,9 +1819,9 @@ body.goals-editing .g-tile{border-style:dashed;}
                 <button class="dash-pill" onclick="toggleChartCatDropdown(event)"><span id="chart-cat-label">Top 5</span> ▾</button>
                 <div id="chart-cat-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.15);">
                   <div style="padding:6px 10px 7px;border-bottom:1px solid var(--border);display:flex;gap:4px;" onclick="event.stopPropagation()">
-                    <button id="ccm-all"    onclick="setChartCatMode('all')"    style="flex:1;font-size:11.5px;font-family:'Inter',sans-serif;padding:3px 0;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--ink);">All</button>
-                    <button id="ccm-top5"   onclick="setChartCatMode('top5')"   style="flex:1;font-size:11.5px;font-family:'Inter',sans-serif;padding:3px 0;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--ink);">Top 5</button>
-                    <button id="ccm-custom" onclick="setChartCatMode('custom')" style="flex:1;font-size:11.5px;font-family:'Inter',sans-serif;padding:3px 0;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--ink);">Custom</button>
+                    <button id="ccm-all"    onclick="setChartCatMode('all')"    style="flex:1;font-size:11.5px;font-family:'Work Sans',sans-serif;padding:3px 0;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--ink);">All</button>
+                    <button id="ccm-top5"   onclick="setChartCatMode('top5')"   style="flex:1;font-size:11.5px;font-family:'Work Sans',sans-serif;padding:3px 0;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--ink);">Top 5</button>
+                    <button id="ccm-custom" onclick="setChartCatMode('custom')" style="flex:1;font-size:11.5px;font-family:'Work Sans',sans-serif;padding:3px 0;border-radius:5px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--ink);">Custom</button>
                   </div>
                   <div id="chart-cat-items" style="max-height:260px;overflow-y:auto;padding:2px 0;"></div>
                 </div>
@@ -1915,8 +1908,8 @@ body.goals-editing .g-tile{border-style:dashed;}
           <button class="ms-btn" id="ms-month-btn" onclick="openMs(event,'ms-month')">All months</button>
           <div class="ms-drop" id="ms-month-drop"></div>
         </div>
-        <button id="txn-select-btn" onclick="toggleTxnSelectMode()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;white-space:nowrap;" title="Bulk-select transactions to edit in one go">Select</button>
-        <button onclick="resetTxnFilters()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Inter',sans-serif;color:var(--faint);cursor:pointer;white-space:nowrap;" title="Reset filters">Reset</button>
+        <button id="txn-select-btn" onclick="toggleTxnSelectMode()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Work Sans',sans-serif;color:var(--ink);cursor:pointer;white-space:nowrap;" title="Bulk-select transactions to edit in one go">Select</button>
+        <button onclick="resetTxnFilters()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Work Sans',sans-serif;color:var(--faint);cursor:pointer;white-space:nowrap;" title="Reset filters">Reset</button>
       </div>
       <div class="txn-cat-pills" id="txn-cat-pills"></div>
       <div class="bulk-bar" id="bulk-bar">
@@ -2000,7 +1993,7 @@ body.goals-editing .g-tile{border-style:dashed;}
             <button class="ms-btn" id="ms-inc-month-btn" onclick="openMs(event,'ms-inc-month')">All months</button>
             <div class="ms-drop" id="ms-inc-month-drop"></div>
           </div>
-          <button onclick="resetIncomeFilters()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Inter',sans-serif;color:var(--faint);cursor:pointer;white-space:nowrap;" title="Reset filters">Reset</button>
+          <button onclick="resetIncomeFilters()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Work Sans',sans-serif;color:var(--faint);cursor:pointer;white-space:nowrap;" title="Reset filters">Reset</button>
         </div>
         <div class="income-table-wrap">
         <table>
@@ -2098,10 +2091,10 @@ body.goals-editing .g-tile{border-style:dashed;}
           <div style="font-family:var(--num);font-size:28px;font-weight:400;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;" id="rental-page-total">$0.00</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
-          <select id="rental-f-year" onchange="renderRental()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Inter',sans-serif;outline:none;">
+          <select id="rental-f-year" onchange="renderRental()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Work Sans',sans-serif;outline:none;">
             <option value="">All years</option>
           </select>
-          <select id="rental-f-cat" onchange="renderRental()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Inter',sans-serif;outline:none;">
+          <select id="rental-f-cat" onchange="renderRental()" style="padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);font-family:'Work Sans',sans-serif;outline:none;">
             <option value="">All categories</option>
             <option value="repairs">Repairs</option>
             <option value="maintenance">Maintenance</option>
@@ -2255,7 +2248,7 @@ body.goals-editing .g-tile{border-style:dashed;}
             <div style="flex:1;">
               <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;font-weight:500;">Google Apps Script Web App URL</label>
               <input type="text" id="sheets-url" placeholder="https://script.google.com/macros/s/..."
-                style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter',sans-serif;outline:none;background:var(--bg);color:var(--ink);">
+                style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Work Sans',sans-serif;outline:none;background:var(--bg);color:var(--ink);">
             </div>
             <button class="btn btn-primary" onclick="saveSheetUrl()">Connect</button>
             <button class="btn btn-ghost" onclick="testConnection()">Test</button>
@@ -2607,7 +2600,7 @@ function doGet(e) {
       <div id="dupes-controls" style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);">
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);">
           Date window:
-          <select id="dupes-window" onchange="renderDuplicates()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:13px;font-family:'Inter',sans-serif;">
+          <select id="dupes-window" onchange="renderDuplicates()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:13px;font-family:'Work Sans',sans-serif;">
             <option value="0">Same day only</option>
             <option value="2" selected>Within 2 days</option>
             <option value="5">Within 5 days</option>
@@ -2799,12 +2792,12 @@ function doGet(e) {
       <div style="margin-top:10px;">
         <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Card</label>
         <select id="col-cardname-select" onchange="onCardNameSelectChange()"
-          style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;">
+          style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;">
           <option value="">No card details</option>
         </select>
         <div id="col-cardname-hint" style="display:none;margin-top:6px;font-size:11px;color:var(--muted);line-height:1.45;">Pick <strong>+ Type a new card name...</strong> above to save one (e.g. "Amex Gold"). It'll appear here next time you upload.</div>
         <input type="text" id="col-cardname" placeholder="e.g. RBC Chequing, Amex Gold"
-          style="display:none;width:100%;margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
+          style="display:none;width:100%;margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);outline:none;">
       </div>
     </div>
       <div style="margin-top:10px;">
@@ -2881,7 +2874,7 @@ function doGet(e) {
       <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div class="add-field">
           <label>Whose card is this?</label>
-          <select id="pdf-person" onchange="onPdfPersonChange(this.value)" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
+          <select id="pdf-person" onchange="onPdfPersonChange(this.value)" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);outline:none;">
             <option value="Michael">Michael</option>
             <option value="Lili">Lili</option>
             <option value="Joint">Joint</option>
@@ -2889,11 +2882,11 @@ function doGet(e) {
         </div>
         <div class="add-field">
           <label>Card</label>
-          <select id="pdf-cardname-select" onchange="onPdfCardNameSelectChange()" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;">
+          <select id="pdf-cardname-select" onchange="onPdfCardNameSelectChange()" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;">
             <option value="">No card details</option>
           </select>
           <div id="pdf-cardname-hint" style="display:none;margin-top:6px;font-size:11px;color:var(--muted);line-height:1.45;">Pick <strong>+ Type a new card name...</strong> above to save one (e.g. "Amex Gold"). It'll appear here next time you upload.</div>
-          <input type="text" id="pdf-cardname" placeholder="e.g. RBC Visa, Amex" style="display:none;width:100%;margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
+          <input type="text" id="pdf-cardname" placeholder="e.g. RBC Visa, Amex" style="display:none;width:100%;margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);outline:none;">
         </div>
       </div>
       <div style="margin-top:10px;">
@@ -2973,9 +2966,9 @@ function doGet(e) {
   <div class="modal">
     <div class="modal-title" id="add-modal-title">Add Transaction</div>
     <div id="add-type-row" style="display:flex;gap:0;margin:10px 0 16px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;width:fit-content;">
-      <button id="add-type-expense"  onclick="setAddType('expense')"  style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--accent);color:#fff;font-family:'Inter',sans-serif;">Expense</button>
-      <button id="add-type-refund"   onclick="setAddType('refund')"   style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--surface);color:var(--muted);font-family:'Inter',sans-serif;">Refund</button>
-      <button id="add-type-transfer" onclick="setAddType('transfer')" style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--surface);color:var(--muted);font-family:'Inter',sans-serif;">Transfer / Split</button>
+      <button id="add-type-expense"  onclick="setAddType('expense')"  style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--accent);color:#fff;font-family:'Work Sans',sans-serif;">Expense</button>
+      <button id="add-type-refund"   onclick="setAddType('refund')"   style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--surface);color:var(--muted);font-family:'Work Sans',sans-serif;">Refund</button>
+      <button id="add-type-transfer" onclick="setAddType('transfer')" style="padding:6px 18px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:var(--surface);color:var(--muted);font-family:'Work Sans',sans-serif;">Transfer / Split</button>
     </div>
     <div class="add-modal-grid">
       <div class="add-field">
@@ -3016,11 +3009,11 @@ function doGet(e) {
       </div>
       <div class="add-field" id="add-nw-field" style="display:none;">
         <label>Needs / Wants override</label>
-        <button type="button" id="add-nw-toggle" data-needs="false" onclick="toggleAddNw()" style="padding:6px 12px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#eaf0f9;color:#2563eb;cursor:pointer;font-family:'Inter',sans-serif;">Want</button>
+        <button type="button" id="add-nw-toggle" data-needs="false" onclick="toggleAddNw()" style="padding:6px 12px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:#eaf0f9;color:#2563eb;cursor:pointer;font-family:'Work Sans',sans-serif;">Want</button>
       </div>
       <div class="add-field" id="add-rental-field" style="display:none;">
         <label>Rental expense (for tax reporting)</label>
-        <button type="button" id="add-rental-toggle" data-rental="false" onclick="toggleAddRental()" style="padding:6px 12px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;">Not rental</button>
+        <button type="button" id="add-rental-toggle" data-rental="false" onclick="toggleAddRental()" style="padding:6px 12px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'Work Sans',sans-serif;">Not rental</button>
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -3036,7 +3029,7 @@ function doGet(e) {
     <div class="modal-title">Which category does this offset?</div>
     <div class="modal-sub">e.g. a friend paid you back for dinner → Eating Out</div>
     <div style="margin-bottom:16px;">
-      <select id="transfer-cat-select" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);outline:none;">
+      <select id="transfer-cat-select" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);outline:none;">
         <option value="">— No specific category —</option>
       </select>
     </div>
@@ -3101,7 +3094,7 @@ function doGet(e) {
       </div>
       <div class="add-field full">
         <label>Extra Keywords <span style="font-size:11px;color:var(--muted);font-weight:400;">comma-separated — parser still uses built-in rules, these are added on top</span></label>
-        <textarea id="new-cat-keywords" rows="3" placeholder="e.g. starbucks, coffee, cafe, tim hortons" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;resize:vertical;box-sizing:border-box;"></textarea>
+        <textarea id="new-cat-keywords" rows="3" placeholder="e.g. starbucks, coffee, cafe, tim hortons" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Work Sans',sans-serif;resize:vertical;box-sizing:border-box;"></textarea>
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
@@ -6868,12 +6861,12 @@ function renderTxns() {
       <td class="txn-td-date" style="width:100px;"><input type="date" class="txn-date-input" value="${t.date}" onchange="saveTxnDate('${t.id}',this.value)"></td>
       <td class="txn-td-merchant" style="font-weight:500;"><span class="txn-edit-text" contenteditable="true" onblur="saveTxnMerchant('${t.id}',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(t.merchant)}</span>${_recurSet.has(commitMerchantKey(t.merchant)) ? ' <span class="recur-chip" title="Recurring (auto-detected)">↻</span>' : ''}${labelChipHtml(t)}</td>
       <td class="txn-td-cat" style="position:relative;"><span class="txn-date-mob">${t.date ? t.date.slice(5).replace('-','/') : ''}</span>${catCell}</td>
-      <td class="hide-mobile"><select onchange="savePerson('${t.id}',this.value)" style="border:none;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;outline:none;padding:2px 4px;border-radius:4px;">
+      <td class="hide-mobile"><select onchange="savePerson('${t.id}',this.value)" style="border:none;background:transparent;font-size:13px;font-family:'Work Sans',sans-serif;color:var(--ink);cursor:pointer;outline:none;padding:2px 4px;border-radius:4px;">
         <option value="Michael" ${t.person==='Michael'?'selected':''}>Michael</option>
         <option value="Lili" ${t.person==='Lili'?'selected':''}>Lili</option>
         ${showJoint ? `<option value="Joint" ${t.person==='Joint'?'selected':''}>Joint</option>` : ''}
       </select></td>
-      <td class="hide-mobile"><select onchange="saveCard('${t.id}',this.value)" style="border:none;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;outline:none;padding:2px 4px;border-radius:4px;">
+      <td class="hide-mobile"><select onchange="saveCard('${t.id}',this.value)" style="border:none;background:transparent;font-size:13px;font-family:'Work Sans',sans-serif;color:var(--ink);cursor:pointer;outline:none;padding:2px 4px;border-radius:4px;">
         <option value="">—</option>
         ${allCardOptions.map(card => `<option value="${esc(card)}" ${t.card===card?'selected':''}>${esc(card)}</option>`).join('')}
       </select></td>
@@ -6882,7 +6875,7 @@ function renderTxns() {
       <td class="txn-td-amount" style="text-align:right;white-space:nowrap;">
         <div class="txn-amt-val">${amtDisplay}</div>
         <div class="txn-amt-actions">
-        ${(!isIncome && !isSavings && !isRefund) ? `<button onclick="setNeeds('${t.id}',${!isNeeds(t)})" style="font-size:10px;padding:1px 6px;border-radius:4px;border:1px solid var(--border);background:${isNeeds(t)?'#fef3e2':'#eaf0f9'};color:${isNeeds(t)?'#b45309':'#2563eb'};cursor:pointer;font-family:'Inter',sans-serif;">${isNeeds(t)?'Need':'Want'}</button>` : ''}
+        ${(!isIncome && !isSavings && !isRefund) ? `<button onclick="setNeeds('${t.id}',${!isNeeds(t)})" style="font-size:10px;padding:1px 6px;border-radius:4px;border:1px solid var(--border);background:${isNeeds(t)?'#fef3e2':'#eaf0f9'};color:${isNeeds(t)?'#b45309':'#2563eb'};cursor:pointer;font-family:'Work Sans',sans-serif;">${isNeeds(t)?'Need':'Want'}</button>` : ''}
         ${(!isIncome && !isSavings) ? `<button class="del-btn rental-btn${t.rental?' on':''}" onclick="toggleRental('${t.id}')" title="${t.rental?'Untag as rental expense':'Tag as rental expense (for tax reporting)'}">🏠</button>` : ''}
         <button class="del-btn edit-btn" onclick="openEditModal('${t.id}')" title="Edit transaction">✎</button>
         <button class="del-btn" onclick="deleteTxn('${t.id}')" title="Remove transaction">✕</button>
@@ -8608,9 +8601,9 @@ function renderIncome() {
       <td style="width:100px;"><span class="txn-date-input" style="cursor:pointer;" onclick="openEditIncome('${i.id}')" title="Click to edit">${i.date||'—'}</span></td>
       <td><span class="cat-badge" style="background:${lightenColor(incomeTypeColor(i.type))};color:${incomeTypeColor(i.type)};">${INCOME_TYPES[i.type]||i.type}</span></td>
       <td style="font-weight:500;"><span class="txn-note" contenteditable="true" onblur="saveIncomeDesc('${i.id}',this.textContent)">${esc(i.desc||'')}</span></td>
-      <td class="hide-mobile"><select onchange="saveIncomeCat('${i.id}',this.value)" style="border:none;background:transparent;font-size:12.5px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;padding:0;outline:none;max-width:110px;">${catOpts}</select></td>
-      <td class="hide-mobile"><select onchange="saveIncomePerson('${i.id}',this.value)" style="border:none;background:transparent;font-size:12.5px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;padding:0;outline:none;max-width:90px;">${['Michael','Lili','Joint'].map(p=>`<option${p===i.person?' selected':''}>${p}</option>`).join('')}</select></td>
-      <td class="hide-mobile"><select onchange="saveIncomeCard('${i.id}',this.value)" style="border:none;background:transparent;font-size:12.5px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;padding:0;outline:none;max-width:110px;">${cardOpts}</select></td>
+      <td class="hide-mobile"><select onchange="saveIncomeCat('${i.id}',this.value)" style="border:none;background:transparent;font-size:12.5px;font-family:'Work Sans',sans-serif;color:var(--ink);cursor:pointer;padding:0;outline:none;max-width:110px;">${catOpts}</select></td>
+      <td class="hide-mobile"><select onchange="saveIncomePerson('${i.id}',this.value)" style="border:none;background:transparent;font-size:12.5px;font-family:'Work Sans',sans-serif;color:var(--ink);cursor:pointer;padding:0;outline:none;max-width:90px;">${['Michael','Lili','Joint'].map(p=>`<option${p===i.person?' selected':''}>${p}</option>`).join('')}</select></td>
+      <td class="hide-mobile"><select onchange="saveIncomeCard('${i.id}',this.value)" style="border:none;background:transparent;font-size:12.5px;font-family:'Work Sans',sans-serif;color:var(--ink);cursor:pointer;padding:0;outline:none;max-width:110px;">${cardOpts}</select></td>
       <td class="hide-mobile"><span class="txn-note" contenteditable="true" onblur="saveIncomeNote('${i.id}',this.textContent)">${esc(i.note||'')}</span></td>
       <td style="text-align:right;font-weight:600;color:#2d6a4f;">${fmt(i.amount)}</td>
       <td style="text-align:right;white-space:nowrap;">
@@ -8890,7 +8883,7 @@ function renderSavings() {
     const col  = acct ? (acct.color || ACCT_COLORS[acct.type]||'#71717a') : '#71717a';
     const isW  = c.type === 'withdrawal';
     return `<tr>
-      <td style="width:120px;vertical-align:middle;"><input type="date" value="${c.date}" onchange="saveContribDate('${c.id}',this.value)" style="border:none;background:transparent;font-size:11.5px;color:var(--faint);font-family:'Inter',sans-serif;cursor:pointer;width:100%;padding:0;margin:0;line-height:1.3;vertical-align:middle;-webkit-appearance:none;appearance:none;box-sizing:border-box;"></td>
+      <td style="width:120px;vertical-align:middle;"><input type="date" value="${c.date}" onchange="saveContribDate('${c.id}',this.value)" style="border:none;background:transparent;font-size:11.5px;color:var(--faint);font-family:'Work Sans',sans-serif;cursor:pointer;width:100%;padding:0;margin:0;line-height:1.3;vertical-align:middle;-webkit-appearance:none;appearance:none;box-sizing:border-box;"></td>
       <td style="font-weight:500;">${esc(acct ? acct.name : '—')}</td>
       <td><span class="cat-badge" style="background:${isW?'#faeaec':'#eaf4ef'};color:${isW?'#9b2335':'#2d6a4f'};">${isW ? 'Withdrawal' : 'Contribution'}</span></td>
       <td><span class="person-tag">${c.person||'—'}</span></td>
@@ -9492,7 +9485,7 @@ function renderRental() {
       const tc = CAT[r.txnCat] || CAT.misc;
       return `<tr class="rental-tagged">
         <td style="color:var(--faint);font-size:12px;width:92px;">${r.date}</td>
-        <td><select class="rental-cat-sel" onchange="setRentalCat('${r.id}',this.value)" title="Assign a rental category" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);cursor:pointer;outline:none;"><option value="">Uncategorized</option>${RENTAL_CATS.map(rc => `<option value="${rc.key}" ${r.cat===rc.key?'selected':''}>${rc.label}</option>`).join('')}</select> <span style="font-size:10px;color:#2d6a4f;background:#e9f5ec;padding:1px 6px;border-radius:4px;margin-left:4px;font-weight:600;" title="Tagged from Transactions (originally: ${esc(tc.label)})">TAGGED</span></td>
+        <td><select class="rental-cat-sel" onchange="setRentalCat('${r.id}',this.value)" title="Assign a rental category" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;font-family:'Work Sans',sans-serif;background:var(--surface);color:var(--ink);cursor:pointer;outline:none;"><option value="">Uncategorized</option>${RENTAL_CATS.map(rc => `<option value="${rc.key}" ${r.cat===rc.key?'selected':''}>${rc.label}</option>`).join('')}</select> <span style="font-size:10px;color:#2d6a4f;background:#e9f5ec;padding:1px 6px;border-radius:4px;margin-left:4px;font-weight:600;" title="Tagged from Transactions (originally: ${esc(tc.label)})">TAGGED</span></td>
         <td style="font-weight:500;">${esc(r.desc)}</td>
         <td><span class="person-tag">${esc(r.person)}</span></td>
         <td><span class="person-tag">${esc(r.card||'')}</span></td>
@@ -12047,7 +12040,7 @@ function renderMortgages() {
           <details style="margin-top:8px;">
             <summary style="font-size:11px;color:var(--accent);cursor:pointer;user-select:none;">Correct balance</summary>
             <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
-              <input type="text" id="mort-bal-input" style="width:140px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;" placeholder="${fmt(sel.balance).replace('$','')}" onfocus="rawBalInput(this)" onblur="fmtBalInput(this)">
+              <input type="text" id="mort-bal-input" style="width:140px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--ink);font-family:'Work Sans',sans-serif;outline:none;" placeholder="${fmt(sel.balance).replace('$','')}" onfocus="rawBalInput(this)" onblur="fmtBalInput(this)">
               <button class="btn btn-primary btn-sm" style="font-size:11px;padding:5px 10px;" onclick="saveMortBalance('${sel.id}')">Save</button>
             </div>
           </details>
@@ -12157,7 +12150,7 @@ function renderMortgages() {
                 <td colspan="2" style="font-size:12px;color:var(--muted);font-style:italic;">Opening Balance &mdash; ${sel.startDate}</td>
                 <td colspan="6" style="text-align:right;">
                   <input type="text" id="mort-opening-bal"
-                    style="font-weight:600;font-size:13px;text-align:right;border:none;border-bottom:1px dashed var(--faint);background:transparent;color:var(--ink);font-family:'Inter',sans-serif;width:130px;cursor:text;outline:none;"
+                    style="font-weight:600;font-size:13px;text-align:right;border:none;border-bottom:1px dashed var(--faint);background:transparent;color:var(--ink);font-family:'Work Sans',sans-serif;width:130px;cursor:text;outline:none;"
                     value="${sel.originalBalance.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2})}"
                     title="Click to edit opening balance"
                     onfocus="rawBalInput(this);this.style.borderBottomColor='var(--accent)';"
