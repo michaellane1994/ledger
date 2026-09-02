@@ -103,6 +103,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .logo{height:64px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0 20px;border-bottom:1px solid rgba(255,255,255,.07);}
 .logo-top{display:flex;flex-direction:row;align-items:center;gap:10px;}
 .logo-emblem{width:34px;height:34px;flex-shrink:0;display:block;}
+/* Close (X) for the mobile full-screen menu; hidden on desktop (persistent sidebar). */
+.sidebar-close{display:none;position:absolute;top:calc(var(--sat) + 14px);right:16px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;border:none;font-size:17px;line-height:1;cursor:pointer;z-index:6;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:background .15s;}
+.sidebar-close:hover{background:rgba(255,255,255,.22);}
 .logo h1{font-family:'Lora',serif;font-size:36px;font-weight:500;color:#fff;letter-spacing:-0.02em;line-height:1;}
 .logo span{font-size:11px;color:rgba(255,255,255,.4);letter-spacing:.8px;text-transform:uppercase;margin-top:6px;display:block;font-weight:500;line-height:1;}
 .nav{padding:14px 10px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;}
@@ -1064,9 +1067,16 @@ body.goals-editing .g-tile{border-style:dashed;}
 
 @media(max-width:768px){
   .card-head{flex-wrap:wrap;gap:10px;}
-  .sidebar{transform:translateX(-100%);transition:transform .25s ease;z-index:100;}
-  .sidebar.open{transform:translateX(0);}
-  .sidebar-overlay.open{display:block;}
+  /* Full-screen menu (matches the SaaS): the drawer becomes a full-viewport
+     panel that fades up over the app, filling the visible screen via 100dvh. */
+  .sidebar{width:100vw!important;left:0!important;right:0!important;top:0!important;bottom:auto!important;height:100dvh!important;
+           transform:translateY(10px);opacity:0;visibility:hidden;pointer-events:none;
+           transition:opacity .26s ease,transform .26s ease,visibility .26s ease;
+           z-index:250;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:var(--sat);}
+  .sidebar.open{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)!important;}
+  .sidebar-close{display:flex;}
+  /* Full-screen menu is opaque, so the dim backdrop is unnecessary. */
+  .sidebar-overlay,.sidebar-overlay.open{display:none!important;}
   .main{margin-left:0;max-width:100vw;padding-top:calc(64px + var(--sat));}
   .hamburger{display:flex;align-items:center;justify-content:center;}
   /* Solid, theme-matched top bar on mobile. Two reasons: (1) the desktop
@@ -1380,6 +1390,7 @@ body.goals-editing .g-tile{border-style:dashed;}
 
 <!-- SIDEBAR -->
 <aside class="sidebar">
+  <button class="sidebar-close" onclick="closeSidebar()" aria-label="Close menu" title="Close">✕</button>
   <div class="logo">
     <div class="logo-top">
       <h1>Ledger</h1>
@@ -11402,15 +11413,31 @@ function normDate(s) {
 }
 
 // ── MOBILE SIDEBAR ───────────────────────────────────────
+// Tint the iOS status bar to the menu colour while the full-screen menu is open
+// (matches the SaaS). In a home-screen PWA this is what fills the very top; it
+// returns to the app background on close. Mobile only.
+function _syncMenuStatusBar(open) {
+  if (window.innerWidth > 768) return;
+  const tc = document.querySelector('meta[name="theme-color"]');
+  if (!tc) return;
+  if (open) {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    tc.setAttribute('content', dark ? '#0d0d0f' : '#0a0a0d');
+  } else {
+    tc.setAttribute('content', getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#f4f1ec');
+  }
+}
 function toggleSidebar() {
   const sb = document.querySelector('.sidebar');
   const ov = document.getElementById('sidebar-overlay');
-  sb.classList.toggle('open');
+  const open = sb.classList.toggle('open');
   ov.classList.toggle('open');
+  _syncMenuStatusBar(open);
 }
 function closeSidebar() {
   document.querySelector('.sidebar').classList.remove('open');
   document.getElementById('sidebar-overlay').classList.remove('open');
+  _syncMenuStatusBar(false);
 }
 // Close sidebar on nav item click on mobile
 document.querySelectorAll('.nav-item').forEach(el => {
