@@ -11495,7 +11495,7 @@ function applyTheme(key) {
   if (_tc) _tc.setAttribute('content', t.bg);
   document.getElementById('dark-toggle')?.classList.toggle('on', t.dark);
   const sidebar = document.querySelector('.sidebar');
-  if (sidebar) sidebar.style.background = t.sidebarBg;
+  if (sidebar) sidebar.style.background = t.dark ? '#0F1A2E' : '#1E3A5C';
   localStorage.setItem('l3_theme', key);
 }
 function setTheme(key) {
