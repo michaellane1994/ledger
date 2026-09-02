@@ -1069,7 +1069,7 @@ body.goals-editing .g-tile{border-style:dashed;}
   .card-head{flex-wrap:wrap;gap:10px;}
   /* Full-screen menu (matches the SaaS): the drawer becomes a full-viewport
      panel that fades up over the app, filling the visible screen via 100dvh. */
-  .sidebar{width:100vw!important;left:0!important;right:0!important;top:0!important;bottom:auto!important;height:100dvh!important;
+  .sidebar{width:100vw!important;left:0!important;right:0!important;top:0!important;bottom:auto!important;height:100dvh!important;min-height:100dvh!important;
            transform:translateY(10px);opacity:0;visibility:hidden;pointer-events:none;
            transition:opacity .26s ease,transform .26s ease,visibility .26s ease;
            z-index:250;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:var(--sat);}
@@ -11413,18 +11413,27 @@ function normDate(s) {
 }
 
 // ── MOBILE SIDEBAR ───────────────────────────────────────
-// Tint the iOS status bar to the menu colour while the full-screen menu is open
-// (matches the SaaS). In a home-screen PWA this is what fills the very top; it
-// returns to the app background on close. Mobile only.
+// Fill the very-top and very-bottom strips with the menu colour while the
+// full-screen menu is open (matches the SaaS). iOS tints those strips from the
+// app background (--bg, which the top bar uses), so overriding --bg is the
+// reliable lever in Safari-browser too; theme-color covers the home-screen PWA.
+// Both restored on close. Mobile only.
+let _menuBgSaved = null;
 function _syncMenuStatusBar(open) {
-  if (window.innerWidth > 768) return;
+  const mobile = window.innerWidth <= 768;
+  const root = document.documentElement;
   const tc = document.querySelector('meta[name="theme-color"]');
-  if (!tc) return;
-  if (open) {
-    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-    tc.setAttribute('content', dark ? '#0d0d0f' : '#0a0a0d');
-  } else {
-    tc.setAttribute('content', getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#f4f1ec');
+  if (open && mobile) {
+    const dark = root.getAttribute('data-theme') === 'dark';
+    const menuBg = dark ? '#0d0d0f' : '#0a0a0d';
+    if (_menuBgSaved === null) _menuBgSaved = root.style.getPropertyValue('--bg');
+    root.style.setProperty('--bg', menuBg);
+    if (tc) tc.setAttribute('content', menuBg);
+  } else if (_menuBgSaved !== null) {
+    if (_menuBgSaved) root.style.setProperty('--bg', _menuBgSaved);
+    else root.style.removeProperty('--bg');
+    _menuBgSaved = null;
+    if (tc) tc.setAttribute('content', getComputedStyle(root).getPropertyValue('--bg').trim() || '#f4f1ec');
   }
 }
 function toggleSidebar() {
