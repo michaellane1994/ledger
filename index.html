@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>Ledger — Household Expenses</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2048%2048%27%3E%3Crect%20width%3D%2748%27%20height%3D%2748%27%20rx%3D%2711%27%20fill%3D%27%232f4a6b%27/%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ede8e1%27%20stroke-width%3D%272.1%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M11%2040%20V22%20L24%2011%20L37%2022%20V40%20Z%27/%3E%3Cpath%20d%3D%27M31%2016%20V12%20H34%20V18.5%27/%3E%3Crect%20x%3D%2716%27%20y%3D%2727%27%20width%3D%2716%27%20height%3D%2711%27%20rx%3D%272.4%27/%3E%3Cpath%20d%3D%27M16%2030.5%20H32%27/%3E%3Cpath%20d%3D%27M24%2033.5%20V35.6%27/%3E%3C/g%3E%3Ccircle%20cx%3D%2724%27%20cy%3D%2733.5%27%20r%3D%271.3%27%20fill%3D%27%23ede8e1%27/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -19,6 +19,9 @@
    Bento Grid + Swiss Modernism, semantic tokens, 8pt rhythm
    ============================================================ */
 :root {
+  /* iOS safe-area insets (0 unless viewport-fit=cover on a notched device). */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
   --num: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --ink:        #0a0a0d;
   --ink-2:      #2c2c34;
@@ -96,7 +99,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;}
 .shell{display:flex;min-height:100vh;overflow-x:hidden;max-width:100vw;}
 
 /* ── SIDEBAR ── */
-.sidebar{width:228px;min-height:100vh;background:linear-gradient(180deg,#0a0a0d 0%,#141417 100%);position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column;}
+.sidebar{width:228px;min-height:100vh;background:linear-gradient(180deg,#0a0a0d 0%,#141417 100%);position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column;padding-bottom:var(--sab);}
 .logo{height:64px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0 20px;border-bottom:1px solid rgba(255,255,255,.07);}
 .logo-top{display:flex;flex-direction:row;align-items:center;gap:10px;}
 .logo-emblem{width:34px;height:34px;flex-shrink:0;display:block;}
@@ -1064,14 +1067,14 @@ body.goals-editing .g-tile{border-style:dashed;}
   .sidebar{transform:translateX(-100%);transition:transform .25s ease;z-index:100;}
   .sidebar.open{transform:translateX(0);}
   .sidebar-overlay.open{display:block;}
-  .main{margin-left:0;max-width:100vw;padding-top:64px;}
+  .main{margin-left:0;max-width:100vw;padding-top:calc(64px + var(--sat));}
   .hamburger{display:flex;align-items:center;justify-content:center;}
   /* Solid, theme-matched top bar on mobile. Two reasons: (1) the desktop
      backdrop-filter blur is a GPU-composited layer that doesn't repaint on a
      light/dark toggle until you scroll/tap, so the very top "hangs" on the old
      colour; a solid bg repaints instantly with the CSS var. (2) it makes the
      whole top region one continuous --bg shade instead of a lighter strip. */
-  .topbar{padding:0 16px;left:0;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;}
+  .topbar{padding:var(--sat) 16px 0;height:calc(64px + var(--sat));left:0;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;}
   .topbar .month-pills{display:none;}
   .topbar-pills-row{position:static;left:auto;top:auto;}
   /* No overflow on period-bar: it'd clip the currency dropdown that extends below.
