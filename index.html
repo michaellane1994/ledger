@@ -3380,7 +3380,15 @@ function goNav(name) {
   }
   if (name === 'upload')    renderUploads();
   if (name === 'trash')     renderTrash();
-  if (name === 'income')    { renderIncome(); }
+  if (name === 'income')    {
+    // Inherit the dashboard's period like Transactions does, so income shows the
+    // selected month/range instead of defaulting to all time.
+    if (incMonthFilter.size === 0) {
+      const months = (typeof currentDashboardMonths === 'function') ? currentDashboardMonths() : (selMonth ? [selMonth] : []);
+      if (months.length) incMonthFilter = new Set(months);
+    }
+    renderIncome();
+  }
   if (name === 'savings')   renderSavings();
   if (name === 'rental')     renderRental();
   if (name === 'mortgages')  renderMortgages();
