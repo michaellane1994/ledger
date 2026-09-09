@@ -6996,13 +6996,19 @@ function openPreviewDD(e, idx, isPdf) {
   const catBody = CATS.map(c => `<div class="cat-opt" onclick="${fn}(${idx},'category','${c.key}');closeCatDropdown();"><div class="cat-opt-dot" style="background:${c.color};"></div>${esc(c.label)}</div>`).join('');
   const incomeBody =
     `<div class="cat-opt" onclick="${fn}(${idx},'category','__income__');closeCatDropdown();"><div class="cat-opt-dot" style="background:#1d4e89;"></div>Income ↗</div>` +
-    INCOME_TYPES_ARR.map(it => `<div class="cat-opt" onclick="${fn}(${idx},'category','__income__${it.key}');closeCatDropdown();"><div class="cat-opt-dot" style="background:${it.color};"></div>${esc(it.label)}</div>`).join('');
+    INCOME_TYPES_ARR.filter(it => it.key !== 'transfer').map(it => `<div class="cat-opt" onclick="${fn}(${idx},'category','__income__${it.key}');closeCatDropdown();"><div class="cat-opt-dot" style="background:${it.color};"></div>${esc(it.label)}</div>`).join('');
+  // Transfer / Split: mark the row as a transfer AND pick the offset expense
+  // category (stored on incomeCategory), matching the Transactions-page flow.
+  const transferBody =
+    CATS.map(c => `<div class="cat-opt" onclick="${fn}(${idx},'category','__transfer__${c.key}');closeCatDropdown();"><div class="cat-opt-dot" style="background:${c.color};"></div>${esc(c.label)}</div>`).join('') +
+    `<div class="cat-opt" onclick="${fn}(${idx},'category','__transfer__');closeCatDropdown();"><div class="cat-opt-dot" style="background:#7c3d12;"></div>No specific category</div>`;
   const savBody = (savAccts && savAccts.length)
     ? savAccts.map(a => `<div class="cat-opt" onclick="${fn}(${idx},'category','__savings__${a.id}');closeCatDropdown();"><div class="cat-opt-dot" style="background:#b45309;"></div>${esc(a.name)}</div>`).join('')
     : `<div class="cat-opt" style="color:var(--faint);cursor:default;">No savings accounts yet</div>`;
   dd.innerHTML =
     `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Expense Category</div><div class="cat-grp-body">${catBody}</div></div>` +
     `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Income</div><div class="cat-grp-body">${incomeBody}</div></div>` +
+    `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Transfer / Split</div><div class="cat-grp-body">${transferBody}</div></div>` +
     `<div class="cat-grp"><div class="cat-opt-group cat-grp-hdr" onclick="_toggleCatGrp(event,this)"><span class="cat-grp-chev">▸</span>Savings Contribution</div><div class="cat-grp-body">${savBody}</div></div>`;
   _positionCatDropdown(e);
 }
@@ -7919,12 +7925,25 @@ function editImportRow(idx, field, value) {
     row.merchant = value;
     if (!row._catManual) row.category = autoCat(value);
   } else if (field === 'category') {
-    if (value.indexOf('__income__') === 0) {
+    if (value.indexOf('__transfer__') === 0) {
+      // Transfer / Split: an inflow that offsets an expense category.
+      row.isIncome = true;
+      row.incomeType = 'transfer';
+      row.transfer = true;
+      row.incomeCategory = value.slice('__transfer__'.length) || null;
+      row.category = null;
+      if (!row.person) {
+        const globalPerson = document.querySelector('input[name="person"]:checked');
+        if (globalPerson) row.person = globalPerson.value;
+      }
+      delete row.savingsAccountId;
+    } else if (value.indexOf('__income__') === 0) {
       const typeKey = value.slice('__income__'.length);
       row.isIncome = true;
       row.incomeType = typeKey || null;
       row.transfer = (typeKey === 'transfer');
       row.category = null;
+      delete row.incomeCategory;
       // Seed per-row person from the mapper's global picker when a row first
       // becomes income, so the picker in the preview has a sensible default.
       if (!row.person) {
@@ -7936,6 +7955,7 @@ function editImportRow(idx, field, value) {
       row.isIncome = false;
       row.transfer = false;
       row.category = null;
+      delete row.incomeCategory;
       row.savingsAccountId = value.slice('__savings__'.length);
       if (!row.person) {
         const globalPerson = document.querySelector('input[name="person"]:checked');
@@ -7945,6 +7965,7 @@ function editImportRow(idx, field, value) {
       row.isIncome = false;
       row.transfer = false;
       row.category = value;
+      delete row.incomeCategory;
       delete row.savingsAccountId;
     }
     row._catManual = true;
@@ -8011,6 +8032,7 @@ async function doImport() {
       refund: !!r.refund,
       isIncome: !!r.isIncome,
       incomeType: r.incomeType || null,
+      incomeCategory: r.incomeCategory || null,
       transfer: !!r.transfer,
       savingsAccountId: r.savingsAccountId || null
     }));
@@ -8141,12 +8163,16 @@ async function doImport() {
       // Linked expense-side row: positive amount + incomeType 'income' means
       // dashboards/filters exclude it from expense totals but it stays visible
       // as a row in the Transactions tab.
+      const isTransfer = t.incomeType === 'transfer' || t.transfer;
       txns.push({
         id: txnId,
         date: t.date,
         merchant: t.merchant,
-        amount: Math.abs(t.amount),
+        // Transfers are the expense side of an offset, so they carry a negative
+        // amount (matching the Transactions-page flow); plain income stays positive.
+        amount: isTransfer ? -Math.abs(t.amount) : Math.abs(t.amount),
         category: t.category || 'misc',
+        incomeCategory: t.incomeCategory || null,
         person: t.person,
         card: t.card,
         note: '',
@@ -8158,6 +8184,9 @@ async function doImport() {
         date: t.date,
         amount: Math.abs(t.amount),
         type: t.incomeType || (t.transfer ? 'transfer' : 'income'),
+        // Offset expense category for transfers; sums into that category's
+        // "transferred" reduction on the dashboard.
+        category: isTransfer ? (t.incomeCategory || null) : null,
         person: t.person,
         desc: t.merchant,
         note: '',
@@ -10450,22 +10479,33 @@ function editPdfRow(idx, field, value) {
     row.merchant = value;
     if (!row._catManual) row.category = autoCat(value);
   } else if (field === 'category') {
-    if (value.indexOf('__income__') === 0) {
+    if (value.indexOf('__transfer__') === 0) {
+      // Transfer / Split: an inflow that offsets an expense category.
+      row.isIncome = true;
+      row.incomeType = 'transfer';
+      row.transfer = true;
+      row.incomeCategory = value.slice('__transfer__'.length) || null;
+      row.category = null;
+      delete row.savingsAccountId;
+    } else if (value.indexOf('__income__') === 0) {
       const typeKey = value.slice('__income__'.length);
       row.isIncome = true;
       row.incomeType = typeKey || null;
       row.transfer = (typeKey === 'transfer');
       row.category = null;
+      delete row.incomeCategory;
       delete row.savingsAccountId;
     } else if (value.indexOf('__savings__') === 0) {
       row.isIncome = false;
       row.transfer = false;
       row.category = null;
+      delete row.incomeCategory;
       row.savingsAccountId = value.slice('__savings__'.length);
     } else {
       row.isIncome = false;
       row.transfer = false;
       row.category = value;
+      delete row.incomeCategory;
       delete row.savingsAccountId;
     }
     row._catManual = true;
@@ -10563,12 +10603,16 @@ async function importPdfTransactions() {
       const incId = uid();
       freshIncomeIds.push(incId);
       freshIncomeLinkedTxnIds.push(txnId);
+      const isTransfer = t.incomeType === 'transfer' || t.transfer;
       txns.push({
         id: txnId,
         date: t.date,
         merchant: t.merchant,
-        amount: Math.abs(t.amount),
+        // Transfers are the expense side of an offset, so they carry a negative
+        // amount (matching the Transactions-page flow); plain income stays positive.
+        amount: isTransfer ? -Math.abs(t.amount) : Math.abs(t.amount),
         category: t.category || 'misc',
+        incomeCategory: t.incomeCategory || null,
         person: t.person,
         card: t.card,
         note: '',
@@ -10580,6 +10624,9 @@ async function importPdfTransactions() {
         date: t.date,
         amount: Math.abs(t.amount),
         type: t.incomeType || (t.transfer ? 'transfer' : 'income'),
+        // Offset expense category for transfers; sums into that category's
+        // "transferred" reduction on the dashboard.
+        category: isTransfer ? (t.incomeCategory || null) : null,
         person: t.person,
         desc: t.merchant,
         note: '',
