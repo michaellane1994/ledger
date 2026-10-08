@@ -1872,9 +1872,9 @@ body.goals-editing .g-tile{border-style:dashed;}
           <div class="chart-controls">
             <div class="chart-range">
               <label>From</label>
-              <select id="chart-from" onchange="renderChartSection()"></select>
+              <select id="chart-from" onchange="setCfFrom(this.value)"></select>
               <label>To</label>
-              <select id="chart-to" onchange="renderChartSection()"></select>
+              <select id="chart-to" onchange="setCfTo(this.value)"></select>
             </div>
           </div>
           <div class="card-body" style="padding-bottom:16px;">
@@ -3558,10 +3558,11 @@ function restoreDismissedCommitments() {
 }
 const _cfExclRaw = localStorage.getItem('l3_cf_excluded_cats');
 let cfExcludedCats = new Set(_cfExclRaw !== null ? JSON.parse(_cfExclRaw) : []);
-// From-month intentionally NOT restored: cashflow forecast defaults to the
-// earliest data month each load (renderCashflowChart resolves '' to earliest).
-let cfFromMonth      = '';
-let cfToMonth        = localStorage.getItem('l3_cf_to')      || '';
+// From-month restores the last pick (falls back to the earliest month if that
+// month no longer has data). To-month is NOT restored: each load opens on the
+// latest month so new imports always show up (renderCashflowChart resolves '').
+let cfFromMonth      = localStorage.getItem('l3_cf_from')    || '';
+let cfToMonth        = '';
 let cfAvgFrom        = localStorage.getItem('l3_cf_avg_from') || '';
 let fvBonusVisible   = true;
 // CF_FIXED_CATS is derived dynamically from CATS where fixed===true (see renderChartSection)
@@ -3584,6 +3585,10 @@ function resetChartFilters() {
   const fromSel = document.getElementById('chart-from');
   const toSel   = document.getElementById('chart-to');
   if (fromSel && allMonths.length) { fromSel.value = allMonths[0]; }
+  // Start/end months are shared with the Cashflow trend: reset both to the full range.
+  cfFromMonth = ''; _cfFromUserSet = false; cfToMonth = ''; _cfToUserSet = false;
+  try { localStorage.removeItem('l3_cf_from'); } catch (e) {}
+  if (typeof renderCashflowChart === 'function') renderCashflowChart();
   if (toSel   && allMonths.length) { toSel.value   = allMonths[allMonths.length - 1]; }
   const catWrap = document.getElementById('chart-cat-wrap');
   if (catWrap) catWrap.style.display = '';
@@ -3655,8 +3660,10 @@ function renderChartSection() {
   const toSel   = document.getElementById('chart-to');
   if (!fromSel || !toSel) return;
 
-  const prevFrom = fromSel.value || allAvailMonths[0];
-  const prevTo   = toSel.value   || allAvailMonths[allAvailMonths.length - 1];
+  // Start month is shared with the Cashflow trend (remembered across reloads).
+  const prevFrom = cfFromMonth || fromSel.value || allAvailMonths[0];
+  // End month is shared with the Cashflow trend ('' = latest, the default on load).
+  const prevTo   = cfToMonth || toSel.value || allAvailMonths[allAvailMonths.length - 1];
 
   fromSel.innerHTML = '';
   toSel.innerHTML   = '';
@@ -3666,8 +3673,8 @@ function renderChartSection() {
     fromSel.add(new Option(lbl, m));
     toSel.add(new Option(lbl, m));
   });
-  fromSel.value = allAvailMonths.includes(prevFrom) ? prevFrom : (allAvailMonths[0] || '');
-  toSel.value   = allAvailMonths.includes(prevTo)   ? prevTo   : (allAvailMonths[allAvailMonths.length - 1] || '');
+  fromSel.value = allAvailMonths.includes(prevFrom) ? prevFrom : (allAvailMonths.find(m => m >= prevFrom) || allAvailMonths[0] || '');
+  { const le = allAvailMonths.filter(m => m <= prevTo); toSel.value = allAvailMonths.includes(prevTo) ? prevTo : (le.length ? le[le.length - 1] : (allAvailMonths[allAvailMonths.length - 1] || '')); }
 
   const from = fromSel.value;
   const to   = toSel.value;
@@ -4151,19 +4158,23 @@ function setCfStart(val) {
   localStorage.setItem('l3_cf_start', cfStartBalance);
   renderCashflowChart();
 }
-let _cfFromUserSet = false;
+let _cfFromUserSet = !!cfFromMonth;
 let _cfToUserSet = false;
 function setCfFrom(val) {
   _cfFromUserSet = true;
   cfFromMonth = val;
   localStorage.setItem('l3_cf_from', val);
   renderCashflowChart();
+  // Start month is shared with the Over time chart.
+  if (typeof renderChartSection === 'function') renderChartSection();
 }
 function setCfTo(val) {
   _cfToUserSet = true;
   cfToMonth = val;
-  localStorage.setItem('l3_cf_to', val);
+  // Session-only: a refresh reopens both charts on the latest month.
   renderCashflowChart();
+  // End month is shared with the Over time chart.
+  if (typeof renderChartSection === 'function') renderChartSection();
 }
 function setCfAvgFrom(val) {
   cfAvgFrom = val;
@@ -4409,23 +4420,27 @@ function renderCashflowChart() {
   if (fromSel) {
     // Default to the earliest month unless the user explicitly picked a From month
     // this session (otherwise a stale value would stick at the latest month).
-    const prev = _cfFromUserSet ? (fromSel.value || cfFromMonth) : '';
+    // Shared start month (also set by the Over time chart). Snap to the first
+    // month with data at or after it; fall back to the earliest month.
+    const prev = cfFromMonth || '';
     fromSel.innerHTML = allCfMonths.map(m => `<option value="${m}">${fmtOpt(m)}</option>`).join('');
-    fromSel.value = allCfMonths.includes(prev) ? prev : allCfMonths[0];
-    if (cfFromMonth !== fromSel.value) cfFromMonth = fromSel.value;
+    fromSel.value = allCfMonths.includes(prev) ? prev : (allCfMonths.find(m => m >= prev) || allCfMonths[0]);
   }
 
   // Populate To dropdown
   const toSel = document.getElementById('cf-to-month');
   if (toSel) {
-    const prev = _cfToUserSet ? (toSel.value || cfToMonth) : '';
+    // Shared end month (also set by the Over time chart); '' = latest month.
+    const prev = cfToMonth || '';
     toSel.innerHTML = allCfMonths.map(m => `<option value="${m}">${fmtOpt(m)}</option>`).join('');
-    toSel.value = allCfMonths.includes(prev) ? prev : allCfMonths[allCfMonths.length - 1];
-    if (cfToMonth !== toSel.value) cfToMonth = toSel.value;
+    const _le = prev ? allCfMonths.filter(m => m <= prev) : [];
+    toSel.value = allCfMonths.includes(prev) ? prev : (_le.length ? _le[_le.length - 1] : allCfMonths[allCfMonths.length - 1]);
   }
 
   // Apply from/to filter
-  const yearMonths = allCfMonths.filter(m => (!cfFromMonth || m >= cfFromMonth) && (!cfToMonth || m <= cfToMonth));
+  const _cfFromEff = (fromSel && fromSel.value) || cfFromMonth;
+  const _cfToEff   = (toSel && toSel.value) || cfToMonth;
+  const yearMonths = allCfMonths.filter(m => (!_cfFromEff || m >= _cfFromEff) && (!_cfToEff || m <= _cfToEff));
 
   // Income by month (exclude transfers; bonus tracked separately as outlier)
   const incByMonth = {};
