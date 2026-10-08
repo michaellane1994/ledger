@@ -7288,6 +7288,15 @@ function saveTxnAmount(id, raw) {
 // The app calls showToast(...) in several places but never defined it —
 // silently no-oped. Adding a real implementation + a matching undo variant.
 let _toastTimer = null;
+// One-time (per page load) explainer when an outflow is tagged Transfer / Split:
+// money out stays an expense; only money in offsets a category.
+let _splitOutNoted = false;
+function _splitOutNote(catKey) {
+  if (_splitOutNoted) return;
+  _splitOutNoted = true;
+  const c = CATS.find(x => x.key === catKey);
+  showToast('Money out stays an expense, filed under ' + (c ? c.label : 'Misc') + '. Transfer / Split only offsets spending when money comes in.');
+}
 function showToast(msg) {
   let t = document.getElementById('global-toast');
   if (!t) {
@@ -7863,7 +7872,7 @@ function renderImportPreview() {
     let catBtnLabel;
     if (isSavings) { const _acc = (savAccts||[]).find(a => a.id === t.savingsAccountId); catBtnLabel = '→ ' + (_acc ? _acc.name : 'Savings'); }
     else if (isIncome) { const _it = INCOME_TYPES_ARR.find(x => x.key === selIncomeKey); catBtnLabel = _it ? _it.label : 'Income ↗'; }
-    else { const _cc = CATS.find(c => c.key === t.category); catBtnLabel = _cc ? _cc.label : 'Set category'; }
+    else { const _cc = CATS.find(c => c.key === t.category); catBtnLabel = (t.splitOut ? '↔ Split · ' : '') + (_cc ? _cc.label : 'Set category'); }
     const rowStyle = isIncome
       ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
       : isSavings
@@ -7933,7 +7942,20 @@ function editImportRow(idx, field, value) {
     row.merchant = value;
     if (!row._catManual) row.category = autoCat(value);
   } else if (field === 'category') {
-    if (value.indexOf('__transfer__') === 0) {
+    delete row.splitOut;
+    if (value.indexOf('__transfer__') === 0 && !row.refund) {
+      // Outflow tagged Transfer / Split (e.g. paying someone their share): keep
+      // it as money OUT, an expense in the chosen category. Only an inflow
+      // becomes an offset against a category.
+      row.isIncome = false;
+      row.transfer = false;
+      row.splitOut = true;
+      row.category = value.slice('__transfer__'.length) || 'misc';
+      _splitOutNote(row.category);
+      delete row.incomeType;
+      delete row.incomeCategory;
+      delete row.savingsAccountId;
+    } else if (value.indexOf('__transfer__') === 0) {
       // Transfer / Split: an inflow that offsets an expense category.
       row.isIncome = true;
       row.incomeType = 'transfer';
@@ -10435,7 +10457,7 @@ function renderPdfPreview() {
     let catBtnLabel;
     if (isSavings) { const _acc = (savAccts||[]).find(a => a.id === t.savingsAccountId); catBtnLabel = '→ ' + (_acc ? _acc.name : 'Savings'); }
     else if (isIncome) { const _it = INCOME_TYPES_ARR.find(x => x.key === selIncomeKey); catBtnLabel = _it ? _it.label : 'Income ↗'; }
-    else { const _cc = CATS.find(c => c.key === t.category); catBtnLabel = _cc ? _cc.label : 'Set category'; }
+    else { const _cc = CATS.find(c => c.key === t.category); catBtnLabel = (t.splitOut ? '↔ Split · ' : '') + (_cc ? _cc.label : 'Set category'); }
     const rowStyle = isIncome
       ? 'border-bottom:1px solid var(--border);background:rgba(22,163,74,.06);'
       : isSavings
@@ -10487,7 +10509,20 @@ function editPdfRow(idx, field, value) {
     row.merchant = value;
     if (!row._catManual) row.category = autoCat(value);
   } else if (field === 'category') {
-    if (value.indexOf('__transfer__') === 0) {
+    delete row.splitOut;
+    if (value.indexOf('__transfer__') === 0 && !row.refund) {
+      // Outflow tagged Transfer / Split (e.g. paying someone their share): keep
+      // it as money OUT, an expense in the chosen category. Only an inflow
+      // becomes an offset against a category.
+      row.isIncome = false;
+      row.transfer = false;
+      row.splitOut = true;
+      row.category = value.slice('__transfer__'.length) || 'misc';
+      _splitOutNote(row.category);
+      delete row.incomeType;
+      delete row.incomeCategory;
+      delete row.savingsAccountId;
+    } else if (value.indexOf('__transfer__') === 0) {
       // Transfer / Split: an inflow that offsets an expense category.
       row.isIncome = true;
       row.incomeType = 'transfer';
