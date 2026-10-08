@@ -923,6 +923,26 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 .mapper-cols .mapper-grid{margin-top:10px;}
 .map-actions{display:flex;gap:8px;justify-content:flex-end;}
 .map-actions-top{margin:12px 0 4px;}
+/* Shared import-window layout (CSV + PDF previews use the same structure) */
+.imp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.imp-label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;font-weight:500;}
+.imp-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
+.imp-grid2 .person-row{margin-top:0;flex-wrap:wrap;}
+.imp-grid2 select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;}
+@media (max-width:560px){.imp-grid2{grid-template-columns:1fr;}}
+.imp-panel{margin-top:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);padding:14px 16px;}
+.imp-panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px;}
+.imp-panel-title{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;}
+.imp-summary{font-size:12.5px;color:var(--muted);margin-bottom:10px;line-height:1.5;}
+.imp-summary:empty{display:none;}
+.imp-tablewrap{overflow:auto;max-height:320px;background:var(--surface);border:1px solid var(--border);border-radius:6px;}
+.imp-totals{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;font-size:12px;}
+.imp-totals:empty{display:none;}
+.imp-tot-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;}
+.imp-tot-val{font-size:14px;font-weight:600;color:var(--ink);}
+.imp-tot-sub{font-size:11px;color:var(--faint);margin-top:2px;}
+.imp-income-note{margin-top:10px;font-size:12px;color:#15803d;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.25);border-radius:6px;padding:8px 10px;line-height:1.45;}
+.imp-verify{margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;}
 .mapper-field label{font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;}
 .mapper-field select{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;font-family:'Work Sans',sans-serif;background:var(--surface);color:var(--ink);outline:none;}
 .mapper-field select:focus{border-color:var(--accent);}
@@ -1199,7 +1219,7 @@ body.goals-editing .g-tile{border-style:dashed;}
      card-transformed rows flow inline and the modal scrolls naturally. */
   #import-preview > div[style*="max-height:320px"],
   #import-preview > div[style*="overflow:auto"],
-  .pdf-preview-wrap{max-height:none !important;overflow:visible !important;}
+  .pdf-preview-wrap, .imp-tablewrap{max-height:none !important;overflow:visible !important;}
   #pdf-raw-text{height:140px !important;font-size:16px;}
   #pdf-step-2 > div[style*="max-height:280px"]{max-height:none;overflow:visible;}
 }
@@ -2765,14 +2785,19 @@ function doGet(e) {
 <!-- COLUMN MAPPER MODAL -->
 <div class="modal-overlay" id="map-modal">
   <div class="modal">
-    <div class="modal-title">Map CSV Columns</div>
-    <div class="modal-sub" id="map-fn">Tell Ledger which column contains what</div>
+    <div class="imp-head">
+      <div>
+        <div class="modal-title">Import CSV Statement</div>
+        <div class="modal-sub" id="map-fn">Tell Ledger which column contains what</div>
+      </div>
+      <button onclick="closeMap()" class="help-close" aria-label="Close" title="Close" style="margin:-4px -4px 0 0;flex-shrink:0;">&times;</button>
+    </div>
     <div class="map-actions map-actions-top">
       <button class="btn btn-ghost" onclick="closeMap()">Cancel</button>
       <button class="btn btn-primary" onclick="doImport()">Import →</button>
     </div>
     <div class="mapper">
-      <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">How are expenses shown?</label>
+      <label class="imp-label">How are expenses shown?</label>
       <div class="stmt-type-choice">
         <label class="stmt-type-opt">
           <input type="radio" name="stmt-type" value="credit" checked onchange="onStmtTypeChange()">
@@ -2789,36 +2814,28 @@ function doGet(e) {
           </span>
         </label>
       </div>
-      <details class="mapper-cols">
-        <summary>Column mapping <span>(auto-detected — expand only if a column looks wrong)</span></summary>
-        <div class="mapper-grid">
-          <div class="mapper-field"><label>Date column</label><select id="col-date"></select></div>
-          <div class="mapper-field"><label>Merchant / Description</label><select id="col-merchant"></select></div>
-          <div class="mapper-field"><label>Amount (debit / spend)</label><select id="col-amount"></select></div>
-          <div class="mapper-field"><label>Credit column (optional)</label><select id="col-credit"></select></div>
-        </div>
-      </details>
-      <div style="margin-top:10px;">
-        <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Whose card is this?</label>
-        <div class="person-row">
+      <div class="imp-grid2">
+        <div>
+          <label class="imp-label">Whose card is this?</label>
+          <div class="person-row">
           <label><input type="radio" name="person" value="Michael" checked onchange="onMapperPersonChange(this.value)"> Michael</label>
           <label><input type="radio" name="person" value="Lili" onchange="onMapperPersonChange(this.value)"> Lili</label>
           <label><input type="radio" name="person" value="Joint" onchange="onMapperPersonChange(this.value)"> Joint</label>
         </div>
-      </div>
-      <div style="margin-top:10px;">
-        <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Card</label>
-        <select id="col-cardname-select" onchange="onCardNameSelectChange()"
+        </div>
+        <div>
+          <label class="imp-label">Card</label>
+          <select id="col-cardname-select" onchange="onCardNameSelectChange()"
           style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;">
           <option value="">No card details</option>
         </select>
         <div id="col-cardname-hint" style="display:none;margin-top:6px;font-size:11px;color:var(--muted);line-height:1.45;">Pick <strong>+ Type a new card name...</strong> above to save one (e.g. "Amex Gold"). It'll appear here next time you upload.</div>
         <input type="text" id="col-cardname" placeholder="e.g. RBC Chequing, Amex Gold"
           style="display:none;width:100%;margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);outline:none;">
+        </div>
       </div>
-    </div>
-      <div style="margin-top:10px;">
-        <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Import mode</label>
+      <div style="margin-top:12px;">
+        <label class="imp-label">Import mode</label>
         <div class="person-row" style="gap:16px;flex-wrap:wrap;">
           <label style="align-items:flex-start;gap:6px;">
             <input type="radio" name="import-mode" value="addnew" checked style="margin-top:2px;">
@@ -2832,30 +2849,36 @@ function doGet(e) {
           </label>
         </div>
       </div>
+      <div style="margin-top:12px;">
+        <details class="mapper-cols">
+        <summary>Column mapping <span>(auto-detected — expand only if a column looks wrong)</span></summary>
+        <div class="mapper-grid">
+          <div class="mapper-field"><label>Date column</label><select id="col-date"></select></div>
+          <div class="mapper-field"><label>Merchant / Description</label><select id="col-merchant"></select></div>
+          <div class="mapper-field"><label>Amount (debit / spend)</label><select id="col-amount"></select></div>
+          <div class="mapper-field"><label>Credit column (optional)</label><select id="col-credit"></select></div>
+        </div>
+      </details>
+      </div>
+    </div>
 
-    <!-- Import preview + totals -->
-    <div id="import-preview" style="margin-top:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);padding:14px 16px;display:none;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;">Preview &amp; edit</div>
+    <!-- Import preview + totals (same structure as the PDF preview) -->
+    <div id="import-preview" class="imp-panel" style="display:none;">
+      <div class="imp-panel-head">
+        <div class="imp-panel-title">Preview &amp; edit</div>
         <button class="btn btn-ghost btn-sm" onclick="resetImportEdits()" id="reset-edits-btn" style="display:none;font-size:11px;padding:3px 9px;">Reset edits</button>
       </div>
+      <div class="imp-summary" id="import-preview-summary"></div>
       <div class="stmt-edit-hint">Tap any date, merchant or amount to edit it before importing.</div>
-      <div style="overflow:auto;max-height:320px;background:var(--surface);border:1px solid var(--border);border-radius:6px;">
+      <div class="imp-tablewrap">
         <table id="import-preview-table" class="stmt-preview" style="width:100%;border-collapse:collapse;font-size:12px;">
-          <thead><tr style="background:var(--bg);position:sticky;top:0;z-index:1;">
-            <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Date</th>
-            <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Merchant</th>
-            <th style="padding:7px 10px;text-align:right;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Amount</th>
-            <th style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Category</th>
-            <th class="import-preview-person-cell" style="padding:7px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);">Person</th>
-            <th style="padding:7px 6px;text-align:center;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);width:36px;"></th>
-          </tr></thead>
+          <thead><tr style="background:var(--bg);position:sticky;top:0;z-index:1;"><th style="padding:7px 10px;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:left;">Date</th><th style="padding:7px 10px;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:left;">Merchant</th><th style="padding:7px 10px;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:right;">Amount</th><th style="padding:7px 10px;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:left;">Category</th><th class="import-preview-person-cell" style="padding:7px 10px;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:left;">Person</th><th style="padding:7px 10px;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:center;width:36px;padding:7px 6px;"></th></tr></thead>
           <tbody id="import-preview-body"></tbody>
         </table>
       </div>
-      <div id="import-preview-footer" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;font-size:12px;"></div>
-      <div id="import-preview-income-note" style="display:none;margin-top:10px;font-size:12px;color:#15803d;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.25);border-radius:6px;padding:8px 10px;line-height:1.45;"></div>
-      <div id="import-preview-verify" style="margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span>✓</span><span>Click any cell to edit. Totals update as you change rows. Use × to drop bad rows.</span></div>
+      <div id="import-preview-footer" class="imp-totals"></div>
+      <div id="import-preview-income-note" class="imp-income-note" style="display:none;"></div>
+      <div id="import-preview-verify"><div class="imp-verify"><span>✓</span><span>Click any cell to edit. Use × to drop a row. Totals update as you change rows.</span></div></div>
     </div>
 
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
@@ -2867,38 +2890,49 @@ function doGet(e) {
 
 <!-- PDF PARSER MODAL -->
 <div class="modal-overlay" id="pdf-modal">
-  <div class="modal" style="width:700px;max-width:95vw;">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+  <div class="modal" style="width:min(720px,95vw);">
+    <div class="imp-head">
       <div>
-        <div class="modal-title">PDF Statement Parser</div>
+        <div class="modal-title">Import PDF Statement</div>
         <div class="modal-sub" id="pdf-filename">Extracting text from PDF...</div>
       </div>
       <button onclick="closePdfModal()" class="help-close" aria-label="Close" title="Close" style="margin:-4px -4px 0 0;flex-shrink:0;">&times;</button>
     </div>
+    <div class="map-actions map-actions-top" id="pdf-top-actions" style="display:none;">
+      <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="importPdfTransactions()">Import →</button>
+    </div>
 
-    <!-- Step 1: Extracted text review -->
+    <!-- Settings (same order as the CSV importer) -->
     <div id="pdf-step-1">
-      <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-        <div style="font-size:12px;color:var(--muted);">Trove reads only your transactions, the date, merchant and amount. Your name, account number and balances are never imported.</div>
-        <span id="pdf-bank-detected" style="font-size:11px;background:#eaf4ef;color:#2d6a4f;padding:3px 9px;border-radius:100px;font-weight:600;display:none;"></span>
+      <label class="imp-label">How are expenses shown?</label>
+      <div class="stmt-type-choice">
+        <label class="stmt-type-opt">
+          <input type="radio" name="pdf-stmt-type" value="credit" checked onchange="onPdfStmtTypeChange()">
+          <span class="stmt-type-card">
+            <span class="stmt-type-title">Expenses shown as +</span>
+            <span class="stmt-type-desc">Spending is positive <b style="color:#c15c1e;">(+)</b>; money in is negative <b style="color:#16a34a;">(−)</b>. Typical of credit-card statements.</span>
+          </span>
+        </label>
+        <label class="stmt-type-opt">
+          <input type="radio" name="pdf-stmt-type" value="bank" onchange="onPdfStmtTypeChange()">
+          <span class="stmt-type-card">
+            <span class="stmt-type-title">Expenses shown as −</span>
+            <span class="stmt-type-desc">Spending is negative <b style="color:#c15c1e;">(−)</b>; money in is positive <b style="color:#16a34a;">(+)</b>. Typical of bank / debit statements.</span>
+          </span>
+        </label>
       </div>
-      <div id="pdf-extract-status" style="padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-size:12.5px;color:var(--muted);line-height:1.5;display:flex;align-items:center;gap:8px;">Extracting text…</div>
-      <textarea id="pdf-raw-text" style="display:none;" readonly></textarea>
-      <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="copyPdfRawText(this)" style="font-size:11px;padding:3px 9px;color:var(--muted);">Copy extracted text</button>
-        <span style="font-size:10.5px;color:var(--faint);">Copies the text the app read from your PDF with personal details (name, address, card number) removed — safe to send to support.</span>
-      </div>
-      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <div class="add-field">
-          <label>Whose card is this?</label>
+      <div class="imp-grid2">
+        <div>
+          <label class="imp-label">Whose card is this?</label>
           <select id="pdf-person" onchange="onPdfPersonChange(this.value)" style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);outline:none;">
             <option value="Michael">Michael</option>
             <option value="Lili">Lili</option>
             <option value="Joint">Joint</option>
           </select>
         </div>
-        <div class="add-field">
-          <label>Card</label>
+        <div>
+          <label class="imp-label">Card</label>
           <select id="pdf-cardname-select" onchange="onPdfCardNameSelectChange()" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);color:var(--ink);outline:none;cursor:pointer;">
             <option value="">No card details</option>
           </select>
@@ -2906,8 +2940,8 @@ function doGet(e) {
           <input type="text" id="pdf-cardname" placeholder="e.g. RBC Visa, Amex" style="display:none;width:100%;margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'Work Sans',sans-serif;background:var(--surface);outline:none;">
         </div>
       </div>
-      <div style="margin-top:10px;">
-        <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">Import mode</label>
+      <div style="margin-top:12px;">
+        <label class="imp-label">Import mode</label>
         <div class="person-row" style="gap:16px;flex-wrap:wrap;">
           <label style="align-items:flex-start;gap:6px;">
             <input type="radio" name="pdf-import-mode" value="addnew" checked style="margin-top:2px;">
@@ -2921,58 +2955,43 @@ function doGet(e) {
           </label>
         </div>
       </div>
-      <!-- Import happens from the preview section below (one-page flow). -->
+      <!-- PDF-specific: what was read from the file (CSV shows column mapping here) -->
+      <div style="margin-top:12px;">
+        <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div style="font-size:12px;color:var(--muted);">Trove reads only your transactions, the date, merchant and amount. Your name, account number and balances are never imported.</div>
+        <span id="pdf-bank-detected" style="font-size:11px;background:#eaf4ef;color:#2d6a4f;padding:3px 9px;border-radius:100px;font-weight:600;display:none;"></span>
+      </div>
+        <div id="pdf-extract-status" style="padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-size:12.5px;color:var(--muted);line-height:1.5;display:flex;align-items:center;gap:8px;">Extracting text…</div>
+        <textarea id="pdf-raw-text" style="display:none;" readonly></textarea>
+        <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="copyPdfRawText(this)" style="font-size:11px;padding:3px 9px;color:var(--muted);">Copy extracted text</button>
+        <span style="font-size:10.5px;color:var(--faint);">Copies the text the app read from your PDF with personal details (name, address, card number) removed — safe to send to support.</span>
+      </div>
+      </div>
     </div>
 
-    <!-- Step 2: Parsed transactions review -->
+    <!-- Preview + totals (same structure as the CSV preview) -->
     <div id="pdf-step-2" style="display:none;">
-      <div class="map-actions map-actions-top">
+      <div class="imp-panel">
+        <div class="imp-panel-head">
+          <div class="imp-panel-title">Preview &amp; edit</div>
+          <button class="btn btn-ghost btn-sm" onclick="resetPdfEdits()" id="pdf-reset-edits-btn" style="display:none;font-size:11px;padding:3px 9px;">Reset edits</button>
+        </div>
+        <div class="imp-summary" id="pdf-parse-summary"></div>
+        <div class="stmt-edit-hint">Tap any date, merchant or amount to edit it before importing.</div>
+        <div class="imp-tablewrap pdf-preview-wrap">
+          <table class="stmt-preview" style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead><tr style="background:var(--bg);position:sticky;top:0;z-index:1;"><th style="padding:7px 10px;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:left;">Date</th><th style="padding:7px 10px;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:left;">Merchant</th><th style="padding:7px 10px;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:right;">Amount</th><th style="padding:7px 10px;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:left;">Category</th><th style="padding:7px 10px;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:left;">Person</th><th style="padding:7px 10px;font-weight:600;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);text-align:center;width:36px;padding:7px 6px;"></th></tr></thead>
+            <tbody id="pdf-parsed-rows"></tbody>
+          </table>
+        </div>
+        <div id="pdf-totals" class="imp-totals"></div>
+        <div id="pdf-income-note" class="imp-income-note" style="display:none;"></div>
+        <div class="imp-verify"><span>✓</span><span>Click any cell to edit. Use × to drop a row. Totals update as you change rows.</span></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
         <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="importPdfTransactions()">Import All →</button>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap;">
-        <div style="font-size:12.5px;color:var(--muted);" id="pdf-parse-summary"></div>
-        <button class="btn btn-ghost btn-sm" onclick="resetPdfEdits()" id="pdf-reset-edits-btn" style="display:none;font-size:11px;padding:3px 9px;">Reset edits</button>
-      </div>
-      <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;">How are expenses shown?</label>
-      <div class="stmt-type-choice" style="margin-bottom:14px;">
-        <label class="stmt-type-opt">
-          <input type="radio" name="pdf-stmt-type" value="credit" checked onchange="parsePdfTransactions()">
-          <span class="stmt-type-card">
-            <span class="stmt-type-title">Expenses shown as +</span>
-            <span class="stmt-type-desc">Spending is positive <b style="color:#c15c1e;">(+)</b>; money in is negative <b style="color:#16a34a;">(−)</b>. Typical of credit-card statements.</span>
-          </span>
-        </label>
-        <label class="stmt-type-opt">
-          <input type="radio" name="pdf-stmt-type" value="bank" onchange="parsePdfTransactions()">
-          <span class="stmt-type-card">
-            <span class="stmt-type-title">Expenses shown as −</span>
-            <span class="stmt-type-desc">Spending is negative <b style="color:#c15c1e;">(−)</b>; money in is positive <b style="color:#16a34a;">(+)</b>. Typical of bank / debit statements.</span>
-          </span>
-        </label>
-      </div>
-      <div class="stmt-edit-hint">Tap any date, merchant or amount to edit it before importing.</div>
-      <div class="pdf-preview-wrap" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);">
-        <table class="stmt-preview" style="width:100%;border-collapse:collapse;">
-          <thead>
-            <tr style="background:var(--bg);position:sticky;top:0;z-index:1;">
-              <th style="padding:7px 10px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Date</th>
-              <th style="padding:7px 10px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Merchant</th>
-              <th style="padding:7px 10px;text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Amount</th>
-              <th style="padding:7px 10px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Category</th>
-              <th style="padding:7px 10px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Person</th>
-              <th style="padding:7px 6px;text-align:center;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);width:36px;"></th>
-            </tr>
-          </thead>
-          <tbody id="pdf-parsed-rows"></tbody>
-        </table>
-      </div>
-      <div id="pdf-totals" style="display:flex;gap:20px;justify-content:flex-end;margin-top:10px;padding:10px 14px;background:var(--bg);border-radius:var(--radius-sm);font-size:12.5px;"></div>
-      <div id="pdf-income-note" style="display:none;margin-top:10px;font-size:12px;color:#15803d;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.25);border-radius:6px;padding:8px 10px;line-height:1.45;"></div>
-      <div style="margin-top:8px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span>✓</span><span>Click any cell to edit. Use × to drop a row. Totals update as you change rows.</span></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
-        <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="importPdfTransactions()">Import All →</button>
+        <button class="btn btn-primary" onclick="importPdfTransactions()">Import →</button>
       </div>
     </div>
   </div>
@@ -7900,36 +7919,49 @@ function renderImportPreview() {
   const resetBtn = document.getElementById('reset-edits-btn');
   if (resetBtn) resetBtn.style.display = _pendingImportEdited ? '' : 'none';
 }
+// ── IMPORT PREVIEW: shared summary + totals (CSV and PDF) ──
+// Both previews render the same summary line and totals grid so they read alike.
+// A row is money in when it is income/transfer-in, or a refund/credit (negative).
+function _impPreviewSummaryHTML(rows) {
+  const n = rows.length;
+  if (!n) return 'No transactions found.';
+  const charges = rows.filter(t => !t.isIncome && t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  return `<strong style="color:var(--ink);font-size:14px;">${n} transaction${n !== 1 ? 's' : ''}</strong> found, totalling <strong style="color:var(--ink);">${fmt(charges)}</strong> in charges. <span style="color:var(--faint);">Compare this against your statement's total to make sure none were missed.</span>`;
+}
+function _impTotalsHTML(rows, invalid) {
+  invalid = invalid || [];
+  const box = (lbl, val, sub, color, lblColor) => `<div><div class="imp-tot-lbl"${lblColor ? ` style="color:${lblColor};"` : ''}>${lbl}</div><div class="imp-tot-val"${color ? ` style="color:${color};"` : ''}>${val}</div><div class="imp-tot-sub">${sub}</div></div>`;
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const incomeRows   = rows.filter(t => t.isIncome && !t.transfer);
+  const transferRows = rows.filter(t => t.isIncome && t.transfer);
+  const expenseRows  = rows.filter(t => !t.isIncome);
+  const spend   = expenseRows.filter(t => t.amount >= 0);
+  const credits = expenseRows.filter(t => t.amount < 0);
+  const expenseTotal  = spend.reduce((s, t) => s + Math.abs(t.amount), 0);
+  const refundTotal   = credits.reduce((s, t) => s + Math.abs(t.amount), 0);
+  const incomeTotal   = incomeRows.reduce((s, t) => s + Math.abs(t.amount), 0);
+  const transferTotal = transferRows.reduce((s, t) => s + Math.abs(t.amount), 0);
+  return box('Expenses', fmt(expenseTotal), plural(spend.length, 'transaction'))
+    + (refundTotal > 0 ? box('Refunds / Credits', '-' + fmt(refundTotal), plural(credits.length, 'transaction'), '#16a34a') : '')
+    + (incomeTotal > 0 ? box('Income', '+' + fmt(incomeTotal), plural(incomeRows.length, 'row') + ' → Income', '#16a34a') : '')
+    + (transferTotal > 0 ? box('Transfers', fmt(transferTotal), plural(transferRows.length, 'row') + ' → not counted as income', 'var(--muted)') : '')
+    + box('Net', fmt(expenseTotal - refundTotal), plural(rows.length, 'row') + ' to import')
+    + (invalid.length ? `<div><div class="imp-tot-lbl" style="color:#b91c1c;">Skipped</div><div class="imp-tot-val" style="color:#b91c1c;">${invalid.length}</div><div class="imp-tot-sub" title="${esc(invalid.slice(0,5).map(r=>r.reason).join(' · '))}">${esc(invalid[0].reason)}${invalid.length>1?' + others':''}</div></div>` : '');
+}
+function _impIncomeNote(el, rows) {
+  if (!el) return;
+  const n = rows.filter(t => t.isIncome && !t.transfer).length;
+  if (!n) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.innerHTML = `↗ <strong>${n} row${n===1?'':'s'}</strong> detected as income. Not right? Set the expense category here before importing — and you can always change the <strong>income type</strong> later on the Income page once these are uploaded.`;
+}
 function renderImportPreviewFooter() {
   const rows = _pendingImportRows || [];
   const invalid = _pendingImportInvalid || [];
-  const incomeRows = rows.filter(t => t.isIncome && !t.transfer);
-  const transferRows = rows.filter(t => t.isIncome && t.transfer);
-  const expenseRows = rows.filter(t => !t.isIncome);
-  const expenseTotal = expenseRows.filter(t => !t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
-  const refundTotal = expenseRows.filter(t => t.refund).reduce((s, t) => s + Math.abs(t.amount), 0);
-  const incomeTotal = incomeRows.reduce((s, t) => s + Math.abs(t.amount), 0);
-  const transferTotal = transferRows.reduce((s, t) => s + Math.abs(t.amount), 0);
-  const net = expenseTotal - refundTotal;
-  const footer = document.getElementById('import-preview-footer');
-  footer.innerHTML = `
-    <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Expenses</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(expenseTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${expenseRows.filter(t=>!t.refund).length} transaction${expenseRows.filter(t=>!t.refund).length===1?'':'s'}</div></div>
-    ${refundTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Refunds / Credits</div><div style="font-size:14px;font-weight:600;color:#16a34a;">-${fmt(refundTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${expenseRows.filter(t=>t.refund).length} transaction${expenseRows.filter(t=>t.refund).length===1?'':'s'}</div></div>` : ''}
-    ${incomeTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Income</div><div style="font-size:14px;font-weight:600;color:#16a34a;">+${fmt(incomeTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${incomeRows.length} row${incomeRows.length===1?'':'s'} → Income</div></div>` : ''}
-    ${transferTotal > 0 ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Transfers</div><div style="font-size:14px;font-weight:600;color:var(--muted);">${fmt(transferTotal)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${transferRows.length} row${transferRows.length===1?'':'s'} → not counted as income</div></div>` : ''}
-    <div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:3px;">Net</div><div style="font-size:14px;font-weight:600;color:var(--ink);">${fmt(net)}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;">${rows.length} row${rows.length===1?'':'s'} to import</div></div>
-    ${invalid.length ? `<div><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:#b91c1c;font-weight:600;margin-bottom:3px;">Skipped</div><div style="font-size:14px;font-weight:600;color:#b91c1c;">${invalid.length}</div><div style="font-size:11px;color:var(--faint);margin-top:2px;" title="${esc(invalid.slice(0,5).map(r=>r.reason).join(' · '))}">${esc(invalid[0].reason)}${invalid.length>1?' + others':''}</div></div>` : ''}
-  `;
-  // Conditional heads-up shown only when rows were detected as income.
-  const incomeNote = document.getElementById('import-preview-income-note');
-  if (incomeNote) {
-    if (incomeRows.length) {
-      incomeNote.style.display = '';
-      incomeNote.innerHTML = `↗ <strong>${incomeRows.length} row${incomeRows.length===1?'':'s'}</strong> detected as income. Not right? Set the expense category here before importing — and you can always change the <strong>income type</strong> later on the Income page once these are uploaded.`;
-    } else {
-      incomeNote.style.display = 'none';
-    }
-  }
+  const summary = document.getElementById('import-preview-summary');
+  if (summary) summary.innerHTML = rows.length ? _impPreviewSummaryHTML(rows) : '';
+  document.getElementById('import-preview-footer').innerHTML = _impTotalsHTML(rows, invalid);
+  _impIncomeNote(document.getElementById('import-preview-income-note'), rows);
 }
 function editImportRow(idx, field, value) {
   if (!_pendingImportRows || !_pendingImportRows[idx]) return;
@@ -10166,6 +10198,7 @@ async function openPdfParser(file) {
   document.getElementById('pdf-filename').textContent = file.name;
   document.getElementById('pdf-step-1').style.display = 'block';
   document.getElementById('pdf-step-2').style.display = 'none';
+  { const ta = document.getElementById('pdf-top-actions'); if (ta) ta.style.display = 'none'; }
   document.getElementById('pdf-raw-text').value = 'Extracting text...';
   const _st0 = document.getElementById('pdf-extract-status');
   if (_st0) { _st0.textContent = 'Extracting text…'; _st0.style.color = 'var(--muted)'; }
@@ -10354,6 +10387,12 @@ function togglePdfStmtType() {
   if (r) r.checked = true;
   parsePdfTransactions();
 }
+// Statement-type switch now sits with the other settings (above the preview), so
+// it can be flipped before the PDF text is ready. Only re-parse once text exists.
+function onPdfStmtTypeChange() {
+  const raw = document.getElementById('pdf-raw-text');
+  if (raw && raw.value.trim()) parsePdfTransactions();
+}
 function parsePdfTransactions() {
   const rawText = document.getElementById('pdf-raw-text').value;
   const bank    = detectPdfBank(rawText);
@@ -10408,6 +10447,7 @@ function parsePdfTransactions() {
   // Show preview below the options (one-page flow, like the CSV mapper — no separate
   // step / Back button). Step 1 (extract status + person/card) stays visible.
   document.getElementById('pdf-step-2').style.display = 'block';
+  { const ta = document.getElementById('pdf-top-actions'); if (ta) ta.style.display = ''; }
   _pdfOriginalParsed = txns.map(t => ({ ...t }));
   _pdfEdited = false;
   renderPdfPreview();
@@ -10419,17 +10459,7 @@ let _pdfEdited = false;
 function renderPdfPreview() {
   const tbody = document.getElementById('pdf-parsed-rows');
   const summary = document.getElementById('pdf-parse-summary');
-  if (summary) {
-    const _n = pdfParsedTxns.length;
-    if (!_n) {
-      summary.textContent = 'No transactions found.';
-    } else {
-      // Prominent count + total so the user can compare against their statement's
-      // own total at a glance, instead of hunting row-by-row for a missed line.
-      const _charges = pdfParsedTxns.filter(t => !t.isIncome && t.amount > 0).reduce((s, t) => s + t.amount, 0);
-      summary.innerHTML = `<strong style="color:var(--ink);font-size:14px;">${_n} transaction${_n !== 1 ? 's' : ''}</strong> parsed, totalling <strong style="color:var(--ink);">${fmt(_charges)}</strong> in charges. <span style="color:var(--faint);">Compare this against your statement's total to make sure none were missed.</span>`;
-    }
-  }
+  if (summary) summary.innerHTML = _impPreviewSummaryHTML(pdfParsedTxns);
   if (!pdfParsedTxns.length) {
     tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--faint);line-height:1.6;">No transactions found in this PDF.<br><br><strong style="color:var(--ink);">Most banks let you export a CSV from web banking</strong> — that path is far more reliable than PDF parsing. Look for "Download" or "Export" on your statement page.</td></tr>';
     document.getElementById('pdf-totals').innerHTML = '';
@@ -10473,26 +10503,8 @@ function renderPdfPreview() {
     </tr>`;
   }).join('');
 
-  const expenseRows = pdfParsedTxns.filter(t => !t.isIncome);
-  const incomeRows  = pdfParsedTxns.filter(t =>  t.isIncome);
-  const charges = expenseRows.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-  const credits = expenseRows.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
-  const incomeTotal = incomeRows.reduce((s, t) => s + Math.abs(t.amount), 0);
-  const totalsEl = document.getElementById('pdf-totals');
-  totalsEl.innerHTML = `
-    <span style="color:var(--muted);">Charges <strong style="color:var(--ink);margin-left:4px;">${fmt(charges)}</strong></span>
-    ${credits < 0 ? `<span style="color:var(--muted);">Credits <strong class="clr-credit" style="margin-left:4px;">-${fmt(Math.abs(credits))}</strong></span>` : ''}
-    ${incomeTotal > 0 ? `<span style="color:var(--muted);">Income <strong style="color:#16a34a;margin-left:4px;">+${fmt(incomeTotal)}</strong></span>` : ''}
-    <span style="color:var(--muted);">Net <strong style="color:var(--ink);margin-left:4px;">${fmt(charges + credits)}</strong></span>`;
-  const incomeNote = document.getElementById('pdf-income-note');
-  if (incomeNote) {
-    if (incomeRows.length) {
-      incomeNote.style.display = '';
-      incomeNote.innerHTML = `↗ <strong>${incomeRows.length} row${incomeRows.length===1?'':'s'}</strong> detected as income. Not right? Set the expense category here before importing — and you can always change the <strong>income type</strong> later on the Income page once these are uploaded.`;
-    } else {
-      incomeNote.style.display = 'none';
-    }
-  }
+  document.getElementById('pdf-totals').innerHTML = _impTotalsHTML(pdfParsedTxns, []);
+  _impIncomeNote(document.getElementById('pdf-income-note'), pdfParsedTxns);
   const resetBtn = document.getElementById('pdf-reset-edits-btn');
   if (resetBtn) resetBtn.style.display = _pdfEdited ? '' : 'none';
 }
