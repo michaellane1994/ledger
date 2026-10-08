@@ -4527,7 +4527,11 @@ function renderCashflowChart() {
   const a         = (solid, faded, i) => projected[i] ? faded : solid;
 
   const subEl = document.getElementById('cashflow-sub');
-  if (subEl) subEl.textContent = `Capacity = income − needs`;
+  // Totals match the dashboard unless categories are excluded here; say so, so a
+  // difference from the dashboard is never silent.
+  const _exclN = [...cfExcludedCats].filter(k => CATS.some(c => c.key === k)).length;
+  const _exclNote = _exclN ? ` · excludes ${_exclN} categor${_exclN === 1 ? 'y' : 'ies'}` : '';
+  if (subEl) subEl.textContent = `Capacity = income − needs${_exclNote}`;
 
   const canvas = document.getElementById('cashflowChart');
   canvas.style.height    = '300px';
@@ -4673,7 +4677,10 @@ function renderCashflowChart() {
               const money = n => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-CA',{minimumFractionDigits:0,maximumFractionDigits:0});
               const spend = -(fixedData[i] + discData[i]);       // series are stored negative; flip to money spent
               const inc   = incData[i] + (cfBonusVisible ? bonusData[i] : 0);
-              return [`Total spend: ${money(spend)}`, `Net: ${money(inc - spend)}`];
+              const out = [`Total spend: ${money(spend)}`, `Net: ${money(inc - spend)}`];
+              if (_exclN) out.push(`(excludes ${_exclN} categor${_exclN === 1 ? 'y' : 'ies'})`);
+              if (!cfBonusVisible && bonusData[i]) out.push('(bonus hidden)');
+              return out;
             }
           }
         }
