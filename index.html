@@ -4176,6 +4176,16 @@ function _gmoney(n){
   try { if (typeof CURRENCIES !== 'undefined' && CURRENCIES[globalCurrency]) s = CURRENCIES[globalCurrency].short; } catch(e){}
   return s + Math.round(n).toLocaleString();
 }
+// Total across ALL savings accounts (goal or not). Shared by the dashboard
+// Savings tile and the Savings Goals card so the two figures always agree.
+// Uses balanceEquiv (manually entered) when account currency differs from global.
+function _savAcctsTotal(){
+  return (savAccts || []).reduce((s, a) => {
+    const ccy = a.currency && CURRENCIES[a.currency] ? a.currency : globalCurrency;
+    const v = (ccy !== globalCurrency && typeof a.balanceEquiv === 'number') ? a.balanceEquiv : (a.balance || 0);
+    return s + v;
+  }, 0);
+}
 function _collectGoals(){
   const list = [];
   (savAccts || []).forEach(a => {
@@ -4225,7 +4235,9 @@ function renderSavingsGoals(){
       + '</div>';
   }).join('');
   const addTile = '<div class="g-tile add" onclick="openAddGoal()"><div class="g-plus">+</div><div>Add a goal</div></div>';
-  const tSaved  = all.reduce((s,g)=>s+g.saved,0);
+  // Saved = every savings account (matches the dashboard Savings tile, so an
+  // account without a goal still counts) + custom goals' own saved amounts.
+  const tSaved  = _savAcctsTotal() + all.filter(g => g.std).reduce((s,g)=>s+g.saved,0);
   const tGoals  = all.reduce((s,g)=>s+g.target,0);
   const oTarget = _goalsTotalTarget > 0 ? _goalsTotalTarget : tGoals;
   const gap     = Math.max(0, oTarget - tGoals);
@@ -5998,11 +6010,7 @@ function renderDashboard() {
   const net = totalIncome - totalExpenses;
   // For dashboard, use balanceEquiv (manually entered) when account currency differs from global,
   // otherwise the raw balance. No FX conversion happens automatically.
-  const totalSavings = savAccts.reduce((s, a) => {
-    const ccy = a.currency && CURRENCIES[a.currency] ? a.currency : globalCurrency;
-    const v = (ccy !== globalCurrency && typeof a.balanceEquiv === 'number') ? a.balanceEquiv : (a.balance || 0);
-    return s + v;
-  }, 0);
+  const totalSavings = _savAcctsTotal();
   const bonusIncome   = monthIncomes.filter(i => i.type === 'bonus').reduce((s, i) => s + i.amount, 0);
   const regularIncome = totalIncome - bonusIncome;
   document.getElementById('dash-income').textContent     = fmt(totalIncome);
