@@ -3579,7 +3579,7 @@ let editingIncomeId = null;
 function resetChartFilters() {
   chartHiddenCats.clear();
   chartViewMode = 'fixed-variable';
-  const allExpenses = txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId));
+  const allExpenses = txns.filter(t => t.incomeType === 'transfer' || (t.amount !== 0 && !t.incomeType && !t.savingsAccountId));
   const allMonths = [...new Set(allExpenses.map(t => t.date.substring(0,7)))].sort();
   const fromSel = document.getElementById('chart-from');
   const toSel   = document.getElementById('chart-to');
@@ -3643,7 +3643,12 @@ function setChartDisplay(mode) {
 }
 
 function renderChartSection() {
-  const allExpenses  = txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId));
+  // Same spending rule as the dashboard and Cashflow trend: refunds and credits net
+  // in (they reduce spending) instead of being dropped.
+  const allExpenses  = txns.filter(t => t.incomeType === 'transfer' || (t.amount !== 0 && !t.incomeType && !t.savingsAccountId));
+  // A Transfer / Split offsets the category it was split against, so classify it
+  // as Needs / Wants by that category rather than the row's own.
+  const _fvNeeds = t => isNeeds(t.incomeType === 'transfer' && t.incomeCategory ? { ...t, category: t.incomeCategory } : t);
   const allAvailMonths = [...new Set(allExpenses.map(t => t.date.substring(0,7)))].sort();
 
   const fromSel = document.getElementById('chart-from');
@@ -3783,11 +3788,11 @@ function renderChartSection() {
     // Needs vs Wants always sums all categories, regardless of the All/Top 5/Custom picker
     // (which is intended to scope the By Category breakdown only).
     const fixedData = filteredMonths.map(m =>
-      allExpenses.filter(t => t.date.startsWith(m) && isNeeds(t))
+      allExpenses.filter(t => t.date.startsWith(m) && _fvNeeds(t))
                  .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
     );
     const varData = filteredMonths.map(m =>
-      allExpenses.filter(t => t.date.startsWith(m) && !isNeeds(t))
+      allExpenses.filter(t => t.date.startsWith(m) && !_fvNeeds(t))
                  .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
     );
     const incomeData = filteredMonths.map(m =>
@@ -4444,20 +4449,34 @@ function renderCashflowChart() {
   buildCfExclDrop();
 
   // Expenses split: fixed vs discretionary (uses CATS.fixed flag, same as Settings)
+  // Same spending rule as the dashboard: every expense row nets in, so refunds and
+  // credits reduce spending, and a Transfer / Split inflow offsets the category it
+  // was split against. Savings-linked rows are excluded here (counted as Savings).
   const fixedByMonth = {};
   const discByMonth  = {};
-  txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId)).forEach(t => {
+  txns.filter(t => t.incomeType === 'transfer' || (!t.incomeType && !t.savingsAccountId)).forEach(t => {
     const m = t.date?.substring(0,7);
     if (!m) return;
+    const isXfer = t.incomeType === 'transfer';
+    const cat = isXfer ? (t.incomeCategory || t.category) : t.category;
     // Skip categories the user has excluded from the cashflow forecast
-    if (cfExcludedCats.has(t.category)) return;
-    if (t.incomeType === 'transfer') {
-      discByMonth[m] = (discByMonth[m]||0) - Math.abs(t.amount);
-    } else if (isNeeds(t)) {
-      fixedByMonth[m] = (fixedByMonth[m]||0) + t.amount;
+    if (cfExcludedCats.has(cat)) return;
+    const amt = isXfer ? -Math.abs(t.amount) : t.amount;
+    if (isNeeds(isXfer ? { ...t, category: cat } : t)) {
+      fixedByMonth[m] = (fixedByMonth[m]||0) + amt;
     } else {
-      discByMonth[m] = (discByMonth[m]||0) + t.amount;
+      discByMonth[m] = (discByMonth[m]||0) + amt;
     }
+  });
+
+  // Savings: net money moved into savings each month (contributions minus withdrawals),
+  // shown as its own outflow so the chart accounts for every dollar going out.
+  const savByMonth = {};
+  (contribs || []).forEach(c => {
+    const m = c.date?.substring(0,7);
+    if (!m) return;
+    if (c.type === 'contribution')     savByMonth[m] = (savByMonth[m]||0) + (c.amount||0);
+    else if (c.type === 'withdrawal')  savByMonth[m] = (savByMonth[m]||0) - (c.amount||0);
   });
 
   // Populate avg-from dropdown with all historical months
@@ -4480,7 +4499,7 @@ function renderCashflowChart() {
   const avgFixed = pastComplete.length ? pastComplete.reduce((s,m)=>s+(fixedByMonth[m]||0),0)/pastComplete.length : 0;
   const avgDisc  = pastComplete.length ? pastComplete.reduce((s,m)=>s+(discByMonth[m]||0),0)/pastComplete.length : 0;
 
-  const incData=[], fixedData=[], discData=[], capData=[], projected=[], bonusData=[];
+  const incData=[], fixedData=[], discData=[], capData=[], projected=[], bonusData=[], savData=[];
   yearMonths.forEach(m => {
     const inc   = (incByMonth[m]||0);
     const fixed = (fixedByMonth[m]||0);
@@ -4492,12 +4511,13 @@ function renderCashflowChart() {
     capData.push(inc + (cfBonusVisible ? bonus : 0) - fixed); // spending capacity includes actual bonus for past months
     projected.push(false);
     bonusData.push(bonus);
+    savData.push(-(savByMonth[m]||0)); // negative = bar goes down
   });
 
   // Running balance from starting point (include actual bonus, not projected)
   let running = cfStartBalance;
   const runningData = yearMonths.map((_,i) => {
-    running += incData[i] + (cfBonusVisible ? bonusData[i] : 0) + fixedData[i] + discData[i];
+    running += incData[i] + (cfBonusVisible ? bonusData[i] : 0) + fixedData[i] + discData[i] + savData[i];
     return running;
   });
 
@@ -4583,6 +4603,13 @@ function renderCashflowChart() {
           borderWidth: 0, borderRadius: 2,
           stack: 'spending', yAxisID: 'y'
         },
+        ...(savData.some(v => v !== 0) ? [{
+          type: 'bar', label: 'Savings',
+          data: savData.map(v => -v),
+          backgroundColor: savData.map((_,i) => `rgba(${isDark?'200,140,40':'180,83,9'},${a(isDark?.7:.45, isDark?.28:.18, i)})`),
+          borderWidth: 0, borderRadius: 2,
+          stack: 'spending', yAxisID: 'y'
+        }] : []),
         {
           type: 'line', label: 'Spending capacity',
           data: capData,
@@ -4652,9 +4679,24 @@ function renderCashflowChart() {
                 const remaining = cap - disc;
                 return ` Wants: ${abs(v)}${tag}  (${remaining>=0?abs(remaining)+' capacity left':'over capacity by '+abs(remaining)})`;
               }
+              if (ctx.dataset.label === 'Savings')          return ` Savings: ${v<0?'-':''}${abs(v)}${tag}`;
               if (ctx.dataset.label === 'Spending capacity') return ` Capacity for wants: ${abs(v)}${tag}`;
               if (ctx.dataset.label === 'Running balance')   return ` Running balance: ${v>=0?abs(v):'-'+abs(v)}${tag}`;
               return ` ${ctx.dataset.label}: ${abs(v)}${tag}`;
+            },
+            // Totals under the breakdown: total spend (needs + wants), savings,
+            // everything out, and what's left of income after all of it.
+            footer: items => {
+              if (!items.length) return '';
+              const i = items[0].dataIndex;
+              const money = n => (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-CA',{minimumFractionDigits:0,maximumFractionDigits:0});
+              const spend = -(fixedData[i] + discData[i]);       // series are stored negative; flip to money spent
+              const sav   = -savData[i];                         // positive = money saved
+              const inc   = incData[i] + (cfBonusVisible ? bonusData[i] : 0);
+              const lines = [`Total spend: ${money(spend)}`];
+              if (sav) lines.push(`Savings: ${money(sav)}`, `Total out: ${money(spend + sav)}`);
+              lines.push(`Net: ${money(inc - spend - sav)}`);
+              return lines;
             }
           }
         }
