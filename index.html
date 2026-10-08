@@ -2898,7 +2898,7 @@ function doGet(e) {
       </div>
       <button onclick="closePdfModal()" class="help-close" aria-label="Close" title="Close" style="margin:-4px -4px 0 0;flex-shrink:0;">&times;</button>
     </div>
-    <div class="map-actions map-actions-top" id="pdf-top-actions" style="display:none;">
+    <div class="map-actions map-actions-top" id="pdf-top-actions">
       <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
       <button class="btn btn-primary" onclick="importPdfTransactions()">Import →</button>
     </div>
@@ -2989,10 +2989,10 @@ function doGet(e) {
         <div id="pdf-income-note" class="imp-income-note" style="display:none;"></div>
         <div class="imp-verify"><span>✓</span><span>Click any cell to edit. Use × to drop a row. Totals update as you change rows.</span></div>
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
-        <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="importPdfTransactions()">Import →</button>
-      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+      <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="importPdfTransactions()">Import →</button>
     </div>
   </div>
 </div>
@@ -10198,7 +10198,6 @@ async function openPdfParser(file) {
   document.getElementById('pdf-filename').textContent = file.name;
   document.getElementById('pdf-step-1').style.display = 'block';
   document.getElementById('pdf-step-2').style.display = 'none';
-  { const ta = document.getElementById('pdf-top-actions'); if (ta) ta.style.display = 'none'; }
   document.getElementById('pdf-raw-text').value = 'Extracting text...';
   const _st0 = document.getElementById('pdf-extract-status');
   if (_st0) { _st0.textContent = 'Extracting text…'; _st0.style.color = 'var(--muted)'; }
@@ -10447,7 +10446,6 @@ function parsePdfTransactions() {
   // Show preview below the options (one-page flow, like the CSV mapper — no separate
   // step / Back button). Step 1 (extract status + person/card) stays visible.
   document.getElementById('pdf-step-2').style.display = 'block';
-  { const ta = document.getElementById('pdf-top-actions'); if (ta) ta.style.display = ''; }
   _pdfOriginalParsed = txns.map(t => ({ ...t }));
   _pdfEdited = false;
   renderPdfPreview();
@@ -10587,6 +10585,7 @@ function resetPdfEdits() {
 }
 
 async function importPdfTransactions() {
+  if (!pdfParsedTxns || !pdfParsedTxns.length) { showToast('No transactions to import yet. Wait for the PDF to finish reading, or try a CSV export.'); return; }
   const pdfDedupKey = t => `${t.date}|${t.amount}|${t.card||t.person}|${(t.merchant||'').toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,20)}`;
   const incomeDedupKey = t => `${t.date}|${Math.abs(t.amount)}|${t.person}|${(t.merchant||t.desc||'').toLowerCase().replace(/[^a-z0-9]/g,'').substring(0,20)}`;
   const importMode = document.querySelector('input[name="pdf-import-mode"]:checked').value;
